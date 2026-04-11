@@ -1,0 +1,13 @@
+.DS_Store
+
+
+# Log files
+*.log
+
+# Session directories with no papers
+2026-0*/
+2026-1*/
+2026-2*/
+2026-3*/
+2026-4*/
+2026-5*/
