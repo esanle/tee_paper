@@ -15,6 +15,13 @@ whisper-cpp 任务转写前注意看看空闲内存够不够4g，不要把系统
 - Naming: "YYYY - Paper Title.pdf"
 - Key conferences: USENIX Security, IEEE S&P, NDSS, CCS, ESORICS
 
+### 2026-04-12 凌晨批次（3:52 AM NZT）
+- **11 篇新论文**下载至 `/tmp/tee_paper/2026-04-12-03-52-00/`，全部来自 USENIX Security 2025（8 月，西雅图）
+- 涵盖：TDXploit（Intel TDX 单步攻击）、TEEcorrelate（性能计数器防御）、Dorami（RISC-V TEE）、Phantom（AI 模型混淆）、Game of Arrows（LLM 权重攻击）、TETD、FABLE、Flexway O-Sort、Available Attestation（区块链）、BulletCT、aDNS
+- 9 个重复文件从旧目录删除
+- README.md 约 10434 字节，包含论文摘要 + 综合对比分析
+- IEEE S&P 2025 和 CCS 2025 论文因 Cloudflare 拦截未能下载
+
 ### 2026-04-08 下午批次
 - **13 篇新论文**下载至 `/tmp/tee_paper/2026-04-08-15-50-00/`，涵盖 BadRAM、CipherSteal、PORTAL、ASGARD、PALANTÍR、The Road to Trust、DORAMI、TETD、TEEcorrelate、TELESCOPE、Mole、EXIA、SNPeek
 - 9 个旧重复文件从早期目录删除（保留最新下载版本）
