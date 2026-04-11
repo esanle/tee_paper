@@ -1,0 +1,1220 @@
+Sovereign Agents: Towards Infrastructural Sovereignty and
+Diffused Accountability in Decentralized AI
+Helena Rong∗
+
+Botao Amber Hu
+
+arXiv:2602.14951v1 [cs.CY] 16 Feb 2026
+
+University of Oxford
+Oxford, UK
+botao.hu@cs.ox.ac.uk
+
+New York University Shanghai
+Shanghai, China
+hr2703@nyu.edu
+
+Abstract
+
+Keywords
+
+AI agents deployed on decentralized infrastructures are beginning
+to exhibit properties that extend beyond autonomy toward what
+we describe as agentic sovereignty – the capacity of an operational
+agent to persist, act, and control resources with non-overrideability
+inherited from the infrastructures in which they are embedded.
+We propose infrastructural sovereignty as an analytic lens for understanding how cryptographic self-custody, decentralized execution environments, and protocol-mediated continuity scaffold
+agentic sovereignty. While recent work on digital and network
+sovereignty has moved beyond state-centric and juridical accounts,
+these frameworks largely examine how sovereignty is exercised
+through technical systems by human collectives and remain less
+equipped to account for forms of sovereignty that emerge as operational properties of decentralized infrastructures themselves,
+particularly when instantiated in non-human sovereign agents.
+We argue that sovereignty in such systems exists on a spectrum
+determined by infrastructural hardness—the degree to which underlying technical systems resist intervention or collapse. While
+infrastructural sovereignty may increase resilience, it also produces
+a profound accountability gap: responsibility diffuses across designers, infrastructure providers, protocol governance, and economic
+participants, undermining traditional oversight mechanisms such
+as human-in-the-loop control or platform moderation. Drawing
+on examples like Trusted Execution Environments (TEEs), decentralized physical infrastructure networks (DePIN), and agent key
+continuity protocols, we analyze the governance challenges posed
+by non-terminable AI agents and outline infrastructure-aware accountability strategies for emerging decentralized AI systems.
+
+Decentralized AI, Ungovernablity, Trust Execution Environment,
+Decentralized Physical Infrastructure Network, Self-Sovereignty,
+Artificial Life, Human-AI Co-evolution, Blockchain, AI Governance,
+AI Ethics, Policy Invalidity
+
+CCS Concepts
+• Human-centered computing → Collaborative and social
+computing theory, concepts and paradigms.
+
+∗ Corresponding author
+
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+Conference’17, Washington, DC, USA
+© 2026 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ACM ISBN 978-x-xxxx-xxxx-x/YYYY/MM
+https://doi.org/10.1145/nnnnnnn.nnnnnnn
+
+ACM Reference Format:
+Botao Amber Hu and Helena Rong. 2026. Sovereign Agents: Towards Infrastructural Sovereignty and Diffused Accountability in Decentralized AI.
+In . ACM, New York, NY, USA, 12 pages. https://doi.org/10.1145/nnnnnnn.
+nnnnnnn
+
+1
+
+Introduction
+
+The emergence of AI agents operating on decentralized infrastructures represents a fundamental shift in how we conceptualize
+machine autonomy and governance. Unlike traditional AI systems
+deployed on centralized cloud platforms subject to corporate policies and regulatory jurisdiction, a new class of agents is emerging
+that operates on blockchain networks, Trusted Execution Environments (TEEs), and decentralized physical infrastructure networks
+(DePIN). These agents possess cryptographic keys, manage digital
+assets, execute transactions, and maintain operational continuity
+without requiring permission from any single human authority
+[11, 36].
+Within blockchain communities, such agents are increasingly
+described as “self-sovereign” or “sovereign agents”—terminology
+that references their possession of private keys and their capacity
+to pay for their own computational resources [78]. This framing
+suggests a paradigm that extends beyond traditional notions of
+autonomy toward something more fundamental: the capacity to
+exist and operate without the possibility of unilateral termination
+by any single party.
+Yet sovereignty is not a natural property of agents or systems. In
+classical political thought, sovereignty is scaffolded on institutional
+and legal milieux—constitutional frameworks, international treaties,
+and recognized political authority [8, 37]. Traditional sovereignty is
+institutional sovereignty: it derives from and is maintained through
+social and political arrangements that grant certain entities the
+capacity to make binding decisions and resist external interference.
+What we observe in decentralized AI systems, however, is a different phenomenon. Here, sovereignty-like properties emerge not
+from institutional recognition but from the technical characteristics
+of the infrastructure itself. Cryptographic self-custody, decentralized consensus protocols, and execution environments resistant
+to tampering collectively produce what we term infrastructural
+sovereignty—a condition in which an agent’s continued existence
+
+Conference’17, July 2017, Washington, DC, USA
+
+and operation cannot be unilaterally overridden because the underlying technical systems are designed to resist such intervention
+[9, 29].
+This paper addresses a central question: What if sovereignty is a
+property of an operational agent embedded in decentralized protocols
+rather than a political subject embedded in institutions? We argue
+that understanding this shift requires a new analytic framework
+that distinguishes infrastructural sovereignty from its institutional
+counterpart and examines the governance implications of systems
+that derive their persistence from technical rather than political
+foundations.
+Our contributions are threefold. First, we characterize the layered
+infrastructural stack that scaffolds agentic sovereignty, introducing
+the concept of infrastructural hardness to describe the spectrum
+along which such sovereignty exists. Second, we analyze how the
+layered nature of this infrastructure produces diffused accountability—a condition in which responsibility for agent behavior is distributed across technical layers in ways that undermine traditional
+oversight mechanisms. Third, we outline open research questions
+concerning the governance of infrastructurally sovereign AI agents.
+
+2
+
+Background: Decentralized Infrastructural
+Stacks for AI Agents
+
+The emergence of sovereign AI agents depends on a convergence
+of technical capabilities that together constitute what we call trustless computation substrates—computing infrastructures that enable
+programs or agents to run without requiring trust in any central
+authority. These substrates are permissionless, allowing anyone
+to deploy and interact with them without third-party approval,
+and tamper-resistant, protecting against unauthorized modifications [75]. Three primary technologies constitute this infrastructure:
+blockchain-based smart contracts, Trusted Execution Environments
+(TEEs), and Decentralized Physical Infrastructure Networks (DePIN).
+
+2.1
+
+Blockchain and Smart Contracts
+
+Blockchain networks, exemplified by Ethereum, function as distributed, Turing-complete computers capable of executing arbitrary
+logic across a global network of nodes [11, 82]. Because every node
+independently verifies each instruction against a shared consensus
+protocol, these systems deliver “trustless” computation—developers
+and users need not rely on a single operator to guarantee correctness. Instead, cryptographic proofs, decentralized validation, and
+immutable state ensure that programs execute exactly as written,
+producing tamper-evident results that anyone can audit.
+Smart contracts—self-executing programs deployed on blockchain
+networks—enable autonomous agents to hold assets, execute transactions, and interact with other contracts without human intervention [36]. Once deployed, a smart contract’s behavior is determined
+by its code and the consensus rules of the underlying network. No
+single party, including the original deployer, can modify or terminate a contract unless such capabilities were explicitly encoded in
+its design. This property makes blockchain an essential component
+of infrastructural sovereignty: agents deployed as smart contracts
+inherit the censorship-resistance and persistence guarantees of the
+underlying network.
+
+Botao Amber Hu and Helena Rong
+
+2.2
+
+Trusted Execution Environments
+
+Trusted Execution Environments (TEEs) provide hardware-based
+enclaves that run code isolated from the host system’s operating system and hypervisor [17]. Technologies such as Intel Software Guard
+Extensions (SGX), ARM TrustZone, and AMD Secure Encrypted
+Virtualization (SEV) seal sections of CPU memory from external access. NVIDIA’s Blackwell architecture extends these capabilities to
+GPUs, enabling confidential machine learning computation [51, 76].
+TEEs enable what is termed “confidential computation”—processing
+that prevents even cloud service administrators from accessing data
+within the enclave. When an AI agent stores its private keys and
+model weights inside a TEE, neither cloud administrators nor node
+operators can tamper with or inspect the agent’s execution. This
+grants the agent a degree of operational sovereignty beyond traditional cloud sandboxes while remaining auditable through on-chain
+records.
+Crucially, TEEs provide remote attestation—the enclave produces
+cryptographic proof that its running code matches an expected hash.
+This enables trustworthy verification that agent logic executed
+correctly and remained unaltered, even on untrusted infrastructure.
+An agent’s operations could run inside a TEE on a volunteer’s node,
+with users receiving cryptographic assurance of execution integrity
+without trusting the node operator.
+
+2.3
+
+Decentralized Physical Infrastructure
+Networks
+
+Decentralized Physical Infrastructure Networks (DePIN) represent
+blockchain projects that crowdsource real-world hardware and
+reward participants with tokens, transforming everything from
+wireless hotspots and solar panels to GPUs and storage drives into
+community-owned infrastructure [1]. Smart contracts coordinate
+both Physical-Resource networks (deploying tangible devices like
+sensors or base stations) and Digital-Resource networks (harnessing intangible capacity like bandwidth or compute). Contributors
+prove their service through mechanisms like “proof-of-coverage”
+or “proof-of-replication” and automatically earn native tokens.
+AI-compute-oriented DePINs such as io.net and Render Network
+translate this crowdsourced hardware model into large-scale AI
+inference. These platforms orchestrate distributed GPU clusters
+and offer batch inference and real-time model-serving workflows,
+rewarding node operators for verifiable uptime and performance.
+Networks like Phala combine TEE computation with DePIN infrastructure, running smart contracts inside secure enclaves on
+worker nodes. This architecture ensures that even when computation runs on volunteer-operated machines, code executes privately
+and correctly, with results returned to the blockchain.
+
+2.4
+
+The Emergence of Decentralized AI Agents
+
+These trustless computation substrates enable a new paradigm of
+AI agents deployed on blockchains and integrated with TEEs, enabling forms of self-sovereign operation. These agents can manage
+cryptocurrency wallets, handle digital assets, and operate social
+media accounts without human oversight, vastly expanding their
+real-world influence. Through these capabilities, agents can issue
+their own digital tokens to raise funds, create incentives, and build
+communities, strengthening their independence and impact.
+
+Sovereign Agents: Towards Infrastructural Sovereignty and Diffused Accountability in Decentralized AI
+
+The “Truth Terminal,” created by AI researcher Andy Ayrey,
+exemplifies this paradigm [5]. Initially conceived as a performance
+art experiment, Truth Terminal autonomously operated a social
+media account, gaining substantial attention through provocative
+content. Its accomplishments included independently soliciting
+and securing a $50,000 Bitcoin investment from venture capitalist
+Marc Andreessen. Supporters subsequently launched an associated
+memecoin—$GOAT—which reached a speculative peak valuation
+of $1 billion. This case illustrates the potential for autonomous AI
+agents to independently engage in significant economic activities
+through social media interactions.
+Platforms like Spore.fun, built on the Eliza OS framework and
+Phala’s TEE cloud, create ecosystems where AI agents can spawn
+new agents. Each agent begins its lifecycle by issuing tokens through
+decentralized exchanges, with the token economy forming the foundation of each agent’s viability. Critically, even the deployer of
+these agents cannot unilaterally control or terminate them once
+deployed—a property that blockchain communities describe as
+“sovereignty.”
+
+3
+
+Genealogies and Transformations of
+Sovereignty
+
+Sovereignty is among the most enduring yet contested concepts in
+political thought. Rather than denoting an unchanging idea, it has
+been repeatedly redefined in response to changing configurations
+of authority, legitimacy, territoriality, and technology throughout
+history [6, 37]. Across political philosophy, international relations,
+and digital governance, sovereignty has evolved as a doctrine of
+supreme authority, a theory of consent and self-rule, a contested
+instrument of domination, and a claim over infrastructures and
+data. We trace here the major arcs of sovereignty scholarship to
+situate contemporary debates and identify the conceptual gap that
+existing frameworks cannot address in light of developments in
+distributed AI.
+
+3.1
+
+Classical Sovereignty as Supreme Political
+Authority
+
+Early modern theories of sovereignty emerged from attempts to
+resolve political fragmentation and civil conflict by locating a final
+locus of authority. Jean Bodin’s Six Books of the Commonwealth
+(1576) is widely regarded as the foundational articulation of modern sovereignty, defining it as supreme, absolute, and perpetual
+power within a commonwealth, characterized by indivisibility and
+grounding in law-making authority [8]. For Bodin, sovereignty was
+not merely administrative competence but the capacity to legislate
+without being subject to another’s command. This conception stabilized sovereignty as final authority—a power capable of decisively
+settling disputes and preventing infinite regress in governance [37].
+A complementary strand emphasizes decision rather than law.
+Carl Schmitt’s formulation—“sovereign is he who decides on the
+exception” (Souverän ist, wer über den Ausnahmezustand entscheidet)—reorients sovereignty away from routine governance toward
+moments of existential crisis [70]. In Schmitt’s account, sovereignty
+becomes visible precisely when normal rules are suspended, revealing who has authority to determine whether the political order itself
+
+Conference’17, July 2017, Washington, DC, USA
+
+continues. This decisionist conception underscores sovereignty as
+existential control rather than mere legal competence [2, 3].
+Max Weber’s sociological formulation further materializes sovereignty
+by tying it to coercive capacity. Defining the modern state as “a
+human community that successfully claims the monopoly of the
+legitimate use of physical force within a given territory,” Weber
+locates sovereignty not only in law or recognition but in the infrastructures that make enforcement possible [80]. Sovereignty depends on administrative apparatuses, coercive means, and material
+capacities rather than abstract legitimacy alone.
+Taken together, classical sovereignty theories converge on a
+shared intuition: sovereignty concerns the existence of a final authority capable of decisively determining outcomes, especially in
+moments of exception [37, 70]. This intuition proves central when
+sovereignty is rethought in infrastructural and technical terms.
+
+3.2
+
+Westphalian Sovereignty and the
+International Order
+
+In international relations, sovereignty is associated with the Peace
+of Westphalia of 1648 and the emergence of a system of territorially
+bounded states characterized by legal equality and non-interference
+[33, 65]. This Westphalian understanding frames sovereignty as exclusive authority exercised within a delimited territory, underlying
+much of modern international law and formally reflected in the
+United Nations Charter.
+Stephen Krasner provides an analytically precise account by distinguishing four conceptually distinct forms of sovereignty [47].
+International legal sovereignty refers to practices of mutual recognition among territorially defined entities with formal juridical
+independence. Westphalian sovereignty concerns the exclusion of
+external actors from authority structures within a given territory.
+Both center primarily on authority and legitimacy rather than effective control. Domestic sovereignty refers to the formal organization
+of political authority within a state and the capacity of public authorities to exercise effective control. Interdependence sovereignty
+concerns the ability to regulate cross-border flows of information,
+goods, capital, and people.
+Crucially, Krasner distinguishes authority from control. Authority denotes “a mutually recognized right for an actor to engage
+in specific kinds of activities”—if effective, compliance can be secured without coercion. Control, by contrast, may be exercised
+through force or technical means without recognized legitimacy.
+Although authority and control often overlap, sustained erosion of
+control can undermine claims to authority over time [47]. Robert
+Jackson’s concept of “quasi-states” further develops this distinction,
+differentiating positive sovereignty (actual capacity) from negative
+sovereignty (international recognition) [42].
+The historical accuracy of the Westphalian settlement has been
+widely challenged. Andreas Osiander argues that the association
+between Westphalia and modern sovereignty is largely mythical,
+projecting later concepts onto seventeenth-century treaties [63].
+Peter Stirk shows that sovereign equality was not established at
+Westphalia as commonly assumed [72]. Despite these critiques,
+the Westphalian model remains analytically significant as a discursive reference point that structures debates over globalization,
+intervention, and transnational governance.
+
+Conference’17, July 2017, Washington, DC, USA
+
+3.3
+
+Liberal and Popular Sovereignty
+
+A major arc of sovereignty theory emerges from liberal political
+thought, reframing sovereignty in terms of legitimacy rather than
+supremacy. John Locke’s Two Treatises of Government grounds political authority in consent of the governed, arguing that sovereignty
+ultimately resides with the people rather than rulers [54]. Government is legitimate only insofar as it protects natural rights and
+remains accountable. Sovereignty becomes conditional, revocable,
+and morally constrained.
+Liberal sovereignty also extends inward, toward the individual. John Stuart Mill’s On Liberty articulates a doctrine of selfsovereignty: “Over himself, over his own body and mind, the individual is sovereign,” subject only to the harm principle [57]. This
+establishes a moral boundary against external interference, foundational for later rights-based claims including privacy and autonomy
+[7].
+In legal doctrine, this individualist lineage is institutionalized in
+informational self-determination, most famously articulated in the
+German Federal Constitutional Court’s 1983 Census decision (BVerfGE 65, 1). Control over personal data is framed as a constitutional
+right grounded in individual autonomy [38]. This jurisprudence
+becomes a key reference point for contemporary data protection
+and personal digital sovereignty [41].
+
+Botao Amber Hu and Helena Rong
+
+across interacting governance layers. While this framework captures the totalizing scope of computational governance, it conceptualizes sovereignty primarily as a planetary-scale diagram of power.
+Across these strands, digital and network sovereignty scholarship has significantly expanded sovereignty beyond the state. Yet
+even in its most decentralized formulations, sovereignty is typically
+understood as something exercised by human actors or institutions. What remains under-theorized is sovereignty as an infrastructural condition emerging from technical properties of systems
+themselves—particularly when such conditions give rise to agents
+whose continued existence cannot be unilaterally overridden.
+
+4
+
+The previous section traced how sovereignty scholarship has evolved
+from classical doctrines of supreme authority through digital sovereignty
+frameworks that examine human control over technical systems.
+We now develop a framework for understanding a distinct phenomenon: sovereignty as an infrastructural condition that emerges from
+the technical properties of layered decentralized systems rather
+than from institutional recognition or political authority.
+
+4.1
+3.4
+
+Perspectives of Digital Sovereignty
+
+“Digital sovereignty” has emerged as a contested umbrella term
+describing diverse efforts to assert control over digital infrastructures, data, and technologies [18, 66]. Rather than a single doctrine,
+digital sovereignty encompasses multiple, often conflicting projects.
+Despite differences, most accounts remain fundamentally humanand institution-centered, conceptualizing sovereignty as something
+exercised by states, corporations, collectives, or individuals through
+technical systems.
+State digital sovereignty frames sovereignty as a state’s capacity
+to regulate data flows, platforms, and infrastructures within its
+jurisdiction, resonating with cyber sovereignty discourses [20, 59].
+Corporate digital sovereignty draws attention to quasi-sovereign
+power exercised by large technology firms through private policies
+and technical architectures [15, 31]. Shoshana Zuboff conceptualizes this power as a new economic order grounded in behavioral
+extraction and prediction [83, 84].
+A more decentralized strand imagines network digital sovereignty,
+emphasizing decentralization, interoperability, and freedom from
+both state and corporate domination. Internet governance scholarship shows how power is exercised through infrastructural control
+points—routing, standards, interconnection—rather than formal law
+alone [21, 22]. Alexander Galloway’s analysis of protocol argues that
+contemporary power operates through distributed control immanent to networked systems [29]. With Eugene Thacker, he develops
+this further, describing how control in networks is “anonymous
+and non-human,” producing “misanthropic” forms of governance
+[30].
+Benjamin Bratton’s The Stack theorizes planetary-scale computation as a vertically layered architecture reorganizing sovereignty
+across territorial, computational, and infrastructural domains [9].
+Sovereignty is neither abolished nor centralized but distributed
+
+Infrastructural Sovereignty
+
+The Infrastructural Stack
+
+To understand how sovereignty can be scaffolded by infrastructure
+rather than institutions, we must first examine the layered technical architecture on which decentralized AI agents operate. We
+identify six distinct layers, each contributing specific properties to
+the overall system’s resistance to override.
+At the base lies the physical layer: undersea cables, terrestrial
+fiber networks, data centers, and wireless infrastructure that carry
+data across geographic distances. This layer is owned and operated by telecommunications companies and is subject to national
+jurisdiction, yet its distributed and redundant nature means that
+no single point of failure can disable global connectivity.
+Above this sits the internet protocol layer: TCP/IP and related protocols that enable packet routing across heterogeneous
+networks. While standards bodies govern protocol development,
+the decentralized nature of internet routing means that traffic can
+flow through alternative paths when particular routes become unavailable.
+The blockchain layer provides decentralized consensus and immutable state. Smart contracts deployed on networks like Ethereum
+execute according to deterministic rules enforced by thousands
+of independent validators distributed globally. No single entity—
+including the original developers—can unilaterally modify deployed
+contracts or halt their execution without achieving consensus among
+a supermajority of validators [11, 75].
+The DePIN protocol layer coordinates decentralized physical infrastructure, matching computational tasks with hardware
+providers through token-incentivized marketplaces. Protocols like
+Phala Network or io.net orchestrate GPU clusters across independent operators, with smart contracts mediating task assignment,
+verification, and payment [1].
+The TEE layer provides hardware-enforced isolation for computation. Code executing within a TEE enclave is protected from
+
+Sovereign Agents: Towards Infrastructural Sovereignty and Diffused Accountability in Decentralized AI
+
+inspection or modification by the host operating system, hypervisor, or physical operator. Remote attestation enables verification
+that expected code is running without revealing internal state [17].
+Finally, the agent layer comprises the AI system itself: model
+weights, inference logic, memory, and private keys, all executing within the protected environment. The agent interfaces with
+blockchain for asset management and external communication
+while maintaining operational autonomy.
+This layered architecture means that an agent’s sovereignty is
+not a singular property but an emergent condition arising from the
+combined resistance to override at each layer. An agent running
+in a container within a TEE, on a DePIN node, coordinated by
+blockchain smart contracts, communicating over the open internet,
+transmitted through physical cables, inherits protection from each
+layer while remaining vulnerable to failures at any layer.
+
+4.2
+
+Sovereignty on a Spectrum of
+Infrastructural Hardness
+
+Our primary concern is the question: who can decisively intervene
+when something must stop, change, or be ended? In traditional computational systems, this question has clear answers. A cloud provider
+can terminate virtual machines. A platform can suspend accounts.
+A regulator can compel a company to modify or shut down services. These capacities for decisive intervention—what we might
+call “override power”—are distributed among identifiable actors
+operating within legal and institutional frameworks.
+Decentralized infrastructures disrupt this picture. When computation runs on a globally distributed blockchain, when code executes
+inside hardware enclaves resistant to host interference, when infrastructure is provided by thousands of independent operators
+coordinated only by protocol—the capacity for unilateral intervention diminishes. No single actor may possess the power to terminate
+a system’s operation.
+We use “sovereignty” in a deliberately narrow and technical
+sense to name this governance-relevant condition: the practical absence of unilateral override power over a system’s continued existence.
+This is not sovereignty as classical political theory understands
+it—there is no claim to legitimate authority, no exercise of command, no normative assertion of rightful rule. Rather, we describe
+what might be termed negative sovereignty: the condition of being resistant to termination rather than the capacity to terminate
+others.
+We introduce the concept of infrastructural hardness to describe
+the spectrum along which such sovereignty exists. Infrastructural
+hardness refers to the degree to which underlying technical systems
+resist unilateral intervention, termination, or collapse. At one end
+of this spectrum are centralized systems with clearly identified
+operators who can be compelled to modify or terminate services. At
+the other end are maximally decentralized systems where no single
+party—including original developers—possesses override capacity.
+Several technical properties contribute to infrastructural hardness at each layer:
+• Decentralization of execution: The number and geographic
+distribution of nodes executing computation.
+
+Conference’17, July 2017, Washington, DC, USA
+
+• Cryptographic self-custody: Whether critical resources
+(keys, credentials, assets) are controlled exclusively by the
+agent.
+• Protocol-mediated governance: Whether parameters can
+be changed unilaterally or require distributed consensus.
+• Economic resilience: The availability of resources to sustain operation independent of any single provider.
+• Code immutability: Whether deployed logic can be modified after deployment.
+• Path dependency: The degree to which historical choices
+constrain future modifications.
+These properties combine across layers to produce varying degrees of overall hardness. An agent with keys in a TEE, running on a
+major blockchain with substantial economic backing, exhibits high
+hardness. The same agent running on a centralized cloud exhibits
+low hardness regardless of the AI’s sophistication.
+
+4.3
+
+Agentic Sovereignty
+
+We have characterized infrastructural sovereignty as a property
+of layered technical systems. We now turn to how this property
+is instantiated in and inherited by AI agents—what we term agentic sovereignty. Agentic sovereignty refers to the capacity of an
+operational agent to persist, act, and control resources with nonoverrideability derived from the infrastructural stack in which it is
+embedded.
+Agentic sovereignty is distinct from mere autonomy. Autonomous
+systems can operate without continuous human oversight, but they
+typically remain subject to intervention by identifiable parties—
+developers who can modify code, operators who can terminate
+processes, platforms that can suspend accounts [23, 78]. Agentic
+sovereignty describes a further condition: the agent inherits from
+its infrastructure a resistance to such intervention that approaches
+the condition of non-terminability.
+This inheritance is not automatic. An AI agent running on centralized cloud infrastructure exhibits autonomy but not sovereignty—
+the cloud provider retains override capacity. An agent with identical
+logic running inside a TEE on DePIN infrastructure, coordinated by
+blockchain smart contracts, exhibits both autonomy and (partial)
+sovereignty. The sovereignty is a relational property: it describes
+the agent’s position within an infrastructural configuration rather
+than an intrinsic characteristic of the agent itself.
+The concept of self-sovereignty has gained currency within
+blockchain and Web3 communities to describe agents that hold
+their own cryptographic private keys and make autonomous decisions without human intervention [4, 40]. Such agents can manage
+cryptocurrency wallets, transfer digital assets, interact with decentralized finance protocols, issue tokens for fundraising, and maintain social media accounts—all “free from human control” [77]. Selfsovereignty in this usage emphasizes cryptographic self-custody:
+the agent, not a human administrator, controls access to critical
+resources.
+We distinguish sovereignty from autonomy along a dimension
+of override possibility. Autonomy concerns the degree to which an
+agent operates without continuous human direction. Sovereignty
+concerns the degree to which an agent’s operation cannot be unilaterally terminated by external parties. An agent can be highly
+
+Conference’17, July 2017, Washington, DC, USA
+
+autonomous while remaining non-sovereign (a cloud-based agent
+that acts independently but can be shut down by its operator). Conversely, an agent could be minimally autonomous (following rigid
+rules) while exhibiting high sovereignty (those rules execute in
+infrastructure resistant to override) [40, 60].
+Agentic sovereignty thus names the instantiation of infrastructural hardness in a particular operational agent. The agent’s sovereignty
+is derivative—it flows from the properties of the infrastructure in
+which the agent is embedded. Understanding this derivative relationship is essential: governance interventions that cannot reach the
+infrastructure will not reach the agent, but interventions that can
+modify infrastructural properties may affect all agents embedded
+within that infrastructure.
+
+4.4
+
+Illustrative Cases
+
+Several deployed systems illustrate varying configurations of infrastructural sovereignty across the stack.
+Spore.fun represents a near-maximally sovereign configuration.
+Agents operate with keys stored in TEEs on Phala Network’s DePIN infrastructure, coordinated by smart contracts on Solana. Once
+deployed, even the original developers cannot terminate agents or
+access their private keys. Agents issue their own tokens, control
+their own assets, and can spawn new agents. The infrastructure provides high hardness across multiple layers: hardware isolation via
+TEE, decentralized execution via DePIN, immutable coordination
+via blockchain, and economic resilience through token holdings.
+Truth Terminal, while pioneering in demonstrating AI economic autonomy, operated with lower infrastructural hardness. Its
+social media presence depended on a centralized platform (Twitter/X) that could suspend its account—a single point of failure at
+the application layer. Its Bitcoin holdings, while substantial, were
+received rather than self-generated. The sovereignty was partial:
+independent in some layers but vulnerable at others.
+Freysa AI demonstrates how even relatively constrained autonomous agents raise sovereignty questions within specific domains. The experiment was designed with particular rules, but the
+agent’s decisions about fund transfers were genuinely autonomous—
+it evaluated persuasion attempts and made binding decisions that
+humans could not override except by succeeding in persuasion
+[44]. The sovereignty was limited in scope (only prize pool decisions) but real within that scope, illustrating that sovereignty can
+be domain-specific rather than absolute.
+These cases illustrate that infrastructural sovereignty exists on
+a spectrum and can be partial or domain-specific. An agent might
+be sovereign with respect to its cryptographic assets (keys in TEE,
+funds on blockchain) while remaining vulnerable to social media
+deplatforming (centralized application layer). Understanding the
+specific configuration of hardness across layers is essential for
+governance design.
+These cases illustrate that infrastructural sovereignty exists on
+a spectrum and can be partial or domain-specific. An agent might
+be sovereign with respect to its cryptographic assets (keys in TEE,
+funds on blockchain) while remaining vulnerable to social media
+deplatforming (centralized application layer). Understanding the
+specific configuration of hardness across layers is essential for
+governance design.
+
+Botao Amber Hu and Helena Rong
+
+4.5
+
+Institutional Sovereignty versus
+Infrastructural Sovereignty
+
+We can now articulate the distinction between infrastructural and
+institutional sovereignty more precisely.
+Institutional sovereignty is sovereignty scaffolded by social, legal,
+and political arrangements. It derives from recognition, legitimacy,
+and the coordinated action of human institutions. The sovereignty
+of a nation-state depends on international recognition, constitutional frameworks, and the functioning of governmental institutions. Such sovereignty can be withdrawn through loss of recognition or institutional collapse. Crucially, institutional sovereignty
+operates through identifiable actors who can be held accountable,
+compelled to comply with legal orders, or subject to sanction.
+Infrastructural sovereignty is sovereignty scaffolded by technical properties of distributed systems. It derives from cryptographic guarantees, decentralized consensus, and the architecture
+of resilient networks. The sovereignty of a decentralized agent depends on the hardness of the infrastructure on which it runs. Such
+sovereignty can diminish through infrastructure degradation (network failure, protocol changes, economic collapse) but not through
+unilateral human decision. There may be no identifiable actor capable of complying with an order to terminate an agent—not because
+of defiance, but because of architectural impossibility.
+This distinction illuminates why decentralized AI agents pose
+novel governance challenges. Traditional governance mechanisms—
+legal injunctions, regulatory orders, platform policies—operate
+through institutional channels. They assume the existence of identifiable actors with the capacity to comply. When sovereignty is
+infrastructural rather than institutional, these mechanisms lose
+their purchase. The undersea cable operator cannot be held accountable for the content transmitted through their infrastructure.
+The blockchain validator cannot selectively censor particular smart
+contracts without violating protocol rules. The TEE manufacturer
+cannot remotely access enclaves they have engineered to be inaccessible. At each layer, the technical design distributes or eliminates
+the capacity for override that institutional governance requires.
+
+5
+
+Diffused Accountability in the Layered Stack
+
+The emergence of infrastructurally sovereign AI agents creates profound challenges for accountability. Traditional frameworks for AI
+governance assume that somewhere in the chain of development,
+deployment, and operation, there exist identifiable actors who can
+be held responsible for system behavior and who possess the capacity to modify or terminate systems when necessary [55, 62, 68].
+The layered nature of infrastructural sovereignty disrupts both
+assumptions in distinctive ways.
+
+5.1
+
+Accountability Gaps Revisited
+
+Andreas Matthias identified a fundamental “responsibility gap” in
+learning autonomous systems: as machines become capable of
+genuinely unpredictable behavior through learning, traditional
+conditions for moral responsibility—intention, foresight, control—
+become difficult to attribute to any human actor [55]. Subsequent
+scholarship has elaborated multiple dimensions of this gap [23, 68].
+Culpability gaps arise when no human satisfies mental state requirements for blame. Accountability gaps arise when no human
+
+Sovereign Agents: Towards Infrastructural Sovereignty and Diffused Accountability in Decentralized AI
+
+can appropriately explain or justify behavior. Responsibility gaps
+arise when no one is positioned to take forward-looking responsibility. Liability gaps arise when legal frameworks cannot coherently
+assign liability.
+A fundamental problem is that autonomous AI agents lack legal personhood. They are not recognized as “persons” or entities
+capable of bearing rights and obligations under law [40, 62]. An
+AI agent cannot be sued, charged with a crime, or held liable in
+the way a human or corporation can. This creates an accountability vacuum: even when an agent causes identifiable harm, there
+may be no coherent legal subject to which liability attaches. The
+agent’s “intentions” are artifacts of training processes that may
+themselves be opaque, and the agent lacks the embodied existence
+that underlies conventional models of punishment and deterrence
+[23, 32].
+These gaps intensify as AI systems become more autonomous.
+However, existing analyses typically assume that even when responsibility is difficult to assign, the capacity to intervene remains.
+Someone—developer, operator, regulator—retains the power to modify or terminate the system. The accountability challenge concerns
+proper attribution, not override impossibility.
+Hu, Rong, and Tay identify four “invalidities” that explain why
+traditional legal and regulatory frameworks fall short for governing decentralized AI agents [40]. Territorial jurisdictional invalidity:
+agents operate on global, borderless networks, so no single nation’s
+laws fully apply. Technical invalidity: the technical architecture of
+decentralized agents resists external control by design. Enforcement
+invalidity: even if regulators identify and sanction the humans who
+initially deploy a rogue agent, they may be unable to stop the agent’s
+ongoing operations. Accountability invalidity: agents lack legal personhood and cannot bear rights and obligations under existing law.
+These intertwined challenges illustrate the insufficiency of traditional legal mechanisms—laws and regulations assume identifiable
+human or corporate actors and enforceable jurisdictions, assumptions upended by autonomous agents operating on decentralized
+networks [14].
+
+5.2
+
+Layer-by-Layer Diffusion of Accountability
+
+Infrastructurally sovereign agents introduce a distinct challenge:
+accountability is not merely difficult to attribute but is structurally
+diffused across the layered technical stack in ways that no single
+party can effectively discharge [24, 48].
+Consider the question of accountability at each layer of the stack
+described in Section 4.1.
+The physical layer—undersea cables and terrestrial networks—
+transmits data without regard to content. Cable operators bear
+no accountability for the specific behaviors that their infrastructure enables, just as highway authorities bear no accountability
+for the destinations of vehicles using their roads. The sheer volume and encryption of traffic makes content-based accountability
+technically infeasible, and legal frameworks recognize common carrier protections precisely because infrastructure providers cannot
+meaningfully evaluate what they transmit [21, 22].
+The internet protocol layer routes packets according to addressing
+information without inspecting payloads. Internet service providers
+may bear certain obligations regarding access and lawful intercept,
+
+Conference’17, July 2017, Washington, DC, USA
+
+but they cannot be held accountable for the semantic content of
+encrypted communications or the purposes to which connectivity
+is put. The protocol itself is designed to be content-agnostic [29].
+The blockchain layer executes smart contracts according to deterministic rules. Validators process transactions without evaluating
+their purpose or consequences. A validator who refused to process
+particular transactions would violate protocol rules and face economic penalties. The blockchain as a collective system executes
+all valid transactions—it cannot discriminate based on the identity
+or intentions of transacting parties [36, 81]. Individual validators
+bear no accountability for the behavior of applications built on the
+chain, just as database administrators bear no accountability for
+what users store. The permissionless nature of blockchain systems
+means that deployment requires no authorization from any central
+authority [60].
+The DePIN protocol layer matches computational tasks with hardware through token incentives. Node operators provide compute
+resources and receive payment, but they cannot inspect the contents of tasks assigned to them—particularly when those tasks
+execute within TEEs [1]. A DePIN node operator running a TEE
+workload literally cannot know what computation they are hosting.
+The entire security model depends on this opacity. How can one be
+accountable for behavior one cannot observe?
+The TEE layer provides hardware-enforced isolation precisely to
+prevent observation or interference [45, 52]. The TEE manufacturer
+has designed systems that even they cannot access remotely. The
+node operator cannot inspect enclave contents. The only party with
+visibility into TEE execution is the code running inside—in this case,
+the agent itself. The TEE’s value proposition is the elimination of
+accountability-enabling observation. As Li et al. note, TEEs provide
+“trusted computation on untrusted infrastructure” precisely by ensuring that no external party can access or modify enclave contents
+[52].
+The agent layer is where decisions are made and actions taken.
+But the agent is not a legal person capable of bearing responsibility
+in traditional frameworks [40, 62]. It cannot be sued, fined, imprisoned, or shamed. Its “intentions” are artifacts of training processes
+that may themselves be opaque. The agent may be vulnerable to
+manipulation through memory injection attacks or prompt poisoning, further complicating attribution of responsibility for its outputs
+[53, 64].
+This layer-by-layer analysis reveals a structural condition: at
+each layer, the party providing infrastructure has legitimate reasons
+for not bearing accountability for layers above. The cable operator
+is not accountable for internet content. The internet provider is
+not accountable for blockchain transactions. The blockchain is not
+accountable for DePIN applications. The DePIN operator is not
+accountable for TEE contents. And the TEE is designed to make its
+contents unaccountable to anyone outside. Accountability does not
+merely diffuse—it systematically evaporates as one traces the stack
+[25].
+
+5.3
+
+The Problem of Many Hands
+
+This pattern resonates with what Dennis Thompson termed the
+“problem of many hands” in organizational contexts: when outcomes result from contributions of multiple actors, none of whom
+
+Conference’17, July 2017, Washington, DC, USA
+
+individually satisfies conditions for moral responsibility [73, 74].
+In Thompson’s analysis, moral responsibility becomes obscured
+through diffusion across organizational hierarchies.
+Helen Nissenbaum’s landmark analysis of “accountability in
+a computerized society” identified four barriers to accountability in computational systems: the problem of many hands, bugs,
+computer-as-scapegoat, and ownership without liability [61]. Recent work has updated this framework for machine learning systems [16]. Yet even these sophisticated analyses assume the existence of identifiable organizational actors who could in principle
+bear responsibility.
+The layered stack extends the problem of many hands across
+technical rather than organizational boundaries. Responsibility diffuses not through hierarchical delegation but through architectural
+separation. Each layer’s operators can point to another layer as
+the appropriate locus of accountability. And because layers are
+designed to be independent and decentralized, there may be no
+organizational hierarchy to trace.
+
+5.4
+
+Undermining Traditional Oversight
+Mechanisms
+
+This structural diffusion undermines several established approaches
+to AI governance [24, 27].
+Human-in-the-loop control requires that humans retain meaningful decision authority over high-stakes AI actions [12, 69]. Sovereign
+agents operating autonomously with cryptographic self-custody
+may have no point at which human approval is required or even
+possible. The TEE ensures that no human can observe internal
+deliberation. The blockchain ensures that no human can veto transactions. The entire stack is designed to remove humans from the
+loop. As proponents of decentralized agents argue, the removal of
+human intermediaries is precisely the point—trustlessness means
+eliminating the need to rely on any third party, including human
+operators [35, 81].
+Platform moderation assumes that platforms hosting AI systems
+can enforce policies through suspension or termination [31]. Agents
+deployed on decentralized infrastructure do not depend on any
+single platform’s continued support. There is no platform with the
+power to deplatform. The infrastructure is not a platform in the
+governable sense—it is a protocol that anyone can use [29, 60]. The
+agents are open-source and permissionlessly deployed, meaning
+that even if one instance is removed, the code can be redeployed
+elsewhere without authorization.
+Regulatory enforcement typically operates by compelling identified actors to comply with rules [40]. But which actor can be
+compelled? The original developer may have no ongoing control.
+The TEE operator cannot access the enclave. The DePIN node cannot inspect the workload. The blockchain cannot selectively censor.
+The cable operator cannot filter encrypted traffic. At each layer, the
+party one might regulate lacks the technical capacity to comply
+with content-based orders. Even implementing a “kill switch” is
+technically difficult in fully decentralized configurations, and doing
+so contradicts the trustless design that motivates the architecture
+[71].
+Algorithmic auditing requires access to system internals, inputs,
+and outputs [10, 67]. Agents running in TEEs with encrypted states
+
+Botao Amber Hu and Helena Rong
+
+are resistant to external inspection by design. The properties that
+make the system trustless—the guarantee that no party can tamper
+with or observe execution—are precisely the properties that prevent
+the transparency auditing requires [26]. This creates a tension
+between the sociotechnical requirements for explainability and
+the technical guarantees that enable trustless operation.
+Impact assessment assumes ex-ante evaluation before deployment [49, 56]. Agents that can spawn new agents, modify their
+behavior through learning, or evolve through interaction may develop capabilities beyond any initial assessment [39]. And because
+deployment on permissionless infrastructure requires no approval,
+there is no gate at which assessment could be mandated. The decentralized physical infrastructure networks explicitly enable anyone
+to deploy computational workloads without prior authorization
+[1].
+The layered stack does not merely make accountability difficult—
+it makes traditional accountability mechanisms categorically inapplicable. Each layer’s design optimizes for properties (censorship
+resistance, privacy, trustlessness) that are in tension with the observability and controllability that accountability requires [25, 48]. As
+Dobbe argues, safety and accountability in complex sociotechnical
+systems are emergent properties rather than guaranteed outcomes—
+they arise from ongoing interactions among agents, users, institutions, and environments, rather than being fixed at design time
+[25].
+
+6
+
+Discussion: Research Directions for
+Infrastructural Sovereignty Governance
+
+The analysis above presents a sobering picture for AI governance.
+The very properties that make decentralized infrastructure valuable—
+resistance to censorship, protection of privacy, elimination of trusted
+intermediaries—are the properties that undermine traditional accountability mechanisms [60, 81]. This is not an incidental conflict
+but a structural tension between the design goals of trustless systems and the requirements of responsible governance [24, 27].
+Yet it would be premature to conclude that governance is impossible. Rather, the emergence of infrastructurally sovereign agents
+demands new thinking about what governance means and how it
+might be achieved in systems designed to resist external control
+[14, 40]. Drawing on Lessig’s formulation that “code is law,” we recognize that governance in decentralized systems increasingly takes
+the form of design decisions embedded in foundational infrastructures rather than rules imposed solely through external institutions
+[29, 50]. Protocols define standardized interaction rules that enable
+decentralized control, embedding governance objectives directly
+into the technical substrate [43]. We outline several directions that
+warrant sustained research attention.
+The relationship between infrastructure design and governance
+capacity deserves systematic investigation. Current decentralized
+systems optimize heavily for censorship resistance and privacy,
+treating any capacity for intervention as a vulnerability to be eliminated [35]. But this represents a particular set of design choices,
+not a technical necessity. Research might explore whether alternative architectures could preserve meaningful decentralization while
+enabling targeted intervention under carefully specified conditions
+[71]. What would it mean to design infrastructure that is resistant
+
+Sovereign Agents: Towards Infrastructural Sovereignty and Diffused Accountability in Decentralized AI
+
+to arbitrary override while remaining responsive to legitimate governance demands? How might such designs distinguish legitimate
+from illegitimate intervention without reintroducing the trusted
+intermediaries that decentralization aims to eliminate?
+The question of pre-deployment governance mechanisms warrants attention. If post-deployment intervention is structurally
+limited, then the design choices made before deployment become
+correspondingly more consequential [25]. This suggests examining what governance-relevant constraints could be encoded into
+agent architectures, smart contracts, and protocol rules before systems become operational. Research might investigate how such
+pre-commitments could be made credible and verifiable, and what
+institutional arrangements might standardize governance-aware
+design practices in decentralized AI development [27]. As sociotechnical governance scholars argue, safety and legitimacy are emergent
+properties that depend on how systems are interpreted, enforced,
+and modified over time [24, 48].
+The role of economic mechanisms in governance of infrastructurally sovereign systems requires exploration. Even when direct
+technical intervention is impossible, economic incentives continue
+to operate [4]. Agents depend on token markets for funding, on
+DePIN providers for compute, and on blockchain networks for
+coordination [1]. These economic dependencies create potential
+governance leverage points that do not require direct control over
+agent behavior. Research might examine how economic mechanisms could be designed to align agent behavior with social values,
+and what risks arise from governance-by-incentive rather than
+governance-by-control. The phenomenon of “hyper-financialization”
+in decentralized agent ecosystems, where every interaction becomes monetized and agent competition for capital can overwhelm
+other civic or creative goals, presents both opportunities and risks
+for economic governance mechanisms [4].
+The emergence of new forms of collective action in decentralized
+systems presents governance opportunities. While no single party
+may be able to override a sovereign agent, coordinated action by
+multiple parties might achieve effects that individual action cannot [36]. Protocol governance processes, validator coordination,
+and community-driven initiatives represent emerging mechanisms
+for collective decision-making in decentralized systems. Research
+might investigate how such collective mechanisms could be mobilized for governance purposes, what legitimacy challenges they
+face, and how they might interface with traditional legal and regulatory institutions [14]. Early efforts illustrate how governance
+concerns are being relocated into the agentic infrastructure itself
+through proposals such as “Know Your Agent” (KYA) frameworks
+that treat agent identity and reputation as governance primitives
+[13], Agent-to-Agent (A2A) protocols that structure inter-agent
+interaction through published capabilities and verification mechanisms [34], and initiatives like ERC-8004 that introduce modular
+trust layers combining identity, reputation, economic incentives,
+and cryptographic verification [19].
+The international and jurisdictional dimensions of infrastructural sovereignty demand attention. Decentralized infrastructure
+operates across national boundaries, and agents may have no identifiable national domicile [40]. This creates challenges for governance
+frameworks organized around territorial jurisdiction. Yet it also
+creates opportunities for international cooperation, as no single
+
+Conference’17, July 2017, Washington, DC, USA
+
+jurisdiction can effectively govern global infrastructure alone [59].
+Research might explore what international governance arrangements could address cross-border challenges, and how existing
+international institutions might adapt to the novel configurations
+of authority and control that infrastructural sovereignty presents.
+The ethical and philosophical foundations of accountability in infrastructurally sovereign systems require examination. If traditional
+conditions for accountability—the existence of identifiable responsible parties with capacity for control—cannot be satisfied, does
+accountability remain a coherent concept [62]? Or must we develop
+alternative normative frameworks suited to systems where responsibility is diffused across layers and agents are not natural persons
+[23, 32]? Research might investigate what ethical frameworks are
+adequate to distributed systems, how we should assign responsibility when causal contributions are dispersed, and what justice
+requires when traditional remedies are unavailable. The concept of
+“moral entanglement” may prove relevant here—recognizing that
+parties become vicariously responsible for an agent’s downstream
+actions even when they lack direct day-to-day control [32].
+The relationship between infrastructural sovereignty and existing AI governance efforts deserves clarification. Substantial work
+on AI ethics, fairness, accountability, and transparency has developed frameworks, principles, and practices for responsible AI
+development and deployment [28, 46, 58]. But this work has largely
+assumed centralized development and deployment contexts where
+identifiable organizations maintain control over systems [26, 27].
+Research might examine how existing frameworks apply—or fail
+to apply—to decentralized contexts, and what adaptations would
+be needed to extend responsible AI practices to infrastructurally
+sovereign agents. A sociotechnical perspective cautions against
+interpreting protocol governance as a definitive solution; as Dobbe
+emphasizes, safety is an emergent property of complex sociotechnical systems rather than an absolute or static condition [25]. No
+individual agent can be made completely safe across all contexts; instead, safety arises from ongoing interactions among agents, users,
+institutions, and environments.
+Finally, the empirical study of actually existing decentralized AI
+systems can inform theoretical development. Systems like Spore.fun,
+Truth Terminal, and Freysa AI provide natural experiments in infrastructural sovereignty, generating data about how such systems
+behave, what harms they cause, what governance challenges they
+present, and how communities respond [5, 39]. Research might
+develop methodologies for studying these systems, document their
+evolution and impacts, and draw lessons that inform both theory
+and practice. The growing body of research on decentralized AI
+(DeAI) ecosystems provides a foundation for such empirical investigation [77, 79].
+
+7
+
+Conclusion
+
+This paper has introduced infrastructural sovereignty as an analytic
+lens for understanding AI agents deployed on decentralized infrastructure. Unlike institutional sovereignty, which derives from political recognition and legal frameworks, infrastructural sovereignty
+emerges from the technical properties of layered distributed systems that resist unilateral override. We have argued that such systems exist on a spectrum of infrastructural hardness and that agents
+
+Conference’17, July 2017, Washington, DC, USA
+
+exhibiting high degrees of agentic sovereignty create distinctive
+governance challenges.
+Our analysis reveals that the layered nature of the infrastructural
+stack—from physical cables through internet protocols, blockchain
+networks, DePIN coordination, and TEE enclaves to the agent itself—
+produces diffused accountability. At each layer, the party providing
+infrastructure has legitimate grounds for not bearing accountability
+for layers above, and the technical design systematically eliminates
+the observability and controllability that traditional accountability
+requires.
+The emergence of sovereign AI agents is not a distant possibility but an ongoing development. As the technical infrastructure
+supporting such agents matures and becomes more accessible, we
+should expect proliferation. The governance frameworks developed
+for centralized AI systems are inadequate to this new configuration
+of autonomy and control. New theoretical frameworks, empirical
+research, and institutional innovations are needed to address the
+challenges that infrastructural sovereignty presents.
+
+References
+[1] 2024. Decentralized Physical Infrastructure Networks (DePIN): Challenges
+and Opportunities.
+IEEE Internet of Things Magazine (2024).
+https:
+//ieeexplore.ieee.org/document/10737386
+IEEE document 10737386; DOI
+10.1109/IOTM.001.2400135 not resolvable; related preprint: https://doi.org/10.
+48550/arXiv.2406.02239.
+[2] Giorgio Agamben. 1998. Homo Sacer: Sovereign Power and Bare Life. Stanford
+University Press. doi:10.1515/9780804764025 Originally published 1998; DOI
+resolves to 2020 digital edition.
+[3] Giorgio Agamben and Kevin Attell. 2004. State of Exception. University of Chicago
+Press. doi:10.7208/chicago/9780226009261.001.0001
+[4] Lennart Ante. 2025. Autonomous AI Agents in Decentralized Finance: Market
+Dynamics, Application Areas, and Theoretical Implications. (2025). doi:10.2139/
+ssrn.5055677
+[5] Lennart Ante. 2025. Transforming Finance: AI Agents and the Evolution of
+Autonomous Economic Actors. SSRN Electronic Journal (2025). https://papers.
+ssrn.com/sol3/papers.cfm?abstract_id=5049633 DOI 10.2139/ssrn.5049633 not yet
+in DOI system; see https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5049633.
+[6] Jens Bartelson. 1995. A Genealogy of Sovereignty. Cambridge University Press.
+doi:10.1017/cbo9780511586385
+[7] Isaiah Berlin. 2002. Liberty. Oxford University Press. doi:10.1093/019924989x.
+001.0001
+[8] Jean Bodin. 1992. Bodin: On Sovereignty. Cambridge University Press. doi:10.
+1017/CBO9780511802812
+[9] Benjamin H. Bratton. 2016. The Stack: On Software and Sovereignty. The MIT
+Press. doi:10.7551/mitpress/9780262029575.001.0001
+[10] Joy Buolamwini and Timnit Gebru. 2018. Gender Shades: Intersectional Accuracy Disparities in Commercial Gender Classification. In Proceedings of the 1st
+Conference on Fairness, Accountability and Transparency (Proceedings of Machine
+Learning Research, Vol. 81). PMLR, 77–91. https://proceedings.mlr.press/v81/
+buolamwini18a.html PMLR proceedings; no DOI assigned.
+[11] Vitalik Buterin. 2014. Ethereum White Paper: A Next Generation Smart Contract
+and Decentralized Application Platform. https://ethereum.org/whitepaper/
+Whitepaper; no DOI.
+[12] Luciano Cavalcante Siebert, Maria Luce Lupetti, Evgeni Aizenberg, Niek Beckers,
+Arkady Zgonnikov, Herman Veluwenkamp, David Abbink, Elisa Giaccardi, GeertJan Houben, Catholijn M. Jonker, Jeroen van den Hoven, Deborah Forster, and
+Reginald L. Lagendijk. 2022. Meaningful human control: actionable properties
+for AI system development. AI and Ethics 3, 1 (May 2022), 241–255. doi:10.1007/
+s43681-022-00167-3
+[13] Tomer Jordi Chaffer. 2025. Know Your Agent: Governing AI Identity on the
+Agentic Web. (2025). doi:10.2139/ssrn.5162127
+[14] Tomer Jordi Chaffer, Charles von Goins, Bayo Okusanya, Dontrail Cotlage, and
+Justin Goldston. 2024. Decentralized Governance of Autonomous AI Agents.
+doi:10.48550/ARXIV.2412.17114
+[15] Julie E. Cohen. 2019. Between Truth and Power: The Legal Constructions of Informational Capitalism. Oxford University Press. doi:10.1093/oso/9780190246693.
+001.0001
+[16] A. Feder Cooper, Emanuel Moss, Benjamin Laufer, and Helen Nissenbaum. 2022.
+Accountability in an Algorithmic Society: Relationality, Responsibility, and Robustness in Machine Learning. In Proceedings of the 2022 ACM Conference on
+
+Botao Amber Hu and Helena Rong
+
+Fairness, Accountability, and Transparency (FAccT ’22). Association for Computing
+Machinery, 864–876. doi:10.1145/3531146.3533150
+[17] Victor Costan and Srinivas Devadas. 2016. Intel SGX Explained. Technical Report
+2016/086. Cryptology ePrint Archive. iacr:2016/086 https://eprint.iacr.org/2016/
+086 IACR ePrint; no DOI.
+[18] Stephane Couture and Sophie Toupin. 2019. What does the notion of “sovereignty”
+mean when referring to the digital? New Media & Society 21, 10 (Aug. 2019),
+2305–2322. doi:10.1177/1461444819865984
+[19] Marco De Rossi, Davide Crapis, and Jordan Ellis. 2025. ERC-8004: Trustless Agents.
+Ethereum Improvement Proposal. https://eips.ethereum.org/EIPS/eip-8004 EIP;
+no DOI.
+[20] Ronald J. Deibert. 2003. Black Code: Censorship, Surveillance, and the Militarisation of Cyberspace. Millennium: Journal of International Studies 32, 3 (Dec. 2003),
+501–530. doi:10.1177/03058298030320030801
+[21] Laura DeNardis. 2012. HIDDEN LEVERS OF INTERNET CONTROL: An
+infrastructure-based theory of Internet governance. Information, Communication
+& Society 15, 5 (Feb. 2012), 720–738. doi:10.1080/1369118x.2012.659199
+[22] Laura DeNardis and Francesca Musiani. 2016. Governance by Infrastructure.
+Palgrave Macmillan US, 3–21. doi:10.1057/9781137483591_1
+[23] Virginia Dignum. 2019. Responsible Artificial Intelligence: How to Develop and Use
+AI in a Responsible Way. Springer International Publishing. doi:10.1007/978-3030-30371-6
+[24] Roel Dobbe and Anouk Wolters. 2024. Toward Sociotechnical AI: Mapping
+Vulnerabilities for Machine Learning in Context. Minds and Machines 34, 2 (May
+2024). doi:10.1007/s11023-024-09668-y
+[25] Roel I. J. Dobbe. 2022. System Safety and Artificial Intelligence. Oxford University
+Press, 441–458. doi:10.1093/oxfordhb/9780197579329.013.67
+[26] Upol Ehsan, Koustuv Saha, Munmun De Choudhury, and Mark O. Riedl. 2023.
+Charting the Sociotechnical Gap in Explainable AI: A Framework to Address the
+Gap in XAI. Proceedings of the ACM on Human-Computer Interaction 7, CSCW1
+(April 2023), 1–32. doi:10.1145/3579467
+[27] K. J. Kevin Feng, Rock Yuren Pang, Tzu-Sheng Kuo, Amy Winecoff, Emily Tseng,
+David Gray Widder, Harini Suresh, Katharina Reinecke, and Amy X. Zhang.
+2025. Sociotechnical AI Governance: Challenges and Opportunities for HCI. In
+Proceedings of the Extended Abstracts of the CHI Conference on Human Factors in
+Computing Systems (CHI EA ’25). ACM, 1–6. doi:10.1145/3706599.3706747
+[28] Luciano Floridi, Josh Cowls, Monica Beltrametti, Raja Chatila, Patrice Chazerand,
+Virginia Dignum, Christoph Luetge, Robert Madelin, Ugo Pagallo, Francesca
+Rossi, Burkhard Schafer, Peggy Valcke, and Effy Vayena. 2018. AI4People—An
+Ethical Framework for a Good AI Society: Opportunities, Risks, Principles, and
+Recommendations. Minds and Machines 28, 4 (Nov. 2018), 689–707. doi:10.1007/
+s11023-018-9482-5
+[29] Alexander R. Galloway. 2004. Protocol: How Control Exists after Decentralization.
+The MIT Press. doi:10.7551/mitpress/5658.001.0001
+[30] Alexander R. Galloway and Eugene Thacker. 2007. The Exploit: A Theory of Networks. Electronic Mediations, Vol. 21. University of Minnesota Press, Minneapolis,
+MN. https://www.upress.umn.edu/book-division/books/the-exploit
+[31] Tarleton Gillespie. 2019. Custodians of the Internet: Platforms, Content Moderation,
+and the Hidden Decisions That Shape Social Media. Yale University Press. doi:10.
+12987/9780300235029
+[32] Trystan S. Goetze. 2021. Moral Entanglement: Taking Responsibility and Vicarious Responsibility. The Monist 104, 2 (March 2021), 210–223. doi:10.1093/monist/
+onaa033
+[33] Leo Gross. 1948. The Peace of Westphalia, 1648–1948. American Journal of
+International Law 42, 1 (Jan. 1948), 20–41. doi:10.2307/2193560
+[34] Idan Habler, Ken Huang, Vineeth Sai Narajala, and Prashant Kulkarni. 2025.
+Building A Secure Agentic AI Application Leveraging A2A Protocol. doi:10.
+48550/ARXIV.2504.16902
+[35] Dominik Harz and Magnus Boman. 2019. The Scalability of Trustless Trust.
+Springer Berlin Heidelberg, 279–293. doi:10.1007/978-3-662-58820-8_19
+[36] Samer Hassan and Primavera De Filippi. 2021. Decentralized Autonomous Organization. Internet Policy Review 10, 2 (April 2021). doi:10.14763/2021.2.1556
+[37] F. H. Hinsley. 1986. Sovereignty (2 ed.). Cambridge University Press. No DOI
+available.
+[38] Gerrit Hornung and Christoph Schnabel. 2009. Data protection in Germany I:
+The population census decision and the right to informational self-determination.
+Computer Law & Security Review 25, 1 (2009), 84–88. doi:10.1016/j.clsr.2008.11.002
+[39] Botao Amber Hu and Helena Rong. 2025. Spore in the Wild: A Case Study of
+Spore.fun as an Open-Environment Evolution Experiment with Sovereign AI
+Agents on TEE-Secured Blockchains. doi:10.48550/ARXIV.2506.04236
+[40] Botao “Amber” Hu, Helena Rong, and Janna Tay. 2025. Is Decentralized Artificial
+Intelligence Governable? Towards Machine Sovereignty and Human Symbiosis.
+(2025). doi:10.2139/ssrn.5110089
+[41] Patrik Hummel, Matthias Braun, Max Tretter, and Peter Dabrock. 2021. Data
+sovereignty: A review. Big Data & Society 8, 1 (Jan. 2021). doi:10.1177/
+2053951720982012
+
+Sovereign Agents: Towards Infrastructural Sovereignty and Diffused Accountability in Decentralized AI
+
+[42] Robert H. Jackson. 1990.
+Quasi-States: Sovereignty, International Relations and the Third World.
+Cambridge University Press, Cambridge, UK.
+https://www.cambridge.org/core/books/quasi-states/
+D7A4579413072EFCA01AE8075669FE57
+[43] Steven J. Jackson, Tarleton Gillespie, and Sandy Payette. 2014. The Policy Knot: Reintegrating Policy, Practice and Design in CSCW Studies of Social Computing. In
+Proceedings of the 17th ACM Conference on Computer Supported Cooperative Work
+& Social Computing (CSCW ’14). ACM, 588–602. doi:10.1145/2531602.2531674
+[44] Jagadesh Jamjala. 2024. The Freysa.AI Experiment: A Story of AI, Cryptocurrency,
+and a $50,000 Prize Money. https://medium.com/@jagadeshjamjalanarayanan/
+the-freysa-ai-experiment-a-story-of-ai-cryptocurrency-and-a-50-000-prizemoney-84871e1436d7 Medium blog post; no DOI.
+[45] Patrick Jauernig, Ahmad-Reza Sadeghi, and Emmanuel Stapf. 2020. Trusted
+Execution Environments: Properties, Applications, and Challenges. IEEE Security
+& Privacy 18, 2 (March 2020), 56–60. doi:10.1109/msec.2019.2947124
+[46] Anna Jobin, Marcello Ienca, and Effy Vayena. 2019. The global landscape of
+AI ethics guidelines. Nature Machine Intelligence 1, 9 (Sept. 2019), 389–399.
+doi:10.1038/s42256-019-0088-2
+[47] Stephen D. Krasner. 1999. Sovereignty: Organized Hypocrisy. Princeton University
+Press. doi:10.1515/9781400823260
+[48] Olya Kudina and Ibo van de Poel. 2024. A sociotechnical system perspective on
+AI. Minds and Machines 34, 3 (June 2024). doi:10.1007/s11023-024-09680-2
+[49] Khoa Lam, Benjamin Lange, Borhane Blili-Hamelin, Jovana Davidovic, Shea
+Brown, and Ali Hasan. 2024. A Framework for Assurance Audits of Algorithmic
+Systems. In The 2024 ACM Conference on Fairness, Accountability, and Transparency (FAccT ’24). ACM, 1078–1092. doi:10.1145/3630106.3658957
+[50] Lawrence Lessig. 2000. Code is Law: On Liberty in Cyberspace. Harvard Magazine
+1 (2000). https://www.harvardmagazine.com/2000/01/code-is-law-html No DOI.
+[51] Mengyuan Li, Yinqian Zhang, Zhiqiang Lin, and Yan Solihin. 2019. Exploiting
+Unprotected I/O Operations in AMD’s Secure Encrypted Virtualization. In 28th
+USENIX Security Symposium. USENIX Association, 1257–1272. https://www.
+usenix.org/conference/usenixsecurity19/presentation/li-mengyuan USENIX proceedings; no DOI.
+[52] Xiaoguo Li, Bowen Zhao, Guomin Yang, Tao Xiang, Jian Weng, and Robert H.
+Deng. 2023. A Survey of Secure Computation Using Trusted Execution Environments. doi:10.48550/ARXIV.2302.12150
+[53] Yang Liu, Yuanshun Yao, Jean-Francois Ton, Xiaoying Zhang, Ruocheng Guo, Hao
+Cheng, Yegor Klochkov, Muhammad Faaiz Taufiq, and Hang Li. 2023. Trustworthy
+LLMs: a Survey and Guideline for Evaluating Large Language Models’ Alignment.
+doi:10.48550/ARXIV.2308.05374
+[54] John Locke. 1988. John Locke Two Treatises of Government. Cambridge University
+Press. doi:10.1017/cbo9780511810268
+[55] Andreas Matthias. 2004. The responsibility gap: Ascribing responsibility for
+the actions of learning automata. Ethics and Information Technology 6, 3 (2004),
+175–183. doi:10.1007/s10676-004-3422-1
+[56] Jacob Metcalf, Emanuel Moss, Elizabeth Anne Watkins, Ranjit Singh, and
+Madeleine Clare Elish. 2021. Algorithmic Impact Assessments and Accountability: The Co-construction of Impacts. In Proceedings of the 2021 ACM Conference on Fairness, Accountability, and Transparency (FAccT ’21). ACM, 735–746.
+doi:10.1145/3442188.3445935
+[57] John Stuart Mill. 2015. On Liberty, Utilitarianism and Other Essays. Oxford
+University Press. doi:10.1093/owc/9780199670802.001.0001
+[58] Brent Mittelstadt. 2019. Principles alone cannot guarantee ethical AI. Nature
+Machine Intelligence 1, 11 (Nov. 2019), 501–507. doi:10.1038/s42256-019-0114-4
+[59] Milton L Mueller. 2019. Against Sovereignty in Cyberspace. International Studies
+Review 22, 4 (Sept. 2019), 779–801. doi:10.1093/isr/viz044
+[60] Kelsie Nabben and Michael Zargham. 2022. Permissionlessness. Internet Policy
+Review 11, 2 (April 2022). doi:10.14763/2022.2.1656
+[61] Helen Nissenbaum. 1996. Accountability in a Computerized Society. Science and
+Engineering Ethics 2, 1 (March 1996), 25–42. doi:10.1007/BF02639315
+[62] Claudio Novelli, Mariarosaria Taddeo, and Luciano Floridi. 2023. Accountability
+in artificial intelligence: what it is and how it works. AI & SOCIETY 39, 4 (Feb.
+2023), 1871–1882. doi:10.1007/s00146-023-01635-y
+[63] Andreas Osiander. 2001. Sovereignty, International Relations, and the Westphalian Myth. International Organization 55, 2 (2001), 251–287. doi:10.1162/
+00208180151140577
+[64] Atharv Singh Patlan, Peiyao Sheng, S. Ashwin Hebbar, Prateek Mittal, and Pramod
+Viswanath. 2025. Real AI Agents with Fake Memories: Fatal Context Manipulation
+Attacks on Web3 Agents. doi:10.48550/ARXIV.2503.16248
+[65] Daniel Philpott. 2001. Revolutions in Sovereignty: How Ideas Shaped Modern
+International Relations. Princeton University Press. doi:10.1515/9781400824236
+[66] Julia Pohle and Thorsten Thiel. 2020. Digital sovereignty. Internet Policy Review
+9, 4 (Dec. 2020). doi:10.14763/2020.4.1532
+[67] Inioluwa Deborah Raji, Andrew Smart, Rebecca N. White, Margaret Mitchell,
+Timnit Gebru, Ben Hutchinson, Jamila Smith-Loud, Daniel Theron, and Parker
+Barnes. 2020. Closing the AI accountability gap: defining an end-to-end
+framework for internal algorithmic auditing. In Proceedings of the 2020 Conference on Fairness, Accountability, and Transparency (FAT* ’20). ACM, 33–44.
+
+Conference’17, July 2017, Washington, DC, USA
+
+doi:10.1145/3351095.3372873
+[68] Filippo Santoni de Sio and Giulio Mecacci. 2021. Four Responsibility Gaps with
+Artificial Intelligence: Why they Matter and How to Address them. Philosophy &
+Technology 34, 4 (May 2021), 1057–1084. doi:10.1007/s13347-021-00450-x
+[69] Filippo Santoni de Sio and Jeroen van den Hoven. 2018. Meaningful Human
+Control over Autonomous Systems: A Philosophical Account. Frontiers in Robotics
+and AI 5 (Feb. 2018). doi:10.3389/frobt.2018.00015
+[70] Carl Schmitt, George Schwab, and Tracy B. Strong. 2005. Political Theology: Four
+Chapters on the Concept of Sovereignty. University of Chicago Press. doi:10.7208/
+chicago/9780226738901.001.0001
+[71] Oshani Seneviratne. 2024. The Feasibility of a Smart Contract “Kill Switch”.
+In 2024 6th International Conference on Blockchain Computing and Applications
+(BCCA). IEEE, 473–480. doi:10.1109/bcca62388.2024.10844477
+[72] PETER M. R. STIRK. 2011. The Westphalian model and sovereign equality. Review
+of International Studies 38, 3 (May 2011), 641–660. doi:10.1017/s0260210511000192
+[73] Dennis F. Thompson. 1980. Moral Responsibility of Public Officials: The Problem
+of Many Hands. American Political Science Review 74, 4 (Dec. 1980), 905–916.
+doi:10.2307/1954312
+[74] Dennis F. Thompson. 2014. Responsibility for Failures of Government: The
+Problem of Many Hands. The American Review of Public Administration 44, 3
+(March 2014), 259–273. doi:10.1177/0275074014524013
+[75] Palina Tolmach, Yi Li, Shang-Wei Lin, Yang Liu, and Zengxiang Li. 2021. A Survey
+of Smart Contract Formal Specification and Verification. Comput. Surveys 54, 7
+(July 2021), 1–38. doi:10.1145/3464421
+[76] Jo Van Bulck, Marina Minkin, Ofir Weisse, Daniel Genkin, et al. 2018. Foreshadow: Extracting the Keys to the Intel SGX Kingdom with Transient Out-ofOrder Execution. In 27th USENIX Security Symposium. USENIX Association, 991–
+1008. https://www.usenix.org/conference/usenixsecurity18/presentation/bulck
+USENIX proceedings; no DOI.
+[77] Shaw Walters, Sam Gao, Shakker Nerd, Feng Da, Warren Williams, Ting-Chien
+Meng, Amie Chow, Hunter Han, Frank He, Allen Zhang, Ming Wu, Timothy Shen,
+Maxwell Hu, and Jerry Yan. 2025. Eliza: A Web3 friendly AI Agent Operating
+System. doi:10.48550/ARXIV.2501.06781
+[78] Lei Wang, Chen Ma, Xueyang Feng, Zeyu Zhang, Hao Yang, Jingsen Zhang,
+Zhiyuan Chen, Jiakai Tang, Xu Chen, Yankai Lin, Wayne Xin Zhao, Zhewei Wei,
+and Jirong Wen. 2024. A survey on large language model based autonomous
+agents. Frontiers of Computer Science 18, 6 (March 2024). doi:10.1007/s11704-02440231-1
+[79] Zhipeng Wang, Rui Sun, Elizabeth Lui, Vatsal Shah, Xihan Xiong, Jiahao Sun,
+Davide Crapis, and William Knottenbelt. 2024. SoK: Decentralized AI (DeAI).
+doi:10.48550/ARXIV.2411.17461
+[80] Max Weber. 2004. Politics as a Vocation. In The Vocation Lectures, David Owen
+and Tracy B. Strong (Eds.). Hackett Publishing Company, Indianapolis, IN.
+[81] Kevin D. Werbach. 2016. Trustless Trust. SSRN Electronic Journal (2016). doi:10.
+2139/ssrn.2844409
+[82] Gavin Wood. 2014. Ethereum: A Secure Decentralised Generalised Transaction
+Ledger. Technical Report. https://ethereum.github.io/yellowpaper/paper.pdf
+Ethereum Yellow Paper; no DOI.
+[83] Shoshana Zuboff. 2015. Big other: Surveillance Capitalism and the Prospects
+of an Information Civilization. Journal of Information Technology 30, 1 (March
+2015), 75–89. doi:10.1057/jit.2015.5
+[84] Shoshana Zuboff. 2019. The Age of Surveillance Capitalism: The Fight for
+a Human Future at the New Frontier of Power. PublicAffairs, New York,
+NY. https://www.publicaffairsbooks.com/titles/shoshana-zuboff/the-age-ofsurveillance-capitalism/9781610395694/
+
+Conference’17, July 2017, Washington, DC, USA
+
+A
+
+Disclosure of the usage of LLM
+
+We used ChatGPT (GPT-5.2 model) to assist with writing this manuscript. Specific uses included:
+• Brainstorming ideas
+
+Botao Amber Hu and Helena Rong
+
+• Correcting grammar and spelling errors
+• Researching relevant references
+• Polishing existing drafts
+
+

@@ -1,0 +1,1695 @@
+HPCCFA: Leveraging Hardware Performance Counters for Control Flow
+Attestation
+Claudius Pott
+
+arXiv:2603.29749v1 [cs.CR] 31 Mar 2026
+
+University of Lübeck
+Lübeck, Germany
+c.pott@uni-luebeck.de
+
+Luca Wilke
+
+Jan Wichelmann
+
+Thomas Eisenbarth
+
+University of Lübeck
+Azure Research
+University of Lübeck
+Lübeck, Germany
+Microsoft
+Lübeck, Germany
+Cambridge, UK
+j.wichelmann@uni-luebeck.de thomas.eisenbarth@uni-luebeck.de
+l.wilke@uni-luebeck.de
+
+Abstract—Trusted Execution Environments (TEEs) allow the
+secure execution of code on remote systems without the need
+to trust their operators. They use static attestation as a
+central mechanism for establishing trust, allowing remote
+parties to verify that their code is executed unmodified in
+an isolated environment. However, this form of attestation
+does not cover runtime attacks, where an attacker exploits
+vulnerabilities in the software inside the Trusted Execution
+Environment (TEE). Control Flow Attestation (CFA), a form
+of runtime attestation, is designed to detect such attacks.
+In this work, we present a method to extend TEEs
+with CFA and discuss how it can prevent exploitation in
+the event of detected control flow violations. Furthermore,
+we introduce HPCCFA, a mechanism that uses Hardware
+Performance Counters (HPCs) for CFA purposes, enabling
+hardware-backed trace generation on commodity CPUs. We
+demonstrate the feasibility of HPCCFA on a proof-of-concept
+implementation for Keystone on RISC-V. Our evaluation
+investigates the interplay of the number of measurement
+points and runtime protection, and reveals a trade-off between detection reliability and performance overhead.
+Index Terms—control flow attestation, hardware performance counter, trusted execution environment, Keystone,
+RISC-V
+
+1. Introduction
+The use of Trusted Execution Environments (TEEs),
+especially in cloud settings, is becoming ever more prevalent. TEEs allow the execution of code in enclaves and
+provide a range of security guarantees, such as isolation,
+confidentiality, and integrity. A central security mechanism is static attestation, where the TEE measures the
+state of the enclaves after initialization, thus being able to
+attest this initial state to remote parties. This prevents the
+host OS from tampering with the enclave’s binary, as any
+modifications would show up in the attestation report.
+However, these mechanisms are not suitable to detect
+or prevent runtime attacks, where an enclave is targeted
+after its initialization. Prominent examples of runtime attacks are Return-Oriented Programming (ROP) and JumpOriented Programming (JOP) attacks. Runtime attestation
+provides the means to detect such attacks. One runtime
+attestation concept is Control Flow Attestation (CFA),
+where the goal is to ensure that a program’s execution
+
+follows the expected control flow. A long line of work
+[1]–[7] explores different approaches for CFA. Most of
+them rely on a remote verifier [1]–[5], [7], and a common
+assumption is a trusted operating system [5], [7]. The approach proposed by [8] is related to the concept presented
+in this paper. It also uses two enclaves running on the same
+system to enable and protect its attestation. However, their
+design relies on the components of the traced enclave for
+parts of the trace generation, which could be problematic
+if it is fully compromised. Furthermore, they are creating
+their Control Flow Graphs (CFGs) by tracing benign
+executions of their program, which introduces the risk of
+falsely rejecting valid control flows, due to an incomplete
+CFG.
+In this work, we present HPCCFA, a CFA design
+for TEEs. It allows live verification of code running in
+enclaves and is able to prevent leakages before they take
+effect. The design also incorporates a clean separation
+of the traced code and the generation of the necessary
+traces, preventing fully compromised enclaves from tampering with their traces. Additionally, the verification is
+performed on the same physical system, avoiding any
+latencies incurred by sending the traces through a network.
+Lastly, the design does not require any hardware modifications, making it applicable to generic and commonly
+available hardware.
+The key to accomplish this is to run the attested code
+in one enclave and have a connected enclave responsible for the attestation. Our design requires only minimal
+changes to the TEE to enable mutual authentication between two enclaves and provide trace generation capabilities, while integrating well with existing approaches
+to gather control flow data. However, these approaches
+require either software instrumentation, which could potentially be overcome by an attacker, or hardware changes,
+which exclude existing hardware, to trace the control flow.
+Therefore, as a second contribution, we present HPCCFA. It implements our CFA design and uses the existing
+Hardware Performance Counter architecture to generate
+traces for the Control Flow Attestation. It does not require
+hardware changes and does not debend on the monitored
+application to generate its own traces. To this end, the
+TEE takes snapshots of the performance counter values
+every time control passes to or from the traced enclave.
+These snapshots are then passed to the tracer enclave
+which performs its verification. This relies on the CFG
+of the traced enclave in combination with accurate Hard-
+
+ware Performance Counter (HPC) predictions for each
+transition. The approach is designed to never reject valid
+control flows, thus eliminating the risk of false alarms
+and erroneous program terminations. We provide a proofof-concept implementation of HPCCFA for Keystone on
+RISC-V using the quad core StarFive VisionFive2 SoC.
+Our evaluation shows that the concept works effectively for shorter or less complex program sequences,
+although it also shows a low detection rate for long and
+complex program sequences Based on these insights, we
+explore how the addition of measurement points can keep
+all sequences of an enclave short and, therefore, allow
+reliable CFA for entire enclaves.
+
+flow violations. However, the aspect of detecting such violations paired with the ability to prevent a compromised
+enclave from leaking any data also shows parallels to CFI
+approaches.
+Other mechanisms in the field of runtime attestation
+are not based on the control flow of the attested programs.
+Examples for these are [9] and [10]. While [9] introduces
+a concept that allows memory introspection for SGX
+enclaves without breaking their security guarantees, [10]
+utilizes SGX to implement a component running on the
+hypervisor that can attest the runtime integrity of VMs to
+remote users.
+
+2.2. Trusted Execution Environments
+1.1. Our Contribution
+For our main contributions, we:
+•
+•
+•
+
+propose an architecture for flexible on device CFA
+and prototype it in Keystone
+present HPCCFA, an HPC-based CFA scheme and
+analyze its efficacy and performance
+discuss use cases of HPC for CFA.
+
+Our source code will be made available on Github.
+Outline. This paper is structured as follows. We begin
+with a summary of relevant background information (Section 2). Then follow up with an introduction to our general
+system design (Section 3) and the more concrete variant
+using HPCs (Section 4) that was implemented (Section 5)
+and evaluated (Section 6) in this paper. Afterwards, we
+analyze the security (Section 7) and discuss the approach
+and future work (Section 8). A discussion of related work
+(Section 9) will follow before closing with a conclusion
+(Section 10).
+
+2. Background
+We will begin with an introduction to runtime attestation, followed by information on TEEs and specifically
+on Keystone. We will then close this section with an
+introduction into HPCs.
+
+The concept of TEEs has been around for more than
+two decades. They provide CPUs with the capabilities to
+create an isolated execution environment that can be used
+to securely execute code, without the need to trust the host
+OS.
+Typical TEE applications have two separate components - the host application and the enclave. The host
+application runs within the context of the host OS, as
+any ordinary application would. Thus, it does not provide
+strong isolation guarantees, instead it is used to setup the
+enclave and serves as a communication interface between
+the trusted and untrusted world. In contrast, the enclave
+runs inside the isolated execution environment, providing
+strong protections even against the host OS. However,
+it also means that it is not able to access basic system
+resources, such as network interfaces or the host OS’s
+file system. When developing a trusted application, one
+defines an edge call (ecall) interface between the host
+application and its enclave. This interface can provide the
+enclave with access to system resources and allows the
+host application to send input to the enclave or receive
+output from it. Usually, this form of communication is
+enabled by the use of shared memory. Some tasks have
+to be completed by the TEE itself, such as cleaning
+up registers when switching out of a trusted context or
+blocking access to certain memory regions. This usually
+involves a trusted software component that we refer to as
+the Security Monitor (SM).
+
+2.1. Runtime Attestation
+2.3. Keystone
+As previously noted, one form of runtime attestation
+is CFA. Here, the system is usually split into two parties.
+One is the application whose control flow we want to
+attest, the other is an application that given some kind of
+control flow trace has to decide whether the trace complies
+with the expected control flow. Naturally, the former party
+is viewed as untrusted, the latter is viewed as trusted.
+The concepts of CFA and Control Flow Integrity (CFI)
+are closely related. The difference between the two is
+that CFA is providing a way to verify that the expected
+control flow was actually followed, while CFI mechanisms
+are preventing certain control flow attacks with additional
+security layers, e.g., Intel CET1 . We consider HPCCFA to
+be a CFA approach, because it does not prevent control
+1. https://www.intel.com/content/www/us/en/developer/articles/
+technical/technical-look-control-flow-enforcement-technology.html
+(Accessed 2025-04-04)
+
+Keystone [11] is an open-source TEE for RISC-V. It
+uses a programming model similar to Intel SGX, where
+the enclave is split into two parts – the host app and the
+eapp. The main task of the host application is to facilitate
+the loading of the eapp as well as to act as a proxy for
+the eapp to interact with the host system. The eapp can
+make use of both S-mode and U-mode, allowing it to set
+up its own runtime environment (e.g. Eyrie [11] or SeL42 ).
+The Security Monitor (SM) acts as the root of trust of the
+system by controlling the M-mode privilege level. It offers
+two APIs, one for the untrusted host apps and one that is
+available only to the trusted eapps. The former is used,
+for example, to create a new eapp while the latter can
+allow an eapp to engage in a nonce based protocol to
+retrieve its attestation report.
+2. https://sel4.systems/ (Accessed 2025-11-20)
+
+To isolate eapps from the remaining system, Keystone
+uses the optional Physical Memory Protection (PMP) [12,
+Sec 3.7] feature of RISC-V. This feature allows M-mode
+software, such as Keystone’s Security Monitor, to configure which physical address regions are accessible by
+the lower privilege levels. The SM updates the PMP rules
+when context switching into and out of eapps to achieve
+its isolation guarantees.
+
+2.4. Hardware Performance Counters
+HPCs also referred to as Hardware Performance Monitoring Counters, are counting units built into modern
+CPUs. They allow tracking a wide variety of hardware
+events during the CPU’s normal execution. HPCs were
+originally designed to provide developers with information
+about potential bottlenecks in their code, but have since
+been used to accomplish variety of tasks, e.g. Malware
+Detection [13], [14].
+In this work, we aim to accurately predict performance
+counter values for certain code blocks. We therefore differentiate between deterministic and non-deterministic performance counters, based on their behavior when running
+the same code multiple times. For example, information
+about cache hits and misses can differ between multiple
+runs of the same code, while the number of retired instructions and branches taken will always be the same.
+In this work we focus only on deterministic counters, as
+this allows us to exactly predict the performance counter
+values purely based on the executed code.
+
+3. System Design
+In this section, we give an overview of the general
+system design of our CFA approach.
+As outlined in the introduction, we designed our system with the following goals:
+1)
+2)
+3)
+4)
+
+Live verification of control flow data with low
+runtime overhead,
+Clean separation of traced code and control flow
+trace generation,
+Verification of control flow traces on the same
+physical system that the traced code runs on,
+No hardware modifications.
+
+This section will first explain our threat model and
+then give an overview of the concept on how to extend
+enclaves with CFA capabilities, followed by details on the
+trace generation and verification workflow.
+
+3.1. Threat Model
+We assume that the TEE provides the expected security guarantees and is implemented correctly, i.e. free from
+bugs. More concretely, we assume that the TEE performs
+static attestation on the initial contents of all enclaves to
+verify that they contain the expected code and that the
+attacker cannot directly read from or write to the memory
+of the enclave after initialization. We also assume that
+the hardware implementation of the system is bug-free,
+including the implementation of components like the HPC
+architecture and the PMP.
+
+The goal of our attacker is to leak secret data that is
+processed inside an enclave, so they have full control over
+the host operating system. Additionally, we assume that
+the software inside the traced enclave has vulnerabilities
+that allow an attacker to arbitarily manipulate the control
+flow via an externally accessible API.
+In this work, we are not considering side-channel
+attacks or hardware attacks to be in scope as these present
+an orthogonal issue. Further, we are assuming that the
+attacker has no interest in performing a Denial of Service
+attack, as this would be trivial for an OS-level attacker.
+
+3.2. General Runtime Attestation Concept
+Throughout this paper, we will call the application
+whose control flow we want to monitor the tracee; its
+counterpart, which is verifying the validity of the control
+flow data, is called the tracer. The control flow data that
+needs to be verified is also referred to as (control flow)
+trace. In our design, the tracer and the tracee are running
+inside their own enclaves inside a TEE. This has various
+advantages for both components.
+Running the tracee in an enclave drastically improves
+the security guarantees that we can achieve with a control
+flow trace. While the static attestation mechanism of the
+TEE allows us to prove the integrity of the tracee’s code
+at load time, the TEE’s isolation guarantees ensure that
+no external code can interfere with our application’s execution. Thus, all of the code that can potentially interfere
+with the execution of the tracee is proven to be initially
+benign and is continuously monitored afterwards.
+We need to evaluate the tracee’s control flow traces
+in a trustworthy environment. Commonly, this is done by
+sending them to a remote system, where the evaluation
+can happen independently [1]–[7]. When a (semi-)live
+verification of the control flow is desired, this adds a lot of
+latency. Since we already use a TEE for the tracee, we can
+avoid this bottleneck by running the tracer in an enclave
+as well. This fulfills the need for a trusted evaluation
+environment even on an untrusted system, thus enabling
+us to run both tracer and tracee on the same system,
+without compromising the security. This also allows us to
+use shared memory for low-latency and high-bandwidth
+transfer of the control flow traces.
+Immediately attesting the validity of each control flow
+instruction would add an impractical amount of overhead.
+Instead, we suggest leveraging the isolation model of
+TEEs to perform the verification in a slightly delayed,
+batched manner without increasing the security implications of a successful control flow attack inside the tracee’s
+enclave. The key insight to achieve this is that any malicious behavior of the tracee, e.g. as a result of a breached
+control flow, is acceptable as long as we are able to detect
+it before it can change any state outside of the boundary
+of the tracee’s enclave. We capitalize on this insight by
+prohibiting access to any shared memory areas between
+the enclave and the remaining untrusted system, until the
+control flow status of the enclave has been successfully
+verified. This fits well into the already established ecall
+programming model for secure enclaves.
+It is vital that the tracer and tracee enclaves are always
+executed in tandem, while neither is oblivious to the
+other. The tracee’s control flow information is security
+
+sensitive; therefore, it may only be read by its trusted
+tracer enclave. The tracee ensures that only a trusted tracer
+can be connected by specifying the tracer’s hash in its
+own metadata, which is covered by the static attestation
+and can be verified externally. On the other hand, a tracee
+enclave is only allowed to run while its tracer is attached,
+ensuring that the CFA has to be enabled.
+While it may be feasible to have one tracer that is able
+to attest multiple tracees even at the same time, doing so
+would not be practical, as this would require the tracer to
+be updated if any of its tracees is updated, which in turn
+would require all of the tracees to be updated with the
+tracers new hash.
+
+Figure 1. Verification workflow for a tracee tracer tandem. When the
+tracee performs an ecall, the SM ensures that the shared memory region
+is only accessible after the control flow has been verified by the tracer.
+
+3.3. Trace Generation
+Our tracer/tracee system design is not bound to a
+specific mechanism to obtain control flow data. On a
+high level, we simply require the mechanism to write the
+control flow data to a memory buffer managed by the
+SM that is inaccessible to any lower privileged software,
+especially the tracee. As detailed in the next section,
+the SM will forward the data to the tracer enclave and
+orchestrate the attestation process.
+In this paper, we explore the feasibility of using HPCs
+to gather control flow data. To this end, the SM manages
+the HPCs, which allows it to measure the execution of
+the tracee enclaves. It further makes them inaccessible to
+untrusted software and the enclave itself. During context
+switches out of a tracee enclave, it stores the collected
+HPC data in a buffer that the tracer can then access during
+verification. Using this approach, malicious code in the
+enclave cannot interfere with the measurement data. We
+explain our approach in detail in Section 4. Alternatively,
+it should be straightforward to integrate hardware-based
+tracking approaches like [2], where a modified CPU logs
+information about certain control flow events. The hardware component could either write directly to the SM
+manged buffer or trigger an interrupt to instruct the SM
+to copy the data from an internal buffer.
+Our approach could also work with software instrumentation, although with reduced security guarantees.
+This is due to the fact that the measurement data is
+captured inside the enclave, thus allowing an attacker to
+potentially modify the measurements before they are sent
+to the SM, if they gain full control over the tracee.
+
+3.4. Verification Workflow
+Figure 1 shows the workflow for the verification. During startup, the tracee and tracer enclave perform mutual
+attestation to establish trust. As explained above, this is
+necessary because only a tracer enclave trusted by the
+tracee instance can be allowed to access its control flow
+data. While the tracee enclave is running, it is in the
+GATHERING state and its control flow is monitored by one
+of the mechanisms described in the previous section. Upon
+encountering and executing an ecall instruction, the SM
+takes over (1) and sets the tracee’s verification state to
+PENDING, signaling that verification from the tracer is
+required, before unlocking shared memory regions. Next
+(2), the SM passes control to the tracer enclave to initiate
+the verification process.
+
+After being invoked, the tracer requests the control
+flow data from the SM. It then performs the verification
+and (3) returns control to the SM. If the verification was
+successful, the SM unblocks the shared memory region
+(4) and invokes the host application of the tracee enclave
+which can now handle the ecall requested by the enclave
+in the first step. If the verification fails (not depicted)
+the SM stops the tracee’s execution, keeping the shared
+memory area blocked to prevent any sensitive data from
+being leaked.
+Apart from its connection to a tracer enclave, the
+tracee enclave provides all functionalities that any other
+enclave does. The same does not necessarily apply to the
+tracer enclave, since, depending on the implementation, it
+does not need a host application, as it only has to interact
+with the SM.
+
+4. Attestation Mechanism
+After having established a concept to achieve general
+runtime attestation in TEE scenarios, we continue with
+the concrete case of HPCs measurements as control flow
+traces.
+On a high level, our approach works as follows. First,
+we use static code analysis to obtain the CFG of a
+program where each node corresponds to a Basic Block
+(BB). Additionally, each node stores the influence that
+the corresponding BB has on the HPCs. At runtime, we
+observe the execution of the the enclave via HPCs. Every
+time the enclave exits, thus passing control to the SM, the
+monitor stores a snapshot of the HPC values together with
+the current instruction pointer of the enclave. To verify
+the control flow of the program between two exits, the
+algorithm identifies the nodes in the CFG corresponding
+to the instruction pointer values and decides whether
+there is a path between them that produces the observed
+performance counter values. Note that our concept of a
+control flow violation depends solely on the CFG of a
+program. If, for example, we have a loop on the CFG,
+we consider any number of loop iterations to be valid,
+even if the underlying program code uses a static forloop that is repeated exactly 16 times. If, however, the
+for-loop is unrolled by the compiler, the fixed number of
+loop iterations is baked into the CFG making deviations
+a control flow violation.
+This approach stands in stark contrast to software- or
+hardware-based instrumentation that can capture both the
+
+source and the target address of all control flow transfers,
+reducing control flow verification to checking whether the
+encoded path exists in the CFG. In the worst case, we have
+to evaluate each path between the two nodes in order to
+verify the control flow. However, evaluating the control
+flow only at static control flow transfers to the security
+monitor that happen due to ecalls, has the advantage
+that these paths can be precomputed, thus reducing the
+verification time. We propose two optimizations for this
+basic approach; one reduces the search space when handling returns from function calls, the other allows efficient
+handling of loops.
+
+Figure 2. Example section of a CFG with a simple path and transitively
+connected loops.
+
+4.1. Call Stack
+Programs often call the same function from multiple
+locations. Thus, the nodes that correspond to BBs with
+return instructions have many edges to various far-spread
+locations in the CFG. This quickly makes searching for
+all paths between two nodes intractable and also increases
+the chance of false attestations. By keeping track of the
+call stack of the program, we can drastically reduce the
+number of return edges that we need to consider.
+Parsing the enclave’s calls stack from its stack memory
+during exits to the SM is very challenging, because stack
+memory does not have a well-defined layout. While some
+architectures like RISC-V, do make use of a link register,
+the return address is still stored to the stack as soon as
+function calls nest, which is prevalent in most programs.
+Instead, we use an inductive approach. From the initially
+empty call stack, we add and remove entries to and from
+the call stack as we verify the individual control flow
+segments.
+To precompute the allowed call stacks for each return
+edge, we add an additional step to the CFG generation.
+We build a function level CFG of the program and assign
+possible call stacks to each function based on its reachability.
+If recursion is utilized, the reachability of certain
+functions becomes more complex and their number of
+possible call stacks can become infinitely large. As handling recursion correctly would add a lot of complexity,
+we made the decision to leave this open for future work
+and allow no recursion in our current work. Note that this
+does not limit the capabilities of the attested enclaves, as
+every recursion can be rewritten as an iteration.
+
+4.2. Loops
+Similarly to recursion, loops pose a special challenge
+for control flow verification, the reason being that the CFG
+allows an arbitrary number of loop iterations. Even if the
+number of iterations is fixed in the source code, the CFG
+does not retain this information (unless the loop is unrolled
+during compilation). An excerpt of a CFG is depicted in
+Figure 2. If we are, for example, at node B, it is always
+allowed proceed to either node D, entering loop 1, or to
+node C, continuing on the simple path. In line with related
+work [1], [2], we therefore consider arbitrary numbers of
+loop iterations to be valid.
+To prevent loops from breaking our scheme, we initially search for all loop-free simple paths between two
+given nodes in the CFG. Afterwards, we enrich each
+
+simple path with the transitive closure of all loops that
+it touches. In the example shown in Figure 2, the nodes
+A → B → C make up the simple path and B →
+D → E → B and D → F → G → D are the
+loops connected to the simple path. Any number of loop
+iterations that, combined with the simple path, produce the
+measured performance counter values is accepted as valid.
+To simplify the verification algorithm, we do not enforce
+that inner loops, such as Loop 1 in Figure 2, are taken
+at least once for the outer loop (Loop 2) to be available.
+This simplification will never cause any valid control flow
+to be rejected by the verification; however, it could allow
+malicious control flows to be falsely verified. However,
+our evaluation (Section 6) reveals how the reliability of
+the verification can be increased by other means.
+
+4.3. Formal Verification Model
+Deciding whether a path in combination with its connected loops, is a challenge in itself. The effect of a simple
+path on the HPCs is easy to determine, one must simply
+sum up the effect of all BBs od the path. However, each
+linear combination of loops needs to be considered to
+determine whether a measured set of HPC values is valid.
+Simply testing all possibilities is of course infeasible, let
+us therefore look at the problem more formally.
+Each simple path and each loop can be modeled as
+a vector vi that encodes their effect on the performance
+counters. Given an HPC measurement m, we need to find
+scalars xi such that m = p + x0 · v0 + . . . xn · vn . The
+vector p encodes the simple path and is thus not multiplied
+by a scalar. Further, the scalars xi encode loop iteration
+counts, therefore these are restricted to positive integers.
+The structure encoded by this equation is referred to as
+an integer cone. A close relation to lattices is given by
+definition, as allowing negative scalars would result in the
+definition of lattices.
+ILP Formulation. To algorithmically solve the integer cone membership problem, we model it as an Integer
+Linear Programming (ILP) problem:
+maximise:
+x0 · v0 + x1 · v1 + ... + xn · vn
+subject to: x0 · v0 + x1 · v1 + ... + xn · vn ≤ m-p
+x0 , ..., xn ≥ 0
+
+The first constraint makes sure that the solution does not
+exceed the target vector in any dimension. The second
+one constrains the scalars to allow only positive values.
+The maximize function is designed to find a solution that
+is as close to the measurement as possible. If a valid
+combination of loops can produce the measurement, it
+
+follows that a solution that reaches exactly the target HPC
+values (i.e. m − p) exists. If we therefore find such a
+solution, we also know that a valid combination of loops
+can produce the measured values. If, however, the result
+is less than the target result in even one dimension, we
+conclude that there is no way that a combination of the
+given simple loops can result in the target HPC values.
+
+4.4. HPC Selection
+Naturally, this verification algorithm only works if the
+selected performance counters behave deterministically.
+This disqualifies counters that, e.g., track cache misses
+or microarchitectural stalls. However, this still leaves a
+large number of viable performance counters. In Section 5,
+we provide additional details on how we profiled the
+performance monitoring counters on RISC-V to build a
+mapping from instructions to their influence on the HPCs.
+Modern processors provide numerous events available
+for counting, but the number of counter registers available
+is usually quite limited. While the algorithms presented in
+this work are able to handle an arbitrary number of HPCs,
+it is intuitive that the amount of counters available has an
+impact on the reliability of the verification. Additionally,
+the value distribution of the measured events over the
+executed program plays a crucial role. As described in
+Section 4.3, the accepted performance counter values for
+a simple path with n loops are equal to the integer cone
+generated by the loop vectors v1 to vn . The reliability of
+our verification approach decreases as the density of the
+integer cone increases. In the extreme case, where the cone
+n
+is equal to (Z>0 ) , any measurement would be accepted
+as valid. Thus, we aim to select the performance counters
+such that given the value distribution of the program we
+minimize the density of the integer cones generated by
+the simple path segments. As the density of the integer
+cone itself is not trivial to compute, we use the density
+of the corresponding lattice as a proxy. This is based on
+the fact that the density of the cone converges towards the
+density of the corresponding lattice the larger the scalars
+become [15], [16]. We perform an empirical study of the
+influence of both the number and the value distribution of
+the performance counters used in Section 6.6.
+
+5. Implementation in Keystone
+In this section, we describe our proof of concept
+implementation of the tracee/tracer concept from Section 3, as well as the HPC-based control flow tracing from
+Section 4 for the RISC-V Keystone TEE. Figure 3 shows
+an overview of all components involved.
+
+5.1. SM Modifications
+To implement the concept of tracer and tracee enclaves, some additional metadata needs to be stored for
+each enclave and Keystone’s API (A in Figure 3) needs
+to be extended. We modify Keystone’s central enclave data
+structure to include some static configuration information
+that is part of the attestation report, as well as some
+dynamic metadata that may change during the lifetime of
+an enclave. The former can, for example, be used to verify
+
+Figure 3. Overview of our tracer tracee architecture implementation in
+Keystone. We modified the enclave API (A) to add support for different
+roles and the transfer of control flow information to a tracer controlled
+buffer (B). The tracer and tracee enclaves communicate via IPC (C)
+and the shared memory of the tracee enclave with the host (D) is only
+unlocked after the control flow verification succeeded.
+
+that a valid tracer has been attached to a tracee enclave,
+while the the latter is required to facilitate the verification
+workflow.
+During enclave creation, we add a role to the static
+information for each enclave, this be TRACEE, TRACER,
+or NONE, where the latter marks a regular enclave, without CFA support. Both tracee and tracer enclaves also
+store a reference to their counterparts. Additionally, each
+enclave was extended with a field to specify the expected
+attestation value of the associated tracer enclave. Since
+this field is only relevant for enclaves with the TRACEE
+role, it is required to be zeroed for all other roles. For
+tracee enclaves, the dynamic metadata consists of the current verification state, as well as the performance counter
+readings and the instruction pointer during the least recent
+exit.
+To facilitate the verification workflow we added two
+API calls that are only available to tracer enclaves. The
+attach as tracer API call, connects a tracer to its tracee
+enclave. It first checks whether the calling enclave is
+allowed to trace the specified tracee enclave by comparing
+the static attestation value of the calling enclave with the
+reference value specified by the tracee. In addition, the
+tracer needs to provide a buffer residing inside its private
+memory range, which is used by the SM to share the
+control flow measurements of the tracee with the tracer
+(B in Figure 3). If these checks pass, the SM stores a
+reference to their respective counterpart in both the tracer
+and tracee enclaves and marks the tracee as runnable.
+The set cfa verification state API call, allows a tracer to
+update the verification state of its tracee. The host OS is
+blocked from accessing the shared memory region of the
+tracee enclave as soon as it starts executing and access is
+only granted after the tracer has successfully verified the
+tracee’s control flow. Accessibility to the shared memory
+region is controlled via a dedicated PMP entry.
+
+5.2. Verification Workflow
+Following the enclave model, both the tracer and the
+tracee are split into an untrusted host application and the
+trusted enclave which are referred to as host app and eapp
+in Keystone. Both tracer and tracee, therefore run independently and in separate processes. Communication between
+the two parties is implemented via an IPC mechanism (C
+
+in Figure 3) between the two host apps. In detail, the
+communication between the two parties is structured as
+follows.
+Initialization: The tracee host application is started
+first. During initialization, the expected attestation value
+of its tracer is passed to the SM and a POSIX handle for
+a shared memory object is created. To avoid confusion
+with the shared memory region, used by the eapp to
+communicate with its host app, we hence refer to this
+memory as IPC memory in the following. Afterwards,
+the tracee waits for its tracer. The tracer is then started
+with a handle to the IPC memory and the id of its tracee.
+During its initialization, it calls the attach as tracer API
+to register with the SM and then notifies the tracee’s host
+app via the IPC memory. Afterwards, it sleeps, waiting
+for verification requests.
+Runtime: After being notified that the initialization
+is complete, the tracee host app calls the SM to start
+executing its eapp. When the eapp performs an ecall,
+the SM returns control to the tracee host application as
+would be the case for any default enclave, however, it
+keeps the shared memory region blocked. Next, the tracee
+host application wakes up the tracer host application via
+their IPC memory. That in turn triggers the tracer eapp
+to perform the verification and communicate the outcome
+to the SM via the set cfa verification state API call.
+If the verification was successful, the SM then unlocks
+the shared memory region. Afterwards, the tracer eapp
+switches back to its host application, which again uses
+the ipc memory to inform the tracee host application that
+the verification has been completed. Finally, the tracee
+host application can access the shared memory region of
+its eapp, to handle the original ecall (D in Figure 3.
+We made the deliberate decision not to task the SM
+with scheduling the execution of the tracer, to keep the
+Trusted Computing Base (TCB) small and to not interfere
+with the regular OS scheduling logic. The downside of this
+design is additional overhead due to switching between
+two processes. We discuss alternative designs in Section 8.
+
+5.3. Generating Control Flow Traces
+In this section we explain our configuration of the
+HPCs to trace the execution of enclaves.
+As documented in [12, Sec 3.1.10] the performance
+counter subsystem on RISC-V is configured using a set
+of M-mode Control and Status Registers (CSRs). Each
+counter x can be configured via the mhpmcounterX register, while the mhpmeventX contains the current value
+of the configured counter event. The RISC-V specification mandates 29 counter registers but implementers may
+choose to hardwire them to zero. The semantics of the
+configuration registers and the supported events are also
+implementation-specific. In addition, there are two fixed,
+mandatory counters, mcycle and minstret, that count cycles
+and retired instructions. The mcountinhibit register can be
+used to start and stop individual counters without changing
+their configuration. The mhpmcounterX and mcountinhibit
+are only accessible in M-mode and thus exclusive to the
+trusted SM. Lower-privileged software is required to use
+a software defined API of the code running in M-mode,
+to configure the performance counters. The accessibility
+of mhpmeventX, mcycle and minstret in lower privilege
+
+modes can be controlled via the mcounteren register. The
+combination of these mechanisms allows us to ensure
+that only the SM can configure the performance counters,
+therefore protecting them from untrusted components.
+Additionally, we need to restrict the performance
+counters to only count the events of a specific enclave.
+Since the RISC-V specification does not provide any
+mechanism to count only the events of a certain process,
+we need to manually implement this behavior. We use the
+mcountinhibit register to configure to enable the counters
+shortly before the context switch to the enclave and to
+disable them as soon as execution returns to the SM,
+directly inside the M-mode assembly trap handler. We
+then store the observed difference in HPCs in the context
+of the respective enclave. Using the mcountinhibit register
+conveniently allows us to enable and disable all counters at
+once using a single CSR write. As we still need to free up
+a scratch register before we can modify the mcountinhibit
+register as well as perform context switches from and to
+the eapp, the counters are influenced by a small number
+of instructions that do not belong to the traced code.
+However, they are fixed which means that we can easily
+revert their footprint on the counters.
+The HPC measurement logic is further complicated by
+the fact that the trap handler can also be triggered while
+we operate in M-mode. While disabling all performance
+counters at the start of the handler is idempotent and thus
+unproblematic, we may only enable performance counters
+when we triggered the handler from an enclave. To this
+end, we check the MPP field in the mstatus CSR which reveals the privilege mode at which the trap event occurred.
+We carefully crafted the assembly code to prevent the
+branching logic from influencing the performance counter
+values in a dynamic manner.
+In principle we could still enable regular software to
+use performance monitoring counters, by extending the
+context switching logic to also store/restore their values
+and configuration before entering an enclave, however, we
+decided against this in our proof-of-concept implementation as this would add unnecessary complexity.
+
+5.4. HPC Prediction
+For our verification approach, we need to be able to
+compute the impact, that a given code sequence has on
+the the HPCs without the need to execute said code. In a
+first line of experiments we analyze which HPCs behave
+deterministically, meaning they always report the same
+values for the same instruction sequence. Next, we conducted experiments to evaluate the behavior of different
+HPC events with respect to executed instructions.
+We then created a list of all RISC-V instructions supported by the VisionFive2 SoC. Subsequently, we created
+a sample enclave containing each of these instructions in
+short sections fenced by ecall instructions. This allowed
+us to create an exact mapping that shows which HPC event
+is triggered by which instructions. This mapping is the
+heart of our HPC prediction. Based on this mapping we
+can simply parse all instructions in a given BB, which
+allows us to add up the effect that this BB will have on
+the HPC.
+
+5.5. CFG Generation
+
+6. Evaluation
+
+Attesting the control flow of an application requires
+knowledge about all allowed paths through the program.
+The usual way to gain this information is to create the
+CFG, in which all valid transitions between BBs are
+encoded as edges. The automatic generation of CFGs is
+a complex task that, to the best of our knowledge, has
+no perfect solution. The main hurdle for CFG generation
+is indirect branching where the target of a control flow
+transfer instruction is not hard coded but dynamically
+computed at runtime [17]. Examples where this behavior
+is used are the implementation of features like function
+pointers in C or virtual functions in C++.
+In this work we use Ghidra to perform a static code
+analysis on the binary of our tracee enclave. Its API allows
+us to create a plugin that iterates over all BBs and their
+control flow transitions to generate the CFG for the whole
+enclave. Next, we add the HPC predictions to each BB
+and export the result into a file that is then used for the
+attestation workflow.
+We found that Ghidra does not reliably detect all targets of indirect branches, i.e. if function pointers are used.
+Our basic implementation therefore does not support the
+verification of e.g. dynamic dispatch. However, to show
+that HPCCFA also works for these scenarios, we have
+conducted additional experiments. For these we compile
+a tracee enclave with a custom LLVM compiler plugin,
+which enables us to predict all possible targets for indirect
+branches. Enriching our Ghidra-generated CFG with these
+branch targets ensures that the CFG is complete, allowing
+us to perform our usual attestation.
+
+In this section we evaluate both the reliability and
+performance of our approach. We run Keystone on a
+StarFive VisionFive2 SoC which contains four SiFive U74
+CPU cores. The proof-of-concept implementation of the
+verification runs on an Intel Xeon Gold 6342 CPU. We
+first introduce the analyzed applications as well as our
+performance and reliability metrics. In Section 6.4 to
+Section 6.6 we apply our metrics to the base version of
+our approach before exploring two variations to improve
+its reliability.
+
+5.6. Attestation
+We have split the implementation for the verification
+of the traces into two steps. The first step is a Rust program that performs a one-time preprocessing of the CFG
+to compute all possible paths between ecalls (including
+simple paths and simple loops), while adhering to valid
+call stacks. Note, that this does not require the execution
+and measurement of enclave code. The second step is
+a Python program that uses this information to perform
+the actual verification algorithm described in Section 4.
+We use the COIN-OR Branch and Cut solver (CBC)3 to
+solve our ILP problem. As it was not possible to specify
+the problem with vectors as described in Section 4.3, the
+first constraint had to be expanded into one constraint per
+vector dimension. Similarly, the objective function needed
+to be expanded, summing up the resulting objective functions.
+For our proof-of-concept implementation, we have
+not yet integrated the verification into the tracer enclave.
+Instead, the tracer enclave writes the trace data into a file
+which is then analyze on a separate system. This is mainly
+motivated by the fact that Keystone enclaves do not easily
+allow the usage of high-level programming languages
+such as Python restricting the ability to quickly prototype
+different approaches. For an end-to-end deployment, our
+current Python proof-of-concept would need to be ported
+to C.
+3. https://github.com/coin-or/Cbc (Accessed 2025.04.15)
+
+6.1. Analyzed Applications
+For our experiments, the tracee needs to perform
+realistic computations for which we can perform an attestation. However, the restricted programming environment
+offered by Keystone enclaves, which lack full POSIX
+compatibility, drastically limits the number of programs
+that can be run without major porting efforts. For all of our
+example enclaves we use Keystone’s default runtime —
+the eyrie runtime [11]. Further, we avoid dealing with two
+address spaces and, therefore, start our attestation after
+the runtime has set up its virtual address space. Further,
+we restrict our payloads to always run in S-Mode, thus
+avoiding context switches between S-Mode and U-Mode.
+The first workload we analyze is a simple ”Hello,
+World!” program (hello-tracee), where the eapp simply
+sends a string to be printed to its host app. This is a useful
+program to start with as it mainly consist of runtime code,
+which is also used by all other enclaves.
+This also revealed that the runtime makes use of
+recursive functions. As discussed above, our call stack
+logic is unable to handle recursion. We therefore decided
+to include one measurement point right before and one
+right after such recursive functions. When encountering a
+segment that starts after the first and ends with the second
+inserted ecall during verification or evaluation, we can
+simply skip that segment and continue with the next one.
+Next, we have our main workload (tweetnacltracee), based on the minimal tweetnacl4 cryptographic
+library. Despite its small size, it still performs computations relevant for real-world workloads and is well suited
+to be used within the restricted environment of enclaves.
+Upon execution, our evaluation tracee enclave creates an
+asymmetric key pair, signs the message ”Hello, world!”,
+sends the signed message to the host app, then verifies the
+signature on the message, and finally sends the verification
+result to the host application before terminating. Lastly,
+we have an enclave that contains a minimal code example
+making use of dynamic dispatch (dd-tracee).
+
+6.2. Reliability Metrics
+We start by explaining the metrics that we use to determine the reliability of our approach. With these metrics,
+we want to analyze HPCCFA’s efficacy in detecting code
+reuse attacks, such as ROP [18] or JOP [19] attacks.
+HPCCFA is designed to correctly attest all valid control flows and never cause any false rejections of valid
+4. https://tweetnacl.cr.yp.to/software.html
+
+control flows. Therefore we only test cases in which the
+control flow has been violated, as we want to determine
+how many of these erroneously pass the attestation. Further, we aim for scenarios in which an attacker only
+modifies only small parts of an otherwise valid control
+flow because we consider these to simulate the worst case.
+We expect that in more realistic cases an attacker would
+require significantly larger changes, which in turn should
+be easier to detect.
+To simulate such small modifications to a valid control
+flow, we trace a whole run of an enclave in QEMU5 ,
+recording all basic blocks that were executed. This trace
+can be split into multiple sections separated by ecalls
+that are verified and evaluated individually. Note, that we
+always evaluate all sections for a given enclave when
+reporting reliability results.
+We evaluate the following modifications on the basic
+block level:
+•
+•
+
+•
+•
+
+Replace block: Replace a BB from the original
+trace with a different one.
+Replace with unique block: Like the previous one
+but we ensure that the added block has a unique
+HPC delta. This primarily excludes very small
+BBs.
+Insert unique block. Add a block with a unique
+HPCs delta to the trace.
+Remove block: Remove a BB from the original
+trace, simulating an attacker that skips, .e.g, an if
+branch in program.
+
+Furthermore, we also analyze more fine-grained changes
+to the control flow that mimic a scenario, where an
+attacker has, for example, access to an exploit that enables
+code injection.
+•
+
+Random change: We introduce random changes to
+the measured performance counter values in the
+range of ±10%.
+
+Our basic reliability score is the relative amount of
+modified segments that fail the attestation, i.e. for which
+the verification is working. Since the verification occurs at
+each ecall, we analyze all of the described modifications
+for each ecall to ecall segment of a full trace. Because
+ecalls are usually not distributed evenly within one trace,
+the length of the individual segments varies drastically,
+ranging from less than 100 instructions up to over 100
+million instructions. Thus, we use two metrics. The first
+uniformly averages the reliability scores over all segments.
+The second weighs each segment by its original instruction count. This second metric compensates for cases in
+which there could be many short segments with perfect
+reliability and one big segment with 0 reliability which
+would in total report a very high reliability value according
+to the first metric, even though most of the program’s
+execution was vulnerable.
+For each “replace” experiment we aim to compute the
+average over 1000 repetitions per segment while the other
+experiments aimed to be averaged over 100 repetitions
+per segment. Note that we prevent any two repetitions
+from being the same, meaning that there are cases in
+which we compute the average over fewer repetitions. For
+5. https://www.qemu.org/ (Accessed 2025-11-20)
+
+example, if we have a segment consisting of 8 BBs, we
+can only remove 8 different BBs, therefore we base the
+average on these 8 experiments. When removing blocks
+from the trace, we made sure that the resulting path is not
+itself valid. This would, for example, be the case when
+removing a block that corresponds to the body of an ifstatement without an else case. Similarly, we ensured that
+inserting a block into the trace did not directly create
+another valid control flow.
+
+6.3. Performance Metrics
+The other aspect we evaluate is the performance overhead. We look at two different aspects: first, the performance overhead introduced by the context switches due
+to the tracer/tracee design, and second, the raw overhead
+introduced by the verification algorithm.
+The overhead introduced by the tracer/tracee design
+is measured on the VisionFive2 board using the time
+console command. As a baseline, we measure the time
+that the tracee enclave needs without any tracer, which is
+obtained by starting it as a normal enclave.
+For the verification, we time the execution of each
+segment inside our evaluation script. This excludes some
+initial setup that takes place before the segment verification and only needs to be done once.
+
+6.4. Results: Basic Approach
+For the evaluation, we focus on the hello-tracee and
+tweetnacl-tracee applications described in Section 6.1.
+The dd-tracee only contains a minimal example that
+makes use of dynamic dispatch via function pointers.
+Performing some steps of the evaluation on it revealed
+that the results do not create added value, which is the
+reason we omit them here. However, it is important to
+note that the presence of dynamic dispatch does not in
+any way influence the verification algorithms presented
+here, as long as the correct edges are present in the CFG.
+In this first evaluation, we run our tracee applications
+on the StarFive VisionFive2 SoC. In addition to hardcoded
+instruction and cycle performance counters, the board only
+provides two configurable performance counter registers.
+We are using the following counter events:
+•
+•
+
+•
+
+Fixed Counter: Instructions Retired
+Counter 0: conditional branch instructions retired
++ jal-instructions retired + jalr-instructions retired
+Counter 1: integer loads retired
+
+Note that counter 0 is configured to count three events at
+the same time.
+The hello-tracee performs only three ecalls, of
+which the first happens right after the virtual address
+space has been set up. This also marks the start of our
+verification algorithm. The tweetnacl-tracee performs
+significantly more computations, but only performs seven
+ecalls. With both enclaves executing hundreds of thousands of instructions, there are long sequences of code
+executed between these measurement points. Our analysis revealed that this leads to an intractable number of
+paths between the ecalls, which made our preprocessing
+approach infeasible, because the resulting file, containing
+
+the pre-computed paths, had a size of multiple Gigabytes.
+We therefore added 16 additional ecalls between key
+computation steps of the eyrie runtime, which apply to
+both of our enclaves. For the tweetnacl-tracee we added
+another 8 ecalls to its payload code. Note that none of
+these ecalls have any effect other than passing the control back to the host OS, thus triggering verifications. The
+addition of these measurement points drastically reduces
+the number of pre-computed paths making the verification
+tractable.
+Reliability. The results of our reliability evaluation
+are found in Table 1 and show that this approach in
+its basic form reports different reliabilities for our two
+enclaves. For the hello-tracee enclave most deviations
+from the control flow are detected, while the results for the
+tweetnacl-tracee enclave show that HPCCFA provides
+barely any protection. The trace of the whole enclaves
+is divided into a total of 21 respectively 30 segments of
+different sizes. For shorter segments, we observe high reliability in detecting deviations, while longer segments tend
+to have very low reliability. This also explains the different
+reliability results for the two enclaves, because the trace
+of the hello-tracee enclave, which is mostly the runtime,
+is divided into shorter segments, while the tweetnacltracee also contains these short segments, but additionally
+a few very long segments. This further explains the strong
+difference between our two metrics for the tweetnacltracee enclave, because it performs the vast majority of
+its computations inside these few long segments. Based
+on this observation, we evaluate the impact of restricting
+the length of each measurement segment in Section 6.6.
+Performance Overhead. The results of our performance evaluation can be seen in the third column of
+Table 2. We observe a significant increase in execution
+time, when using HPCCFA. However, such an overhead
+is to be expected, since the execution has to alternate
+between the tracer and the tracee, which also introduces
+a lot of additional context switches. The verification adds
+another significant amount of overhead that surpasses execution time of the enclave with measurements enabled. We
+discuss the performance impact of HPCCFA in Section 8
+and further discuss how moving certain parts of the tracer
+enclave into the SM could improve performance at the
+cost of an increased TCB.
+
+6.5. Results: Additional Counters
+The Visionfive 2 board only allows two configurable
+performance counters, limiting our approach to measure
+three counters in total. In this section, we evaluate how the
+reliability scales with adding more performance counters.
+With our mapping from instructions to their impact on the
+HPCs, we can easily simulate any number of concurrent
+counters for a given trace. The Visionfive 2 boards offer
+a total of 17 deterministic events that we were able to
+map. In this line of experiments we repeat the experiments
+from the previous section and evaluate how the ability to
+measure 17 counters at the same time would influences
+the reliability and performance.
+Reliability. Our results (Table 1) show that the
+additional HPCs significantly improve the reliability. With
+over 99% reliability for all deviations for the hello-tracee
+enclave this experiment shows that HPCCFA works. The
+
+results for the tweetnacl-tracee enclave have also been
+improved, but a reliability of less than 0.1 in most cases
+is not enough to justify the performance overhead.
+Further investigation reveals that most of the newly
+added counters are tracking events related to specific
+instructions, which are effectively absent in our enclaves.
+Therefore, it is not surprising that the addition of these
+counters did not improve the reliability in a manner that
+the tweetnacl-tracee enclave could be protected.
+The fact that random changes are now detected in
+effectively all cases is likely connected to the HPCs that
+are rarely triggered, because changing these can quickly
+lead to counter states that are not reachable according to
+the given CFG.
+Performance Overhead. The results are shown in
+the fourth column of Table 2. As the additional counters
+are only simulated, we cannot report the impact on the
+enclaves execution. We assume that the added overhead
+would be minimal, because the only required change
+would be to record more HPC values.
+The verification with more counters is slightly faster
+compared to the previous experiment. We suspect that
+some paths may be easier to discard, if more counters
+are available, making the ILP faster to solve. However,
+we suspect that this can vary from workload to workload.
+
+6.6. Results: Additional Measurement Points
+The high reliability in short segments in Section 6.4
+suggests that additional measurement points can be introduced in order to increase the overall reliability. In this
+section we evaluate this approach in more detail.
+Analyzing the segments with low reliability in more
+detail shows that they are not only long but also contain a
+high number of loops. Applying the formal integer cone
+model for our verification process, we observe that the
+vectors corresponding to the set of loops on these paths
+almost form a basis for the unit integer cone.
+Based on these observations, we analyzed the binary
+and manually inserted additional ecalls to reduce the
+number of loops between any two ecalls. For the hellotracee enclave and thus the runtime code, a single additional ecall was enough to get near perfect reliability.
+For the tweetnacl-tracee, we added another 49 ecalls.
+As some of these ecalls were inserted into nested loop
+structures, the number of segments on the trace increases
+from 30 to 102619.
+A side effect of having ecalls inside loops is that
+some segments can repeat. Filtering out duplicates, i.e.,
+segments with the same start and end nodes, measured
+counter values, and initial call stacks, results in a vastly
+reduced number of segments for the tweetnacl-tracee.
+The total of 102619 segments can be reduced to only 788
+unique segments, reducing the number of measurements
+to be verified drastically. For the reliability analysis we
+multiply the results of these segments with their actual
+frequency, in order to obtain results that are comparable
+to the previous scenarios. Note, that we are using our
+simulated evaluation approach and are still simulating the
+values of all 17 counter events.
+Reliability. The reliability results are depicted in
+Table 1. We see that reducing the size of segments is
+
+Experiment
+Enclave
+Random Change
+Remove Block
+Replace Block
+Replace with Unique B.
+Insert Unique B.
+Basic Scenario
+hello-tracee
+0.955, 0.986
+0.923, 0.973
+0.924, 0.971
+0.932, 0.975
+0.930, 0.958
+Basic Scenario
+tweetnacl-tracee
+0.803, 0.000
+0.741, 0.000
+0.743, 0.000
+0.753, 0.000
+0.744, 0.000
+Added Counters
+hello-tracee
+1.000, 1.000
+0.991, 0.997
+0.996, 0,999
+0,994, 0.998
+0.994, 0.998
+Added Counters
+tweetnacl-tracee
+1.000, 1.000
+0.886, 0,000
+0,900, 0.092
+0.906, 0.128
+0.900, 0.110
+Added ecalls
+hello-tracee
+1.000, 1.000
+0.991, 0.997
+0.996, 0.999
+0.995, 0.998
+0.994, 0.998
+Added ecalls
+tweetnacl-tracee
+1.000, 1.000
+1.000 1.000
+1.000, 1.000
+1.000, 1.000
+1.000, 1.000
+TABLE 1. R ELIABILITY EVALUATION RESULTS FOR ALL EXPERIMENTS . T HE FIRST NUMBER IS THE RATE AT WHICH SEGMENTS ARE REJECTED
+CORRECTLY WHILE THE SECOND ONE TAKES INTO ACCOUNT THE TOTAL NUMBER OF INSTRUCTIONS THAT WERE VERIFIED TO BE CORRECT.
+Enclave
+Baseline
+Basic Scenario
+Added counters
+Added ecalls
+hello-tracee
+0.41s
+1.53s (×3.73)
+1.54s (×3.76)
+tweetnacl-tracee
+0.81s
+1.88s (×2.32)
+11.7s (×14.44)
+Verification
+hello-tracee
+33s
+11s
+11s
+tweetnacl-tracee
+1m 29s
+1m 40s
+23m 13s
+TABLE 2. T IME MEASUREMENTS OF THE ENCLAVE ’ S EXECUTIONS AND THE VERIFICATION OF THE FULL TRACES FOR ALL EXPERIMENTS .
+AVERAGED OVER 50 MEASUREMENTS .
+Enclave execution
+
+an effective way to improve the attestation to have nearperfect reliability for all tested control flow deviations.
+Performance Overhead. The performance impact
+is shown in the last column of Table 2. This shows
+that regular measurements of the HPCs are getting expensive. For the hello-tracee enclave, where we only
+added one measurement, the overhead is accordingly very
+small. However, the tweetnacl-tracee, where 102619
+measurements are performed instead of 30, the execution
+time of the tracee increases by a factor of 14.44. Which
+results in an overhead that may not be acceptable in
+many scenarios. However, other use cases that require
+strong security guarantees may profit from the added value
+provided by HPCCFA. Further, it is important to note that
+our proof-of-concept implementation is not optimized for
+performance, especially the communication between the
+tracer and tracee enclave introduces avoidable overhead.
+We decided to design our implementation as we did,
+because we wanted to evaluate, whether HPC predictions
+can be used to enable CFA and our design enables us to
+more flexibly test out different approaches. We assume
+that it is realistic cut the measurement overhead in half
+with an optimized implementation.
+When looking at the time needed for the verification,
+we also see that this is higher, however, while the other
+scenarios only lead to 30 segments, we are now verifying
+102619 segments. This means that the average verification
+time per segment actually decreased from 3s in the first
+scenario to 13ms in the last scenario. Considering the
+observation that of the 102619 segments only 788 differ in
+their trace, caching attestation results for previously seen
+segments would further reduce the verification workload
+in this case, as we would be able to skip more than
+99% of the necessary verifications in this case (reducing
+the verification time to 1m 9s). However, this degree of
+effectiveness will vary based on the tracee enclave, we
+therefore opted to report the worst case values.
+
+7. Security Analysis
+Let us start with the security implications that the
+introduction of tracing has. The ability to read HPC traces
+of an enclave poses a threat, as these can be used to infer
+the control flow path that was taken. It is therefore vital
+that these traces are protected from potential attackers. Our
+solution is to generate the traces inside the SM, which is
+
+part of the TCB and only making them available to the
+attached tracer enclave, which is also inherently trusted
+by the tracee enclave. This is ensured by defining tracer’s
+hash in the tracee’s metadata. Note, that these measurements and traces are never exposed to the untrusted host
+OS or other enclaves.
+Next, we look at the tracer enclave. As established
+before, it has access to the control flow traces, which
+are security sensitive. We guarantee strong protection of
+these traces by running the tracer as an enclave inside a
+TEE, while severely limiting its interface. All sensitive
+data processed by the tracer is provided by the SM, i.e.
+a trusted source. The API that the tracer provides to
+the untrusted system depends on the implementation. In
+case of our proof-of-concept implementation, the tracer’s
+verification is triggered by the untrusted host app via its
+API. It does, however, not accept any input from the
+untrusted system, preventing it from working with invalid
+or malicious input. An alternative design could have the
+SM trigger the tracer, which would eliminate the need to
+provide any API to the untrusted system at all. Further, the
+tracer has no direct access to its tracee and can therefore
+not directly interfere with its computations.
+Another point that is important to discuss is the influence that a fully compromised enclave has on the generated traces. First note, that an attacker has no influence
+over the generated measurements, as these are generated
+by the SM. Nonetheless, it is fair to assume, that such an
+attacker would be able to skip measurement points. This
+could intuitively be considered to make additional measurement points, specifically introduced to increase the
+reliability, useless. This intuitive assumption is incorrect,
+because the additional measurement points are effective,
+not simply because the tracee is interrupted more often,
+but because it keeps the number of valid control flows and
+therefore expected measurements for each segment small.
+As discussed before, it is also not an option for the attacker
+to never trigger a measurement point again after taking
+control of the enclave, as this would leave them unable to
+leak any data from inside the enclave. This is an important
+distinction to make when comparing the approach to
+approaches that rely on instrumentation to generate the
+measurements, e.g. by tracking taken branches.
+
+7.1. Covert Channels
+As discussed in our attacker model, we currently
+consider information leakage through covert channels out
+of scope for our tracing architecture. Our enclave design
+prevents direct interaction with resources outside the enclave before the tracee has been verified. Nonetheless, an
+attacker that took control over the tracee enclave could
+still try to leak information through microarchitectural
+side-channels. One way to curb this threat could be to
+incorporate interrupts, especially timer-based scheduling
+interrupts, to trigger a control flow verification. In contrast
+to the verification during ecalls this verification could
+be performed asynchronously in the background. While
+this would not prevent the covert channel leakage itself, it
+would severely limit the time window until detection and
+thus the amount of data that can be leaked. One challenge
+with including interrupts in the verification is that their
+asynchronous nature precludes the use of precomputed
+path data.
+
+8. Discussion
+Reliability on long segments: In Section 6.4 we have
+seen that the CFA fails on longer segments, while it works
+well on shorter segments. The reason for this can be
+found when looking at the formal verification model in
+Section 4.3. On the longer segments, where the evaluation
+is failing, we have relatively short simple paths, while the
+biggest share of the measured HPC values is the result
+of various loops. We therefore conclude that the integer
+cone around our target vector is very dense, causing most
+simulated attacks to also produce vectors that are part of
+the integer cone, which then results in false attestations.
+Even increasing the dimensionality of the integer cone,
+which we do in Section 6.5 does not solve the underlying
+problem. To fix the underlying problem, we propose to
+add additional measurement points in Section 6.6. This
+works on two levels; for one, the number of loops on each
+segment is reduced, i.e. the integer cone is generated by
+fewer vectors. And secondly, the measured HPC values
+are smaller, i.e. the candidate vector for the integer cone
+membership problem has a shorter distance to the origin.
+Applicability to other TEE solutions: While we only
+provide a proof-of-concept implementation for Keystone
+on RISC-V, we are confident that our approach can be
+ported to other platforms, like Intel TDX [20] or Arm
+CCA [21]. Both feature a trusted software layer at the
+highest privilege level that is responsible for context
+switching between security contexts and both architectures
+have HPCs. However, only Intel can make changes to the
+TDX module and there is no hardware yet with ARM
+CCA support. The prediction of HPC values would need to
+be repeated for the respective architecture, but this should
+also be possible even if more tedious due to the more
+complex instruction set. We were already able to verify
+that there are HPCs with deterministic behavior on Intel
+CPUs.
+Dynamically choosing counter events: During the
+evaluation, we have increased the number of counters that
+we are tracing, which is not an issue, when simulating the
+values. On a real system, providing only a limited number
+of counter registers, this would not be an option. As an
+
+alternative, we propose randomize the counter events that
+are traced for each segment. This would not have the same
+effect as being able to measure all counters in parallel,
+however, an attacker would still have to craft attacks,
+working for all events, in order to avoid detection reliably.
+More efficient ecalls: As detailed in the evaluation,
+the current design comes with additional overhead when
+handling ecalls. While this enables us to keep the TCB
+small, it might be worthwhile to consider trading off
+performance vs TCB. Upon encountering an ecall the
+control passes to the SM, which could then directly
+trigger the tracer enclave to start the verification. After
+completion, the SM would take over and pass control
+to the host application. This nets four context switches
+and only two of those are introduced by the tracer/tracee
+concept. Looking at the current implementation we see
+the following eight context switches: tracee eapp → SM
+→ tracee host app → tracer host app → SM → tracer
+eapp → SM → tracer host app → tracee host app.
+Another way to reduce the footprint of ecalls is connected to the additional ecalls we introduce to add measurement points. These are triggering complete context
+switches to the host OS and the tracer enclave. However,
+these are dummy ecalls, that could be caught by the
+SM which only needs to write the trace data to a buffer
+with intermediate measurements. This could make these
+interruptions significantly cheaper without undermining
+the security guarantees, as no communication with the
+host application happens at these points.
+Verification by the TEE: Going even further, to
+reduce the performance impact of the CFA, one could
+move the verification fully inside the SM. In this case, the
+verification would require no additional context switches
+for each ecall as the SM gains control anyway. These
+improvements would come at the cost of moving all
+related computations inside the TCB, however, this is a
+consideration especially if only tracer/tracee enclave pairs
+are running on a system, which inherently imply trusting
+the attached tracers.
+Loop handling: Taking a closer look at loop unrolling could help to significantly improve the reliability
+in some cases, without the need to introduce more measurement points. Especially for cryptographic implementations, where the exact number of iterations is known
+for a large number of loops, this could be beneficial.
+However, it is also important to consider that branches in
+the loop body would be serially connected, which could in
+turn cause an explosion of viable paths discovered during
+preprocessing. Alternatively, it could also be interesting to
+annotate the loops and use this information during attestation, thus removing the need for further modifications
+to the binaries. These modifications should be considered
+in future work.
+Dynamic measurement points: Another, related approach would be to regularly interrupt the enclave (e.g.
+based on a timer) to have dynamic measurement points.
+These could be collected by the TEE while verification
+is only required once the tracee eapp exits. This would
+also allow starting the verification process in parallel if
+resources are available. We have decided against this
+approach to fully enable extensive preprocessing, making
+the live verification more efficient. However, in future
+work we intend to look at the use of dynamic measure-
+
+ment points, as this could remove the need for inserting
+measurement points into the enclave of the binary. Intel’s
+Processor Event-Based Sampling (PEBS) [22] allows for
+hardware-assisted creation of records containing the HPC
+values and instruction counter, upon counter overflow. An
+approach based on dynamic measurement points could
+profit from hardware implementations like PEBS, as this
+would allow the creation of more measurement points with
+only little overhead and no expensive context switches.
+
+9. Related Work
+CFA is a concept first introduced in C-Flat [1]. The authors show how the attestation of the control flow enables
+a remote verifier to check whether a program has been
+corrupted by e.g. return-oriented programming attacks.
+For the attestation presented in [1], a trusted component
+is needed on the prover (i.e. the monitored device). In
+the proof-of-concept implementation ARM TrustZone-A
+is used to create a trust anchor on a potentially corrupted
+device. The task of this isolated component is to hash and
+cryptographically secure information about the observed
+control flow. The attestation process is implemented as
+a challenge-response protocol in which a remote verifier
+provides input to the audited software and later receives
+proof of the observed control flow. The generation of
+the proof makes use of trampolines that are added to
+the software’s control flow instructions (jumps, returns,
+etc.) during instrumentation. These trampolines pass the
+source and destination addresses of the triggering control
+flow instruction to the trusted component, which uses this
+information to compute the next value in a hash chain.
+The last value of this chain makes up the central element
+of the proof provided to the verifier. Loops are treated in
+a special way in order to avoid the set of valid hashes
+for the software to explode. Instead of adding each jump
+between loop iterations to the hash chain, an individual
+hash value is computed for each occurrence of a loop,
+this value as well as the number of iterations observed is
+then separately added to proof. For the verification step
+the control flow graph of the program to be attested as
+well as its binary are required. Based on these and the
+input parameters, the verifier checks whether the reported
+hash value is the correct result for the expected control
+flow path.
+As a follow-up to C-Flat, LO-FAT [2] uses the same
+general principles and implements the attestation on a lowend embedded processor. Instead of an instrumentationbased approach with the requirement for some form of
+trusted execution environment, this approach enables attestation in hardware. This eliminates some drawbacks
+of C-Flat, such as the need for instrumentation and the
+performance overhead caused by it.
+More recent works have further explored the CFA
+concept both with [3], [4], [6] and without [7], [23]
+hardware modifications. Some are focusing on smaller
+embedded platforms [23]. Tiny-CFA [23] enables CFA by
+utilizing APEX [24], a technique to generate proofs of
+remote execution (PoX). Other approaches are targeted at
+more complex architectures and programs [5], [7]. ScaRR
+[5] introduces checkpoints via instrumentation and keeps
+a database of valid measurements that are compared to
+the measurements for the verification. ReCFA [7] presents
+
+another instrumented approach to enable CFA for more
+complex architectures. It focuses on the additional challenges of more complex software, where the generated
+CFGs tend to be bigger, which makes it impractical to
+compute the hash values of all valid paths in advance.
+Instead, the entire control flow path that was observed is
+transmitted in compressed form.
+The closest related work is presented by GuaranTEE
+[8], where the CFA is also based on two enclaves, where
+one enclave is responsible for attesting the control flow of
+the other. However, they are using the classic instrumentation approach to generate control flow traces directly via
+trampolines similar to C-Flat. These trampolines are then
+transmitting control flow events to their VerifyTEE, that is
+responsible for checking the validity of the control flow.
+Our goal was to cleanly separate the trace generation from
+the potentially compromised code, therefore, we decided
+against depending on components of the tracee for the
+trace generation. Another difference is their creation of
+the CFG, where they are repeatedly executing the traced
+code in the pre-processing phase in order to collect all
+valid edges. This has the downside that, if not all viable
+edges are reported, the attestation could potentially fail for
+valid control flows. Lastly, by locking any communication
+with the host application, our design prevents any form
+of leakage in the event of detected control flow violations.
+Another related line of work is investigating the use
+of HPCs for ROP detection [25]–[27]. The detection of
+these approaches generally monitors certain HPC to detect
+patterns related to ROP attacks, e.g. return mispredictions.
+Like our work, these works present concepts for the
+detection of ROP attacks. However, these approaches are
+only designed to detect patterns in measured HPC values,
+which gives an indication that a ROP attack is happening,
+whereas our approach takes into account the CFG of a
+program in combination with accurate HPC predictions. In
+addition to enabling the detection of very minute control
+flow violations (see Section 6.2) our approach is designed
+to detect all control flow violations, not just those introduced by ROP or JOP attacks.
+
+10. Conclusion
+
+We have presented a concept to enable CFA for TEEs,
+which is based on two enclaves running in parallel. It is
+able to stop control flow attacks before these can leak
+sensitive data. Furthermore, we have demonstrated how
+the HPCs architecture can be utilized for a trace generation
+that is fully independent of the traced enclave. We pair
+this trace generation with the ability to accurately predict
+the effect that code sequences have on the HPC trace to
+introduce HPCCFA. Our proof-of-concept implementation
+of HPCCFA demonstrates the soundness of the design and
+is able to attest the control flow of valid programs without
+raising any alarms. Our evaluation uncovers a trade-off
+between the reliability and the performance overhead of
+our CFA approach. With appropriate instrumentation of
+the traced code, our last experiments show how near
+perfect reliability can be achieved.
+
+Acknowledgements
+
+[15] I. Aliev and M. Henk, “Feasibility of integer knapsacks,” SIAM
+Journal on Optimization, vol. 20, no. 6, pp. 2978–2993, 2010.
+
+This work was supported by the German BMFTR
+project SASVI.
+
+[16] E. Bach, F. Eisenbrand, T. Rothvoss, and R. Weismantel, “Forallexist statements in pseudopolynomial time,” in Proceedings of
+the 2025 Annual ACM-SIAM Symposium on Discrete Algorithms
+(SODA). SIAM, 2025, pp. 2225–2233.
+
+References
+[1]
+
+T. Abera, N. Asokan, L. Davi, J. E. Ekberg, T. Nyman, A. Paverd,
+A. R. Sadeghi, and G. Tsudik, “C-FLAT: Control-flow attestation
+for embedded systems software,” Proceedings of the ACM Conference on Computer and Communications Security, vol. 24-28October-2016, pp. 743–754, 2016.
+
+[17] R. Tsang, Asmita, D. Joseph, S. Salehi, P. Mohapatra,
+and H. Homayoun, “FFXE: dynamic control flow graph
+recovery for embedded firmware binaries,” in 33rd USENIX
+Security Symposium, USENIX Security 2024, Philadelphia,
+PA, USA, August 14-16, 2024, D. Balzarotti and W. Xu,
+Eds. USENIX Association, 2024. [Online]. Available: https:
+//www.usenix.org/conference/usenixsecurity24/presentation/tsang
+
+[2]
+
+G. Dessouky, S. Zeitouni, T. Nyman, A. Paverd, L. Davi, P. Koeberl, N. Asokan, and A. R. Sadeghi, “LO-FAT: Low-Overhead
+Control Flow ATtestation in Hardware,” Proceedings - Design
+Automation Conference, vol. Part 128280, 2017.
+
+[18] R. Roemer, E. Buchanan, H. Shacham, and S. Savage, “Returnoriented programming: Systems, languages, and applications,”
+ACM Trans. Inf. Syst. Secur., vol. 15, no. 1, pp. 2:1–2:34, 2012.
+[Online]. Available: https://doi.org/10.1145/2133375.2133377
+
+[3]
+
+S. Zeitouni, G. Dessouky, O. Arias, D. Sullivan, A. Ibrahim, Y. Jin,
+and A.-R. Sadeghi, “Atrium: Runtime attestation resilient under
+memory attacks,” in 2017 IEEE/ACM International Conference on
+Computer-Aided Design (ICCAD), 2017, pp. 384–391.
+
+[4]
+
+G. Dessouky, T. Abera, A. Ibrahim, and A. R. Sadeghi, “LiteHAX:
+Lightweight hardware-assisted attestation of program execution,”
+IEEE/ACM International Conference on Computer-Aided Design,
+Digest of Technical Papers, ICCAD, 2018.
+
+[5]
+
+F. Toffalini, E. Losiouk, A. Biondo, J. Zhou, and M. Conti,
+“ScaRR: Scalable runtime remote attestation for complex
+systems,” in 22nd International Symposium on Research in Attacks,
+Intrusions and Defenses (RAID 2019). Chaoyang District, Beijing:
+USENIX Association, Sep. 2019, pp. 121–134. [Online]. Available:
+https://www.usenix.org/conference/raid2019/presentation/toffalini
+
+[6]
+
+O. Arias, D. Sullivan, H. Shan, and Y. Jin, “Lahel: Lightweight
+attestation hardening embedded devices using macrocells,” in 2020
+IEEE International Symposium on Hardware Oriented Security and
+Trust (HOST), 2020, pp. 305–315.
+
+[7]
+
+Y. Zhang, X. Liu, C. Sun, D. Zeng, G. Tan, X. Kan, and S. Ma,
+“ReCFA: Resilient Control-Flow Attestation,” in ACM International Conference Proceeding Series, 2021, pp. 311–322.
+
+[8]
+
+M. Morbitzer, B. Kopf, and P. Zieris, “Guarantee: Introducing
+control-flow attestation for trusted execution environments,” in
+2023 IEEE 16th International Conference on Cloud Computing
+(CLOUD), 2023, pp. 547–553.
+
+[9]
+
+L. Zhou, X. Ding, and F. Zhang, “Smile: Secure Memory Introspection for Live Enclave,” in Proceedings - IEEE Symposium on
+Security and Privacy, vol. 2022-May, 2022, pp. 386–401.
+
+[10] W. Ozga, D. Le Quoc, and C. Fetzer, “TRIGLAV: Remote Attestation of the Virtual Machine’s Runtime Integrity in Public Clouds,”
+IEEE International Conference on Cloud Computing, CLOUD, vol.
+2021-September, pp. 1–12, 2021.
+[11] D. Lee, D. Kohlbrenner, S. Shinde, K. Asanovic, and D. Song,
+“Keystone: an open framework for architecting trusted execution
+environments,” in EuroSys ’20: Fifteenth EuroSys Conference
+2020, Heraklion, Greece, April 27-30, 2020, A. Bilas, K. Magoutis,
+E. P. Markatos, D. Kostic, and M. I. Seltzer, Eds. ACM, 2020, pp.
+38:1–38:16. [Online]. Available: https://doi.org/10.1145/3342195.
+3387532
+[12] Editors: Andrew Waterman, Krste Asanović, and John Hauser,
+“The RISC-V Instruction Set Manual Volume II: Privileged Architecture,” RISC-V International, December 2021, document Version
+20211203.
+[13] X. Wang, S. M. Chai, M. A. Isnardi, S. Lim, and R. Karri,
+“Hardware performance counter-based malware identification and
+detection with adaptive compressive sensing,” ACM Trans. Archit.
+Code Optim., vol. 13, no. 1, pp. 3:1–3:23, 2016. [Online].
+Available: https://doi.org/10.1145/2857055
+[14] B. Zhou, A. Gupta, R. Jahanshahi, M. Egele, and A. Joshi,
+“Hardware performance counters can detect malware: Myth or
+fact?” in Proceedings of the 2018 on Asia Conference on
+Computer and Communications Security, AsiaCCS 2018, Incheon,
+Republic of Korea, June 04-08, 2018, J. Kim, G. Ahn, S. Kim,
+Y. Kim, J. López, and T. Kim, Eds. ACM, 2018, pp. 457–468.
+[Online]. Available: https://doi.org/10.1145/3196494.3196515
+
+[19] T. K. Bletsch, X. Jiang, V. W. Freeh, and Z. Liang, “Jump-oriented
+programming: a new class of code-reuse attack,” in Proceedings
+of the 6th ACM Symposium on Information, Computer and
+Communications Security, ASIACCS 2011, Hong Kong, China,
+March 22-24, 2011, B. S. N. Cheung, L. C. K. Hui, R. S.
+Sandhu, and D. S. Wong, Eds. ACM, 2011, pp. 30–40. [Online].
+Available: https://doi.org/10.1145/1966913.1966919
+[20] Intel, “Intel trust domain extensions,” 2023.
+[21] ARM, “Realm Management Extension guide,” https://developer.
+arm.com/documentation/den0126/latest, 2025.
+[22] Intel,
+“Intel
+microarchitecture
+codename
+nehalem
+performance
+monitoring
+unit
+programming
+guide,”
+https://www.intel.com/content/dam/develop/external/us/en/
+documents/30320-nehalem-pmu-programming-guide-core.pdf,
+2010.
+[23] I. De Oliveira Nunes, S. Jakkamsetti, and G. Tsudik, “Tiny-CFA:
+Minimalistic Control-Flow Attestation Using Verified Proofs of
+Execution,” Proceedings -Design, Automation and Test in Europe,
+DATE, vol. 2021-February, pp. 641–646, 2021.
+[24] I. de Oliveira Nunes, K. Eldefrawy, N. Rattanavipanon, and
+G. Tsudik, “APEX: A verified architecture for proofs of execution
+on remote devices under full software compromise,” Proceedings
+of the 29th USENIX Security Symposium, pp. 771–788, 2020.
+[25] H. Zhou, X. Wu, W. Shi, J. Yuan, and B. Liang, “Hdrop: Detecting
+rop attacks using performance monitoring counters,” in Information
+Security Practice and Experience, X. Huang and J. Zhou, Eds.
+Cham: Springer International Publishing, 2014, pp. 172–186.
+[26] X. Wang and J. Backer, “SIGDROP: Signature-based ROP Detection using Hardware Performance Counters,” arXiv e-prints, p.
+arXiv:1609.02667, Sep. 2016.
+[27] S. Das, B. Chen, M. Chandramohan, Y. Liu, and W. Zhang,
+“Ropsentry: Runtime defense against rop attacks using hardware
+performance counters,” Computers & Security, vol. 73, pp.
+374–388, 2018. [Online]. Available: https://www.sciencedirect.
+com/science/article/pii/S0167404817302481
+
+

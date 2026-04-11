@@ -1,0 +1,609 @@
+TEEBFT : Pricing the Security of Proof of Cloud
+Alex Shamis1⋆ , Matt Stephenson1 , and Linfeng Zhou1
+
+arXiv:2510.26091v3 [econ.TH] 5 Nov 2025
+
+Subzero Labs
+
+Abstract. Blockchains face inherent limitations when communicating
+outside their own ecosystem. Trusted Execution Environments (TEEs)
+are a promising mitigation because they allow trusted brokers to interface with external systems. In this work, we develop a cost-of-collusion
+principal–agent model for compromising a TEE in a Data Center Execution Assurance design [24]. Our model focuses on four core determinants
+of attack profitability: (i) a K-of-n threshold for successful collusion, (ii)
+detection risk, (iii) per-member sanctions Fi conditional on being caught,
+and (iv) an extractable flow reward ω, which is distinguished from the
+total value (“stock”) of the system.
+With these primitives we derive (a) a condition for rational collusion,
+(b) closed-form deterrence thresholds showing how modifying parameters affects rational collusive, and (c) a design bound that guarantees non-profitability of profitable collusion. Calibrations informed by
+time-advantaged arbitrage [12] and estimates of security breach fallout
+demonstrate that protocols can plausibly secure on the order of $1T
+in value against TEE compromise. We allude to this secure design as
+TEEBFT .
+
+1
+
+A Cost of Collusion Model of TEE Security
+
+TEE security can be strengthened through the use of cloud providers [24], as well
+as multi-party-computation key splitting approaches under BFT assumptions
+e.g. [13]. In this paper we model and attempt to estimate the plausible security
+available for using these methods.
+Our model attends to TEE breaches with a principal–agent framework that
+captures the incentives of trusted-execution-environment (TEE) providers in this
+setting. The goal is to quantify when collusion is not profitable for rational
+agents akin to e.g. [2], given detection probabilities, penalties, and practical flow
+constraints on what attackers can seize during a feasible window.
+Other related work on flow extraction and timing frictions include Flash
+Boys 2.0 which documented MEV and priority-gas auctions, linking ordering
+rents to consensus-layer risk [9]. Fritsch–Mamageishvili–Silva–Livshits–Felten
+formalize time-advantaged arbitrage, showing under martingale-like prices that
+⋆
+
+Authors listed in alphabetical order.
+
+2
+
+A. Shamis, M. Stephenson, L. Zhou
+
+optimal arbitrage waits until the end of the advantage window, with policy variants (e.g., auctions) reallocating a share of that flow [12]. Our “stock vs. flow” calibration uses exchange turnover as a conservative proxy to bound short-window
+extractable value; recent WFE and SIFMA statistics give global market-cap and
+value-traded orders of magnitude, and Budish’s economic-limits argument is a
+conceptual antecedent to our “cheapest attack remains uneconomical” design
+condition [31,27,6].
+Censorship dynamics in fraud-proof protocols have been cast as explicit
+budgeted games. Berger–Felten–Mamageishvili–Sudakov derive challenge-period
+lengths ensuring defender success as a function of move counts and attacker/
+defender budgets [3]. Coalition-proofness (CPNE) provides a canonical equilibrium notion for multi-party deviation, justifying checks at threshold coalitions
+under monotone detection [4].
+Proof of Cloud [25] have explored the ability to detect where a TEE is being
+hosted and examined the security of TEEs in cloud environments, but does not
+consider economic incentives directly. Systems like Enigma [32] and CCF (Confidential Consortium Framework) [16,26], have proposed to leverage TEEs for
+privacy-preserving computations on blockchain networks with similar requirements for TEE security properties. However, to date there has been little attention to identifying thresholds at which it would be economically rational for
+agents to collude, and recent work on “proof of cloud” makes plausible our economic estimation of the security that may be available under.
+Our paper’s primary contribution is in modeling the multiplicative security
+available under such designs. Notably, our model does not assume that TEEs
+are secure against attacks–it is conservatively assumed that physical access is
+sufficient to extract the secrets of a TEE in the model. Instead we focus on the
+incentives of the service providers under breach and collusion detection risk.
+
+2
+
+Model
+
+2.1
+
+Environment and threshold
+
+There are n ≥ 2 providers i ∈ {1, . . . , n}. A system event (e.g., a threshold
+decryption) occurs if at least K providers act in concert. We attend to the
+simple majority rule often preferred to ensure liveness
+jnk
++ 1.
+(1)
+K(n) =
+2
+Core Primitives: Rewards and Sanctions Then consider that provider i faces
+a per-member sanction scale Fi > 0 (legal, reputational, and/or balance-sheet
+exposure) if detected. For heterogeneity in F , we let F(1) ≥ · · · ≥ F(n) denote
+the order statistics.
+The bounty that can be captured by successful colluders is ω, which we treat
+as having equivalent units to F . We treat this as a fraction not greater than the
+total value secured by the system, V ≥ 0. Intuitively, if a group could collude
+
+TEEBFT : Pricing the Security of Proof of Cloud
+
+3
+
+to discover the secret upcoming trades on the stock market, they would have
+to maintain that access for some length of time before they could capture full
+value of the stock market itself. This is affected by the observed flow rate (which
+is about 5% per month for the US Stock market), the flow rate conditional on
+suspicious activity (e.g. the colluders have not been discovered, but traders have
+observed suspicious activity and are being more cautious and trading less), as
+well as time-governing aspects of the security breach itself (e.g. if cloud providers
+use different makes of TEE, they require any discovered vulnerabilities to overlap
+and not be patched), That is, V is the “stock” and ω ≤ V defines the “capturable
+flow” for the colluding group, with the proportional relationship governed by
+β ∈ (0, 1]. Thus we characterize an extractable flow “prize” of
+ω = β V.
+
+(2)
+
+Roadmap. The primitives are a flow prize ω = βV and per-member sanction
+scales {Fi }. Two frictions govern feasibility: (i) a threshold K of providers must
+act for the event to occur; and (ii) independent detection at rate q per member
+induces both pre-coordination and execution risk. We first analyze the completeinformation game and show that only the two corner symmetric profiles can be
+equilibria, with existence of the collusive corner governed by a simple odds-ratio
+condition. We then introduce dispersed information and obtain a unique symmetric cutoff equilibrium à la global games, which selects the collusive boundary
+as noise vanishes. Finally, we study heterogeneity in F under a Zipf law to characterize how majority size K shifts deterrence.
+
+2.2
+
+Detection and success
+
+Let q ∈ (0, 1) be the per-member independent detection probability. Following
+[20,21], observe that for a coalition of size m ≥ 1,
+p(m) = 1 − (1 − q)m ,
+
+pK := p(K),
+
+p̃ := p(K − 1).
+
+(3)
+
+Note that we allow for 0 < p̃ ≤ pK to account for the fact that detection
+probability may be lower (but not strictly zero) before a collusive group has
+formed. Given a belief α ∈ [0, 1] that each other provider joins, the probability
+that at least K − 1 of the other n−1 providers join is
+
+
+πn,K (α) = Pr Bin(n−1, α) ≥ K−1 .
+
+(4)
+
+Detection layers. We model detection in two layers. First, pre-coordination exposes at least K − 1 members (e.g., outreach, key-share solicitation), so an attempt incurs detection probability p̃ := p(K − 1). Second, if a size-K coalition
+forms and executes, there is incremental exposure pK − p̃. Hence the joiner’s
+
+unconditional detection probability at belief α is p̄(α) = p̃ + πn,K (α) pK − p̃ .
+
+4
+
+A. Shamis, M. Stephenson, L. Zhou
+
+2.3
+
+Coalition composition and the binding type
+
+We assume the deviating coalition can choose its members. It is then optimal to
+select the K providers with the smallest sanction scales.
+Lemma 1 (Binding type). Fix (n, K) and a profile (Fi )ni=1 . The coalition’s
+participation is pinned down by the binding (highest-F ) member among the chosen K, and Feff enters individual incentives. If there exists a profitable coalition
+of size K, there exists one consisting of the K lowest-F providers, with the
+marginal (binding) member having type
+Feff (n, K) = F(n−K+1) .
+
+(5)
+
+Proof (). Replacing any coalition member j with a provider ℓ such that Fℓ <
+Fj weakly raises each member’s payoff: the prize share is unchanged while the
+expected sanction falls. Iterating this replacement yields a coalition of the K
+smallest Fi ’s. The largest F within that set is the binding type.
+2.4
+
+Payoff: expected prize minus expected sanction
+
+If a provider joins, the expected per-member payoff given belief α is
+1 − pK
+ω − p̄(α) Feff (n, K),
+UJ (α) = πn,K (α)
+|
+{z
+}
+|
+{z K
+}
+expected prize
+
+(6)
+
+expected sanction
+
+
+p̄(α) := p̃ + πn,K (α) pK − p̃ .
+
+(7)
+
+Equivalently,
+1 − p
+
+K
+ω − [pK − p̃] Feff (n, K) .
+UJ (α) = −p̃ Feff (n, K) + πn,K (α)
+{z
+}
+|
+| K
+{z
+}
+attempt cost
+
+(8)
+
+success bonus
+
+Not joining yields 0.
+Remark 1 (Group Rationality). The relevant slope in beliefs is positive whenever the expected marginal benefit from additional coordination outweighs the
+marginal increase in expected detection. Under independent detection, this reduces to an odds-ratio condition:
+q
+ω
+>
+.
+K Feff
+1−q
+
+(9)
+
+Intuitively, the group’s per-capita prize–to–sanction ratio must exceed the individual detection odds.
+Lemma 2 (Monotonicity in beliefs). From equation 9, UJ (α) is strictly
+increasing in α.
+
+TEEBFT : Pricing the Security of Proof of Cloud
+
+5
+
+
+
+K
+Proof. Since UJ (α) = −p̃ Feff + πn,K (α) 1−p
+K ω − (pK − p̃) Feff , we have
+
+
+dUJ
+′
+K
+= πn,K
+(α) 1−p
+ω − (pK − p̃) Feff .
+K
+dα
+′
+Because πn,K
+(α) > 0 for α ∈ (0, 1) and the bracket is positive via 9, dUJ /dα > 0.
+
+Proposition 1 (Multiple equilibria). For n ≥ 2 and majority K, the nojoin profile is always a symmetric equilibrium. In addition, the all-join profile is
+a symmetric equilibrium if and only if
+UJ (1) =
+
+1 − pK
+ω − pK Feff (n, K) ≥ 0.
+K
+
+(10)
+
+Under Assumption 9, these are the only symmetric pure equilibria.
+Proof (Proof sketch). With α = 0, πn,K (0) = 0 and p̄(0) = p̃, so UJ (0) =
+−p̃ Feff < 0; hence no-join is an equilibrium. With α = 1, πn,K (1) = 1 and
+p̄(1) = pK , so all-join is an equilibrium iff (10) holds. Under Assumption 9 and
+Lemma 2, best responses are strictly increasing in α, which rules out additional
+symmetric pure equilibria between the corners.
+2.5
+
+Private information and selection
+
+Information structure. Let the fundamental θ ∈ R have continuous prior H with
+density h and full support. Each provider i observes
+si = θ + εi ,
+
+εi i.i.d. with CDF Gσ and strictly log-concave density gσ ,
+
+independent of θ. The parameter σ > 0 indexes information precision.
+Assumption 1 (Monotonicity in the fundamental) For each α, UJ (α; θ)
+is strictly increasing in θ.
+Equilibrium. Let α(θ; τ ) := 1−Gσ (τ −θ) denote the probability another provider
+joins when everyone uses cutoff τ .
+Proposition 2 (Unique symmetric cutoff equilibrium for each σ > 0).
+Under Assumption 9, the information structure in §2.5, and assuming UJ (α; θ)
+is strictly increasing in θ, there exists a unique symmetric Bayesian Nash equilibrium in monotone strategies: for each σ > 0 there is a unique threshold τσ
+such that agent i joins iff si ≥ τσ . The cutoff satisfies
+
+
+
+E UJ πn,K (α(θ; τσ )); θ
+si = τσ = 0.
+(11)
+Proof (). Strict log-concavity implies MLRP, so best responses are threshold in
+own signal. Given a candidate cutoff τ , the LHS of (11) is continuous and strictly
+decreasing in τ : as τ rises, α(θ; τ ) falls (reducing πn,K and UJ ), while conditioning on a higher s shifts θ upward (Assumption 1); the first effect dominates by
+Lemma 2. Boundary conditions ensure a unique zero. Uniqueness of the cutoff
+equilibrium then follows. See [19] or [11] for closely related arguments.
+
+6
+
+A. Shamis, M. Stephenson, L. Zhou
+
+Proposition 3 (Limit selection as σ → 0). Let θ⋆ uniquely solve UJ (1; θ⋆ ) =
+0. As σ → 0, τσ → θ⋆ , and for θ > θ⋆ (resp. θ < θ⋆ ) the probability of the
+collusive profile tends to one (resp. zero).
+Proof (). Under Assumptions 1 and 9, the complete-information game has exactly the two pure equilibria in Proposition 1. The set of θ for which all-join is an
+equilibrium is {θ : UJ (1; θ) ≥ 0}, which has boundary θ⋆ . Standard global-games
+arguments (e.g., [7,19,11]) imply the unique monotone equilibrium selects this
+boundary in the vanishing-noise limit.
+2.6
+
+Zipf heterogeneity and majority
+
+Motivated by well-known rank–size regularities in firms [1], we adopt a Zipf law
+with slope s = 1:
+F(r) = C r−1 ,
+r = 1, . . . , n,
+(12)
+for scale parameter C > 0. Under majority (1),
+
+C
+
+n odd,
+ ,
+C
+K
+=
+Feff (n, K) = F(n−K+1) =
+
+n−K +1
+ C , n even.
+K −1
+Let a := 1 − q ∈ (0, 1). Substituting into (10) yields, for n odd,
+o
+1 n
+UJ (1) =
+(ω + C) a K − C .
+K
+
+(13)
+
+(14)
+
+The bracket is strictly decreasing in K, so the sign of UJ (1) is single-crossing in
+K.
+Corollary 1 (Closed-form deterrence thresholds for odd n). All-join is
+not an equilibrium iff (ω + C)(1 − q)K ≤ C, equivalently
+
+C
+ C 1/K
+log ω+C
+K ≥
+or q ≥ 1 −
+.
+log(1 − q)
+ω+C
+These thresholds yield immediate policy comparatives: raising q (detection), raising C (sanctions), or raising K (required majority size) each shrinks the collusive
+region.
+Remark 2 (Single-crossing in K (sign)). For fixed parameters, the sign of UJ (1)
+as a function of K changes at most once, which is the relevant property for
+existence of the collusive corner.
+2.7
+
+Design bound
+
+A conservative design sets V so that joining is unprofitable even if success is
+assured:
+K
+V safe (n, K) =
+pK Feff (n, K).
+(15)
+(1 − pK ) β
+
+TEEBFT : Pricing the Security of Proof of Cloud
+
+3
+
+7
+
+Calibration and Parameterization
+
+We calibrate the conservative design bound in Eq. (15):
+V safe (n, K) =
+
+K
+pK Feff (n, K),
+(1 − pK ) β
+
+where Feff (n, K) is the binding per-member sanction from Lemma 1, pK =
+1−(1−q)K is the detection probability for a size-K coalition within the effective
+exploitation window (§2.2), and β ∈ (0, 1] is the fraction of system stock V
+extractable as flow before suspicion, patching, or market responses curtail it
+(§2.1, Eq. (2)).
+Sanction scale Feff . In practice, Feff is driven by tangible financial and reputational losses borne by large providers:
+(i) Equity drawdowns. Event-study evidence places the average post-breach equity loss for public firms in the 7–8% range; we adopt 7.5% as a reference
+[15]. Single-day cloud-related moves of ∼ $90B in market value have occurred
+at hyperscalers (e.g., Amazon) [23], and sector examples (e.g., Okta) show
+double-digit drops on breach news (about 12%) [22]. For a top-tier market
+cap Mtop ≈ $1.8T, 0.075 × Mtop implies $135B of equity loss on announcement.
+(ii) Legal and regulatory exposure. GDPR empowers fines up to 4% of global
+annual turnover [10]; large U.S. cases have settled in the hundreds of millions
+(e.g., Equifax’s $575M global settlement) [29].
+(iii) Customer flight and financing costs. Breaches damage trust and can worsen
+financing terms; major credit-rating agencies increasingly incorporate cybersecurity posture into ratings and outlooks [28].
+(iv) Remediation overhead. Post-incident audit, re-platforming, and security spend
+are material and reduce margins; these are widely documented in breach case
+studies [15].
+Note The cited magnitudes largely reflect “innocent” breaches (operational failures, compromised vendors). A malicious, profit-motivated collusion to steal secrets would plausibly inflict a larger reputational penalty; in addition, criminal
+liability (including potential jail time) strengthens the effective penalty further.
+Detection at the coalition pK . Bryant and Eckard (1991) estimate the risk of a
+cartel getting caught at 13% to 17% annually[5]. There is natural uncertainty
+on this number, since it can be hard to get data the collusions which were not
+detected. But on the flipside, the physical traces from TEE breaches, faulty
+attestation possibilities, etc. may make the probability uniquely higher in our
+setting. We take pK = 0.15 and explore pK ∈ [0.05, 0.20].
+q = 1 − (1 − pK )1/K
+
+(e.g., K=3, pK =0.15 ⇒ q ≈ 5.3% per window).
+
+8
+
+A. Shamis, M. Stephenson, L. Zhou
+
+Fig. 1. Tornado Graph of total effective security under variable ranges
+
+TEEBFT : Pricing the Security of Proof of Cloud
+
+9
+
+Flow fraction β. We cap β using market turnover and operational controls.
+Annual equity turnover in large markets is often 0.6–0.8 [30], meanwhile 10-day
+median dwell times for many incidents (cf. [18]), along with but protocol-level
+patch & re-attestation requirements can reduce this proportion further. There
+are endogenous considerations which limit effective extraction as well:
+– the full value of the flow may not be directly extractable (e.g. only a proportion of it may be capturable via e.g. information arbitrage and front-running)
+– market microstructure theory [14,17] and practice[8] predicts that liquidity
+contracts when flow looks suspicious, which can dry up the exploitable flow.
+We consider a baseline β = 0.06 as a conservative estimate and examine β ∈
+[0.03, 0.10].
+Threshold. We illustrate with n = 5 and K = 3. With constant Feff , changing
+K scales V safe linearly (holding pK fixed).
+Back-of-the-envelope baseline. With K = 3, pK = 0.15, β = 0.06, and Feff =
+$135B,
+0.15
+3
+·
+· $135B ≈ $1.19 trillion.
+V safe =
+0.06 0.85
+A tighter throttle (smaller β) raises the bound (e.g., β = 0.055 ⇒∼ $1.30T); a
+looser throttle (β = 0.065) lowers it (∼ $1.10T).
+Tornado bands. Unless stated otherwise we vary one parameter at a time around
+the baseline:
+Feff ∈ [$100, $135]B,
+
+pK ∈ [0.05, 0.20],
+
+β ∈ [0.03, 0.10],
+
+K ∈ {3, 4, 5, 6, 7}.
+
+Because V safe scales linearly in Feff and K, with odds pK /(1−pK ), and inversely
+in β, the bars in Fig. 1 are directly interpretable.
+
+4
+
+Conclusion
+
+We derived a principal–agent model with a coalition threshold, layered detection, and heterogeneous sanctions yields tractable deterrence conditions and a
+conservative design bound V safe that protocol designers can target ex ante. Under plausible parameters informed by time-advantaged arbitrage, the cheapest
+collusion may remain uneconomical even at trillion-dollar secured value.
+The engineering of TEEBFT aligns with these levers: near-stateless TEEs
+and periodic restarts compress extraction windows; DKG raises the threshold
+K; and accountability via attestations physical breach traces increase effective
+detection.
+Insights include:
+– Protocol-coordinated TEEs can achieve remarkable high levels of security,
+by effectively borrowing it from the reputational risk of existing firms.
+
+10
+
+A. Shamis, M. Stephenson, L. Zhou
+
+Fig. 2. Iso Curves on Flow Level and Detection Probability
+
+– In an optimal design, the right unit of account for TEE compromise is flow,
+not stock.
+– This can be achieved without relying on the individual security of a single
+TEE design.
+We view improving empirical estimates of detection rates q and extraction
+windows (domain-specific β) as the key path to tighter calibrations and safer
+TEE-augmented BFT systems.
+
+References
+1. Axtell, R.L.: Zipf distribution of u.s. firm sizes. Science 293(5536), 1818–1820
+(2001)
+2. Becker, G.S.: Crime and punishment: An economic approach. Journal of Political
+Economy 76(2), 169–217 (1968)
+3. Berger, B., Felten, E.W., Mamageishvili, A., Sudakov, B.: Economic censorship
+games in fraud proofs. In: Proceedings of the 26th ACM Conference on Economics
+and Computation (EC ’25) (2025). https://doi.org/10.1145/3736252.3742611
+4. Bernheim, B.D., Peleg, B., Whinston, M.D.: Coalition–proof nash equilibria i:
+Concepts. Journal of Economic Theory 42(1), 1–12 (1987). https://doi.org/10.
+1016/0022-0531(87)90099-8
+5. Bryant, P.G., Eckard, E.W.: Price fixing: The probability of getting caught. Journal
+of Law and Economics 34(2), 431–443 (1991). https://doi.org/10.1086/467240
+6. Budish, E.: The economic limits of bitcoin and the blockchain. Tech. Rep. 24717,
+NBER (2018), https://www.nber.org/papers/w24717
+7. Carlsson, H., van Damme, E.: Global games and equilibrium selection. Econometrica 61(5), 989–1018 (1993). https://doi.org/10.2307/2951491
+
+TEEBFT : Pricing the Security of Proof of Cloud
+
+11
+
+8. Cartea, Á., coauthors: Detecting toxic flow. https://papers.ssrn.com/sol3/
+papers.cfm?abstract_id= (2023), practitioner-oriented methodology for identifying informed/toxic order flow. Working paper. Accessed 2025-10-31
+9. Daian, P., Goldfeder, S., Kell, T., Li, Y., Zhao, X., Bentov, I., Breidenbach, L.,
+Juels, A.: Flash boys 2.0: Frontrunning, transaction reordering, and consensus instability in decentralized exchanges. arXiv preprint arXiv:1904.05234 (2019)
+10. European Union: Regulation (eu) 2016/679 (general data protection regulation),
+article 83. https://eur-lex.europa.eu/eli/reg/2016/679/oj (2016), administrative fines up to 4% of worldwide annual turnover; Accessed 2025-10-31
+11. Frankel, D.M., Morris, S., Pauzner, A.: Equilibrium selection in global games with
+strategic complementarities. Journal of Economic Theory 108(1), 1–44 (2003).
+https://doi.org/10.1016/S0022-0531(02)00005-0
+12. Fritsch, R., Silva, M.I., Mamageishvili, A., Livshits, B., Felten, E.W.: Mev capture
+through time-advantaged arbitrage. arXiv preprint arXiv:2410.10797 (2024)
+13. Gao, M., Dang, H., Chang, E.C.: Teekap: Self-expiring data capsule using trusted
+execution environment. In: Proceedings of the 37th Annual Computer Security
+Applications Conference. pp. 235–247 (2021)
+14. Glosten, L.R., Milgrom, P.R.: Bid, ask and transaction prices in a specialist market
+with heterogeneously informed traders. Journal of Financial Economics 14(1), 71–
+100 (1985). https://doi.org/10.1016/0304-405X(85)90044-3
+15. Harvard
+Business
+Review:
+The
+devastating
+business
+impacts
+of
+a
+cyber
+breach.
+https://hbr.org/2023/05/
+the-devastating-business-impacts-of-a-cyber-breach (May 2023), accessed 2025-10-31
+16. Howard, H., Alder, F., Ashton, E., Chamayou, A., Clebsch, S., Costa, M., DelignatLavaud, A., Fournet, C., Jeffery, A., Kerner, M., et al.: Confidential consortium
+framework: Secure multiparty applications with confidentiality, integrity, and high
+availability. arXiv preprint arXiv:2310.11559 (2023)
+17. Kyle, A.S.: Continuous auctions and insider trading. Econometrica 53(6), 1315–
+1335 (1985). https://doi.org/10.2307/1913210
+18. Mandiant, Google Cloud: M-trends 2024: Insights into median dwell times and attack lifecycle. https://cloud.google.com/blog/topics/threat-intelligence/
+m-trends-2024 (2024), reports much faster medians in observed intrusions (e.g.,
+∼10 days). Accessed 2025-10-31
+19. Morris, S., Shin, H.S.: Global games: Theory and applications. In: Dewatripont,
+M., Hansen, L.P., Turnovsky, S.J. (eds.) Advances in Economics and Econometrics:
+Theory and Applications, Eighth World Congress, vol. 1, pp. 56–114. Cambridge
+University Press, Cambridge (2003)
+20. Polinsky, A.M., Shavell, S.: The optimal tradeoff between the probability and magnitude of fines. American Economic Review 69(5), 880–891 (1979)
+21. Polinsky, A.M., Shavell, S.: The economic theory of public enforcement of law.
+Journal of Economic Literature 38(1), 45–76 (2000)
+22. Reuters:
+Software
+firm
+okta’s
+shares
+slump
+after
+cyber
+breach.
+https://www.reuters.com/technology/
+software-firm-oktas-shares-slump-cyber-breach-2023-10-20/
+(October
+2023), accessed 2025-10-31
+23. Reuters: Amazon beats quarterly revenue estimates. https://www.reuters.
+com/technology/amazon-beats-quarterly-revenue-estimates-2025-02-06/
+(February 2025), reports market-cap move around cloud-related news; Accessed
+2025-10-31
+
+12
+
+A. Shamis, M. Stephenson, L. Zhou
+
+24. Rezabek, F., Mahhouk, M., Miller, A., Genchev, S., Kilbourn, Q., Carle, G.,
+Passerat-Palmbach, J.: Proof of cloud: Data center execution assurance for confidential vms (2025), https://arxiv.org/abs/2510.12469
+25. Rezabek, F., Mahhouk, M., Miller, A., Genchev, S., Kilbourn, Q., Carle, G.,
+Passerat-Palmbach, J.: Proof of cloud: Data center execution assurance for confidential vms. arXiv preprint arXiv:2510.12469 (2025)
+26. Russinovich, M., Ashton, E., Avanessians, C., Castro, M., Chamayou, A., Clebsch,
+S., Costa, M., Fournet, C., Kerner, M., Krishna, S., et al.: Ccf: A framework for
+building confidential verifiable replicated services. Microsoft, Redmond, WA, USA,
+Tech. Rep. MSR-TR-2019-16 (2019)
+27. SIFMA: 2025 capital markets fact book. https://www.sifma.org/wp-content/
+uploads/2024/07/2025-SIFMA-Capital-Markets-Factbook.pdf (2025)
+28. The Washington Post: Credit ratings are increasingly looking at cybersecurity.
+https://www.washingtonpost.com/politics/2023/03/21/
+credit-ratings-increasingly-looking-cybersecurity/ (March 2023), accessed 2025-10-31
+29. U.S. Federal Trade Commission: Equifax to pay $575 million as part
+of settlement with ftc, cfpb, and states related to 2017 data breach.
+https://www.ftc.gov/news-events/news/press-releases/2019/07/
+equifax-pay-575-million-part-settlement-ftc-cfpb-states-related-2017-data-breach
+(July 2019), accessed 2025-10-31
+30. World Bank, F.: Stock market turnover ratio (value traded/market capitalization)
+for the united states. https://fred.stlouisfed.org/series/DDEM01USA156NWDB
+(2024), fRED series DDEM01USA156NWDB. Accessed 2025-10-31
+31. World Federation of Exchanges: Fy 2024 market highlights. https://www.
+world-exchanges.org/our-work/articles/wfe-market-highlights-fy-2024
+(2025), report PDF available; global equity market cap ∼ $126T (end 2024)
+32. Zyskind, G., Pentland, A.: Enigma: Decentralized computation platform with guaranteed privacy (2018)
+
+

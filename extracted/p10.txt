@@ -1,0 +1,1861 @@
+arXiv:2603.04168v1 [cs.CR] 4 Mar 2026
+
+OmniIntent: A Trusted Intent-Centric Framework for
+User-Friendly Web3
+Zhuoran Pan
+
+Yue Li
+
+Zhi Guan
+
+Peking University
+Beijing, China
+vanthon256@gmail.com
+
+Taiyuan University of Technology
+Taiyuan, Shanxi, China
+liyue@tyut.edu.cn
+
+Peking University
+Beijing, China
+guan@pku.edu.cn
+
+Jianbin Hu
+
+Zhong Chen
+
+Peking University
+Beijing, China
+hujianbin@pku.edu.cn
+
+Peking University
+Beijing, China
+zhongchen@pku.edu.cn
+
+Abstract
+The increasingly complex Web3 ecosystem and decentralized finance (DeFi) landscape demand ever higher levels of technical expertise and financial literacy from participants. The Intent-Centric
+paradigm in DeFi has thus emerged in response, which allows users
+to focus on their trading intents rather than the underlying execution details. However, existing approaches, including Typed-intent
+design and LLM-driven solver, trade off expressiveness, trust, privacy, and composability.
+We present OmniIntent, a language–runtime co-design that reconciles these requirements. OmniIntent introduces ICL, a domainspecific Intent-Centric Language for precise yet flexible specification of triggers, actions, and runtime constraints; a Trusted Execution Environment (TEE)-based compiler that compiles intents
+into signed, state-bound transactions inside an enclave; and an
+execution optimizer that constructs transaction dependency graphs
+for safe parallel batch submission and a mempool-aware feasibility
+checker that predicts execution outcomes. Our full-stack prototype
+processes diverse DeFi scenarios, achieving 89.6% intent coverage, up to 7.3× throughput speedup via parallel execution, and
+feasibility-prediction accuracy up to 99.2% with low latency.
+
+CCS Concepts
+• Do Not Use This Code → Generate the Correct Terms for
+Your Paper; Generate the Correct Terms for Your Paper; Generate
+the Correct Terms for Your Paper; Generate the Correct Terms for
+Your Paper.
+
+ACM Reference Format:
+Zhuoran Pan, Yue Li, Zhi Guan, Jianbin Hu, and Zhong Chen. 2026. OmniIntent: A Trusted Intent-Centric Framework for User-Friendly Web3. In
+Proceedings of The Web Conference 2026 (WWW ’26). ACM, New York, NY,
+USA, 11 pages. https://doi.org/XXXXXXX.XXXXXXX
+
+1
+
+Introduction
+
+Despite rapid technological advancements in Web3 [33], end-user
+interaction remains largely transaction-centric, i.e., users specify
+low-level contract calls, parameters, and fees [18]. This forces them
+to learn protocol-specific interfaces across these DeFi (e.g., wallets,
+DEXs, lending markets, bridges), posing a significant barrier to
+apply traditional financial strategies in DeFi and confining Web3’s
+revolutionary potential to a niche audience [1]. Recently, an intentcentric paradigm has been proposed to revolutionize Web3 interaction: instead of specifying multiple low-level calls, users only need
+express what they want to achieve [5]. For example, a user can submit a single intent “stake 10 ETH, borrow USDC at rate ≤ 𝑟 , purchase
+asset 𝑋 , and bridge 𝑋 to BSC before 𝑡” and the intent-centric system will compile and execute it without further users involvement,
+whereas a transaction-centric workflow would require at least four
+transactions from the user. Figure 1 shows the workflow of a typical intent-centric system: the signed intent will be submitted to
+the intent pool, the solver automatically understands the intent
+and initiates necessary actions (i.e., transaction) to fulfill it by referring the DeFi interface and on-chain state, and then the solver
+autonomously carries out these transactions on chain. Note that a
+prior authorization from user is necessary to allow solver-issued
+transactions to act on user assets.
+
+Keywords
+Web3, Domain-Specific Language, Trusted Execution Environment,
+Intent-Centric
+
+authorize
+Signed
+Intents
+
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+WWW ’26, Dubai, UAE
+© 2026 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ACM ISBN 978-1-4503-XXXX-X/2018/06
+https://doi.org/XXXXXXX.XXXXXXX
+
+Users
+
+Clients’
+Intents
+Intent Pool
+
+transactions
+Solvers
+
+Blockchain
+
+Figure 1: Typical workflow in intent-centric DeFi systems.
+Currently, intent-centric designs advance along two directions.
+Typed-intent design, such as UniswapX [2], Cowswap [30] and
+1inch [21], support a limited types of intents (e.g., price-bounded
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+swaps, cross-chain transfers) and execute them through competitive solvers; the design is efficient and easier to secure but does
+not generalize well to complex intents. The second relies on LLMdriven solvers that translates natural-language intents into transactions [14], which increases expressiveness of intents while introducing opaque decision paths, weak interpretability, and added
+trust in both the model and its execution backend.
+Overall, both directions have the following limitations: (i) an
+inherent trade-off between the expressiveness of intents and the accuracy with which they can be interpreted, i.e., typed-intent design
+methods support relatively simple user intents to achieve higher accuracy, whereas LLM-driven solvers allow natural-language expression of intents with inaccuracy of translation [10]; (ii) LLM-based
+solvers suffer from unverifiable and untrusted intent-to-transaction
+compilation, as their reasoning and generated transactions cannot
+be formally validated, while typed-intent systems remain verifiable but lack sufficient expressiveness for composite strategies; and
+(iii) lack of support for composite intents, i.e., typed-intent design
+focuses on single-function intents such as token swaps, offering
+little support for intents that span multiple contracts or platforms.
+Moreover, LLM’s reliability will be greatly reduced when handling
+multiple intents.
+Proposing a solution that addresses these gaps entails the following challenges: (𝐶 1 ) seek an appropriate intent expression method
+between the two extremes of typed design and LLM-based approaches, in order to achieve a delicate balance between intent expressiveness and interpretation accuracy; (𝐶 2 ) because the system
+involves the management of real assets, the intent-to-transaction
+parsing process must be trustworthy, and the parsed transactions
+must accurately implement the user’s diverse intent; and (𝐶 3 ) for
+composite intents that may involve multiple interdependent transactions, their interaction and the potential risks of failure during
+execution need to be carefully considered.
+This paper overcomes these challenges with a trusted intentcentric framework. At its core is the Intent-Centric Language (ICL),
+a domain-specific language [16] that captures user intents as structured programs composed of trigger conditions, transaction actions,
+and execution constraints. ICL supports both precise and fuzzy intents (e.g., “buy rare NFT” or “stake with low risk”), which supports
+diverse intents without sacrificing the accuracy of intent interpretation (𝐶 1 ). It is worth noting that ICL is not intended for novice users
+to write directly. Instead, it serves as an intermediate representation
+that can be generated by UI tools or natural language front-ends,
+while remaining concise and auditable for advanced users.
+To ensure that the system conversion process is reliable and
+accurate (𝐶 2 ), we compile ICL inside a Trusted Execution Environment (TEE) [7], which preserves the confidentiality of users’
+private keys and intent parameters, attests to the correctness of
+the compilation process, and produces signed transactions bound
+to real-time blockchain state. This TEE-based design enables preauthorization and immediate execution under remote attestation,
+allowing intents to be executed securely and atomically even in
+constrained environments such as browsers or mobile devices.
+To handle compilation and execution of multiple composite intents (𝐶 3 ), we introduce an execution optimizer which includes
+a parallel transaction submitter that identifies opportunities for
+
+et al.
+
+concurrent execution for multi-step intents while maintaining semantic correctness, and a feasibility checker that simulates multiple
+future blockchain states—including mempool [36] dynamics—to
+estimate execution success probabilities and provide risk feedback
+to users before submission.
+We implement a full-stack prototype, OmniIntent, integrating
+these three components into a cohesive system. OmniIntent supports trusted intent compilation, transaction planning, dependencyaware parallel execution, and risk prediction.
+Our contributions are as follows:
+We conceptualize and formalize intent specification in DeFi as a
+programmatic abstraction. By designing ICL that allows for combination of conditions and expression of multiple intents, we show
+how structured yet flexible constructs can achieve high expressiveness without sacrificing semantic clarity or verifiability. To the best
+of our knowledge, we are the first to incorporate domain-specific
+language interaction paradigms into Web3 intent-centric architectures. Evaluation shows that ICL achieves high expressiveness
+(89.6% of diverse DeFi intents).
+We design and implement a trusted compiler that operates entirely inside a TEE. The compiler securely translates ICL intents
+into verifiable on-chain transactions while preserving the confidentiality of private keys and runtime parameters. It attests to both the
+integrity and correctness of the compilation process and produces
+signed transaction bundles bound to real-time blockchain states.
+We introduce an execution optimizer that enables dependencyaware, risk-predictive intent execution. The optimizer constructs
+a transaction dependency graph to identify parallelizable components in composite intents and submits them concurrently while
+maintaining semantic correctness. A feasibility checker further simulates future blockchain states—including mempool dynamics—to
+estimate execution success probabilities and provide pre-execution
+risk feedback, achieving up to 7.3× throughput improvement and
+99.2% success prediction accuracy.
+We build and open-source a full-stack prototype, OmniIntent,
+integrating ICL, the trusted compiler, and the execution optimizer
+into a cohesive framework. The syntax design of ICL and the Java
+implementation of the resolution system can be found at https:
+//anonymous.4open.science/r/Intent-Centric-DeFi-DSL-3FF7.
+
+2 Background
+2.1 Intent-Centric Framework
+Intent-centric frameworks replace users’ direct submission of concrete transactions with declarative intents that are posted to a
+shared intent pool and consumed by a decentralized solver network [8, 20, 35].
+Solvers scan the pool, match complementary intents, construct
+transaction bundles (often using matching, privacy-preserving proofs,
+and fee negotiation), and present concrete proposals which users
+then authorize (e.g., by signing) for on-chain submission. This separation of what from how improves liquidity aggregation and execution efficiency and lets users express richer goals without detailed
+market knowledge. Current systems, however, remain limited: advanced behaviors such as multi-step strategies, conditional logic,
+and tightly interdependent goals are unsupported, and current
+
+OmniIntent: A Trusted Intent-Centric Framework for User-Friendly Web3
+
+ICL
+Program
+
+Intents (ICL)
+
+ICL
+Program
+
+ICL
+Program
+
+Trusted Intent
+Compiler
+
+Transaction Set
+Trusted Execution Environment
+
+Simulation Result
+To Client
+
+Transaction Set 𝒳
+
+1. Trigger Condition
+2. Tx Main Body
+3. Runtime Constraint
+
+OmniIntent
+Zoom-In
+
+On-Chain State
+
+Execution Optimizer
+𝒳 ∶ {𝑡𝑥! , 𝑡𝑥" , … , 𝑡𝑥# }
+1. Build dependencies
+based on shared state
+
+3. Fix special dependencies
+
+Transaction
+Dependency Graph
+
+AST
+Transfer
+Liquidity Manage
+Stake
+NFT Trading
+…
+
+Transaction Submitter
+Feasibility Checker
+
+Transaction Set 𝒳: {𝑡𝑥! , 𝑡𝑥" , … , 𝑡𝑥# }
+
+Feasibility
+Checker
+
+Each 𝑡𝑥 before Submit
+
+2. Eliminate redundant
+dependencies
+
+Execution Optimizer
+
+Txs on Blockchain
+
+Transaction
+Submitter
+
+Trusted Intent
+Compiler
+
+Clients
+
+Users’ Intents
+
+ICL
+Program
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+Client
+
+Confirm Submission
+
+Warning Infomation
+Simulating
+
+Shuffling
+
+𝑡𝑥' Related Txs
+
+Execution Schedule
+𝑡𝑥! , 𝑡𝑥$ , 𝑡𝑥% , …
+𝑡𝑥" , 𝑡𝑥& , …
+𝑡𝑥'
+Parallel Submitting
+
+Voting
+
+Execution Contexts
+
+Grouping
+
+Candidate Txs
+
+𝑡𝑥!
+
+Pending Txs in
+Mempool
+
+Figure 2: OmniIntent Architecture.
+frameworks lack formal semantics, a type system, or constraintvalidation mechanisms necessary for safety and composability.
+
+2.2
+
+Trusted Execution Environment
+
+Trusted Execution Environments (TEEs) provide hardware-enforced
+confidentiality and integrity for code and data running in isolated enclaves [11]. Representative implementations include Intel
+SGX, ARM TrustZone, and AMD SEV. [13, 25, 39] Lightweight enclave OSes (e.g., Occlum, Eleos) and related abstractions reduce
+the trusted computing base and simplify secure system calls for
+complex workloads [9, 22, 23, 29].
+TEEs support hardware-backed remote attestation (signed measurements of code/configuration), in-enclave key generation, and
+sealed storage; together these features enable enclaves to obtain
+and protect long-term credentials, produce enclave-bound cryptographic proofs, and perform sensitive operations (e.g., signing
+or policy enforcement) without exposing secrets to the untrusted
+host, thereby creating a verifiable chain of trust from hardware to
+application. However, TEEs also introduce practical concerns such
+as vendor dependency and potential side-channel vulnerabilities,
+which should be considered when deploying production systems.
+
+3
+
+Overview
+
+OmniIntent is a comprehensive intent-centric framework that
+bridges the gap between user-friendly intent expression and secure,
+high-performance DeFi transaction execution.
+
+3.1
+
+Architecture
+
+Figure 2 illustrates the high-level architecture of OmniIntent. The
+system takes client intents written in ICL as input and produces executable blockchain transactions as output. This system comprises
+three main parts.
+Intent Centric Language (ICL) is a domain-specific declarative
+language for expressing user intents in DeFi. It provides syntactic
+
+constructs to describe actions such as asset swaps, conditional transfers, staking, liquidity provision, and other multi-step strategies.
+Each intent is represented as a structured statement composed of
+trigger conditions, transaction actions, and execution constraints.
+Trigger conditions define when an action should be initiated, transaction actions specify the operations to perform across protocols,
+and execution constraints capture limits such as slippage, gas usage, or deadlines. By separating these components, ICL enables a
+uniform and machine-readable representation of user strategies
+that can be compiled into executable transactions. Unlike prior
+typed-intent specifications that only capture single-step actions,
+ICL is explicitly designed to express multi-step, composite, and
+dependency-aware strategies in a concise and structured manner,
+enabling complex DeFi workflows to be described as a single highlevel program.
+Taking clients’ ICL programs as input, Trusted Intent Compiler operates inside a TEE and implements the parsing and translation pipeline for ICL programs. It uses an ANTLR-based [24]
+context-free grammar parser to convert ICL statements into Abstract Syntax Trees (ASTs). From the ASTs, the compiler extracts
+structured user intents composed of trigger conditions, transaction main body, and runtime constraints. Within the TEE, these
+structured intents are transformed into executable transactions by
+mapping high-level operations to corresponding smart contract
+interfaces of well-known platforms such as Uniswap, Sushiswap,
+Aave, Compound, etc. The compiler thus produces a set of wellformed transactions that correspond to the user’s specified actions
+while keeping all parsing and key material confined to the secure
+enclave.
+Taking transaction set as input, Execution Optimizer integrates transaction submission and feasibility checking into a unified
+pipeline. It first applies a transaction dependency graph construction algorithm together with parallel scheduling optimization to
+maximize submission throughput while preserving dependency
+correctness. Before a transaction is submitted, it performs feasibility analysis by combining the transaction with a subset of mempool
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+pending transactions [6], generating multiple execution contexts
+via randomized shuffling, simulating each context, and aggregating
+the results to assess execution risk. This integration ensures that
+submitted transactions are both efficiently scheduled and robust
+against execution failures.
+
+3.2
+
+et al.
+
+Table 1: Transaction set which record trigger conditions,
+main trading operation, and runtime constraints.
+Idx
+
+Trigger Condition
+
+Main Operation
+
+1
+
+/
+
+uniswapRouter.exactInputSingle(...)
+
+slippage < 0.005
+
+2
+
+/
+
+uniswapRouter.exactInputSingle(...)
+
+slippage < 0.05 &&
+gasLimit = 150000
+
+Illustrative Motivating Example
+
+1 swap 400000 USDC from wallet[0xA] for USDT on Uniswap checking slippage < 0.005;
+2 swap 200000 USDC from wallet[0xA] for ETH on Uniswap checking slippage < 0.005 and
+fee < 150000;
+
+3 buy popular price-increasing NFT using at most 80 ETH from wallet[0xA];
+4 trigger balance wallet[0x_A] > 400000 USDT then
+5
+add 400000 USDC, 400000 USDT to Sushiswap receiving liquidity token to wallet
+[0xA];
+
+6 stake 160 ETH from wallet[0x_A] using long-term low-risk strategy checking price
+ETH > 4000;
+
+Figure 3: Investment strategies written in ICL.
+
+Consider a decentralized investment fund seeking to automate
+multi-protocol asset allocation and management through OmniIntent. The authorized wallet initially holds a diversified portfolio
+consisting of 1 million USDC and 200 ETH. Its investment policy
+requires the following actions to be performed securely:
+(i) Asset Rebalancing. The user exchanges part of their USDC for
+USDT in order to join a high-yield stablecoin pool [27].
+(ii) NFT Acquisition. The user invests about 20% of their portfolio
+in NFTs [34] with the potential for future appreciation.
+(iii) Stablecoin Liquidity Provision. Another 40% of the portfolio
+is deposited into a stablecoin pool to earn trading fees and liquidity
+incentives.
+(iv) Lending for Profit. The remaining 40% is supplied to lending
+protocols to earn long-term interest [3].
+Using a non–intent-centric approach to achieve the above workflow requires users to understand token contracts, various staking
+protocols, NFT market dynamics, and risk management strategies.
+Under existing intent-centric paradigms, for typed-intent designs, because they support only a very limited range of user intents,
+struggle to handle composite intents that span multiple contracts,
+such as NFT operations, staking, or liquidity-pool interactions. Conversely, although LLM-driven DApps can accept such intents, the
+uncertainty and low interpretability of the transactions generated
+by LLM planning strategies make this approach unacceptable in
+scenarios involving real assets and investments.
+Using the ICL, however, the fund manager specifies the entire
+strategy declaratively as a set of intent statements shown in Figure 3.
+Specifically, line 1 to 2 rebalances assets by converting USDC into
+USDT and ETH; line 3 acquires promising NFTs with a capped ETH
+budget; line 4 to 5 uses a trigger condition to add both USDC and
+USDT to a Sushiswap liquidity pool once a balance threshold is
+reached; and line 6 stakes ETH under a low-risk strategy with a
+price constraint.
+Upon submission, Trusted Intent Compiler parses the ICL program, extracts structured intents, calls related contracts to realize
+the intents, and constructs conditions and trading operations into
+a transaction set, which contains several tuples as Table 1 shows.
+
+Runtime Constraint
+
+3
+
+/
+
+OpenSea.buyNFT(...)
+
+/
+
+4
+
+balanceof(0x_A) > 400000 USDT
+
+SushiSwapRouter.addLiquidity(...)
+
+/
+
+5
+
+/
+
+StakedAave.stake(...)
+
+price ETH > 4000
+
+Then the transaction set is submitted to the execution optimizer module as shown in Figure 4, which models the dependencies among transactions and eliminates redundant links. Based on
+the resulting dependency graph, together with each transaction’s
+trigger conditions and execution constraints, the system submits
+transactions to the blockchain in parallel. Before any transaction
+is dispatched on-chain, it is speculatively executed to anticipate
+potential execution risks in advance.
+1
+
+2
+
+1
+
+2
+
+3
+parallel
+execution
+
+eliminate
+redundancy
+
+4
+
+3
+
+5
+
+4
+
+5
+
+Thread 1
+
+1
+
+4
+
+Thread 2
+
+2
+
+5
+
+Thread 3
+
+3
+
+Figure 4: Transaction dependency construction and parallel
+submission execution.
+This motivating example highlights how OmniIntent transforms complex, multi-step DeFi strategies into a single, auditable
+intent specification, allowing automated yet verifiable execution of
+diversified investment strategies, which cannot be accomplished
+by current intent-centric DApps.
+
+4
+
+ICL Language Design
+
+The ICL is designed as a domain specific language that allows users
+to express DeFi intents in a programmable yet natural form. Its
+constructs are closely aligned with how users describe conditional
+transactions and asset management in decentralized finance, allowing for intuitive expression of triggers, execution logic, and
+runtime-checking conditions. The core syntax of ICL is shown in
+Figure 5. The complete syntax of ICL is provided in the appendix A.
+<program> ::= <triggerStatement> | <triggerStatement> <program>
+<triggerStatement> ::= ("trigger" condition "then")? statement ("checking"
+condition)? ";"
+<condition> ::= <andExpression> ("or" <andExpression>)*
+<andExpression> ::= (<comparisonExpression> | <timeCondition>)("and" <
+comparisonExpression> | <timeCondition>))*
+<comparisonExpression> ::= <comparisonElement> <comparisonOperator> <
+comparisonElement>
+<comparisonElement> ::= <walletBalance> | <assetPrice> | <number> <asset> | <
+number> | "slippage" | "fee" | "(" orExpression ")"
+<statement> ::= <transferStatement> | <borrowStatement> | <repayBorrowStatement> |
+<swapStatement> | <addLiquidityStatement> | <removeLiquidityStatement> | <
+stakeStatement> | <buyNFTStatement> | <sellNFTStatement>
+
+Figure 5: Representative grammar of ICL.
+
+OmniIntent: A Trusted Intent-Centric Framework for User-Friendly Web3
+1: function CompileICLProgram(𝑃 ):
+2: 𝑡𝑥𝑆𝑒𝑡 ← { }
+3: For each 𝑇 𝑆 in 𝑃 :
+4: (𝑇 , 𝑆, 𝐶 ) ← ParseTriggerAndStmt(𝑇 𝑆 )
+5: 𝑡𝑥 ← CompileStatement(𝑆 )
+6: 𝑡𝑥𝑆𝑒𝑡 .𝑎𝑝𝑝𝑒𝑛𝑑 (𝑇 , 𝑡𝑥, 𝐶 )
+7: return 𝑡𝑥𝑆𝑒𝑡
+8: function CompileTranS(𝑇 𝑟𝑎𝑛𝑆 ):
+9: (𝑠𝑒𝑛𝑑𝑒𝑟, 𝑟𝑒𝑐𝑒𝑖𝑣𝑒𝑟, 𝑎𝑠𝑠𝑒𝑡, 𝑎𝑚𝑡 ) ← Parse(𝑇 𝑟𝑎𝑛𝑆 )
+10: 𝑡𝑥 ←ERC20.transfer(sender,receiver,asset,amt)
+11: return 𝑡𝑥
+12: function CompileSwapS(𝑆𝑤𝑎𝑝𝑆 ):
+13: (𝑎𝑐𝑐𝑡, 𝑓 𝑟𝑜𝑚𝐴𝑠𝑠𝑒𝑡, 𝑡𝑜𝐴𝑠𝑠𝑒𝑡, 𝑎𝑚𝑡 ) ← Parse(𝑆𝑤𝑎𝑝𝑆 )
+14: 𝑡𝑥 ← Dex.exactInputSingle(acct,fromAsset,toAsset,amt)
+15: return 𝑡𝑥
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+1: function CompileBorrS(𝐵𝑜𝑟𝑟𝑆 ):
+2: (𝑎𝑐𝑐𝑡, 𝑎𝑠𝑠𝑒𝑡, 𝑝𝑙𝑎𝑡 𝑓 𝑜𝑟𝑚, 𝑎𝑚𝑡 ) ← Parse(𝐵𝑜𝑟𝑟𝑆 )
+3: 𝑡𝑥 ← platform.borrow(acct,asset,amt)
+4: return 𝑡𝑥
+5: function CompileRepaS(𝑅𝑒𝑝𝑎𝑆 ):
+6: (𝑎𝑐𝑐𝑡, 𝑎𝑠𝑠𝑒𝑡, 𝑝𝑙𝑎𝑡 𝑓 𝑜𝑟𝑚, 𝑎𝑚𝑡 ) ← Parse(𝑅𝑒𝑝𝑎𝑆 )
+7: 𝑡𝑥 ← platform.repayBorrow(acct,asset,amt)
+8: return 𝑡𝑥
+9: function CompileAddlS(𝐴𝑑𝑑𝑙𝑆 ):
+10: (𝑎𝑐𝑐𝑡, 𝑎𝑠𝑠𝑒𝑡𝑃𝑎𝑖𝑟, 𝑎𝑚𝑡 ) ← Parse(𝐴𝑑𝑑𝑙𝑆 )
+11: 𝑡𝑥 ← Dex.mintLiquidity(acct,assetPair,amt)
+12: return 𝑡𝑥
+13: function CompileRmvlS(𝑅𝑚𝑣𝑙𝑆 ):
+14: (𝑎𝑐𝑐𝑡, 𝑎𝑠𝑠𝑒𝑡𝑃𝑎𝑖𝑟, 𝑎𝑚𝑡 ) ← Parse(𝑅𝑚𝑣𝑙𝑆 )
+15: 𝑡𝑥 ← Dex.decreaseLiquidity(acct,assetPair,amt)
+16: return 𝑡𝑥
+
+1: function CompileStakS(𝑆𝑡𝑎𝑘𝑆 ):
+2: (𝑎𝑐𝑐𝑡, 𝑎𝑠𝑠𝑒𝑡, 𝑠𝑡𝑟𝑎𝑡𝑒𝑔𝑦) ← Parse(𝑆𝑡𝑎𝑘𝑆 )
+3: info←QueryStakingPools(asset)
+4: target←D.DecideStake(info,strategy)
+5: 𝑡𝑥 ← StakeModule.stake(acct,asset,target)
+6: return 𝑡𝑥
+7: function CompileBuynS(𝐵𝑢𝑦𝑛𝑆 ):
+8: (𝑎𝑐𝑐𝑡, 𝑏𝑢𝑑𝑔𝑒𝑡, 𝑡𝑒𝑛𝑑 ←) Parse(𝐵𝑢𝑦𝑛𝑆 )
+9: info←QueryNFTMarket(...)
+10: target←D.DecideNFT(info,budget,tend)
+11: 𝑡𝑥 ←OpenseaAPI.buildTx(acct,budget,target)
+12: return 𝑡𝑥
+13: function CompileSelnS(𝑆𝑒𝑙𝑛𝑆 ):
+14: (𝑎𝑐𝑐𝑡, 𝑛𝑓 𝑡, 𝑡𝑒𝑛𝑑 ←) Parse(𝑆𝑒𝑙𝑛𝑆 )
+15: info←QueryNFTMarket(nft)
+16: price←D.DecidePrice(info,tend)
+17: 𝑡𝑥 ←OpenseaAPI.buildTx(acct,nft,price)
+18: return 𝑡𝑥
+
+Figure 6: ICL program compilation details (𝑃: ICL program from client. 𝑇 𝑆: triggerStatement instruction in 𝑃. 𝑇 : trigger condition.
+𝑆: transaction statement. 𝐶: execution constraints. 𝑇𝑟𝑎𝑛𝑆: transfer statement. 𝐵𝑜𝑟𝑟𝑆: borrow statement. 𝑅𝑒𝑝𝑎𝑆: repay statement.
+𝑆𝑤𝑎𝑝𝑆: swap statement. 𝐴𝑑𝑑𝑙𝑆: add liquidity statement. 𝑅𝑚𝑣𝑙𝑆: remove liquidity statement. 𝑆𝑡𝑎𝑘𝑆: stake statement. 𝐵𝑢𝑦𝑛𝑆: buy
+NFT statement. 𝑆𝑒𝑙𝑛𝑆: sell NFT statement. 𝑡𝑥: transaction. 𝐷: decision module.)
+Trigger Statement. The fundamental unit of an ICL program is
+the trigger statement. A trigger statement consists of three components: (i) an optional trigger condition introduced by the keyword
+trigger, which specifies the on-chain state or temporal condition
+that must be met before execution; (ii) a mandatory transaction
+statement, which encodes the intended blockchain operation; (iii)
+an optional runtime constraint introduced by checking, which enforces execution-time restrictions such as slippage tolerance or gas
+limits.
+Condition Expression. Conditions appear both in trigger condition and runtime constraint. The grammar supports Boolean logic
+with and/or, enabling composite conditions. Supported predicates
+include wallet balance comparisons, asset price thresholds, slippage bounds [4], fee limits [15], and time-based triggers. Nested
+expressions allow users to combine multiple state variables.
+Transaction Statement. Transaction statements describe the
+actual operations to be executed once conditions are met. ICL supports a comprehensive set of DeFi-native operations, including:
+- Transfers: token transfers; - Swaps: asset exchanges on AMMs
+such as Uniswap or SushiSwap; - Borrowing/Lending: interactions
+with lending protocols like Aave or Compound; - Liquidity Provision/Removal: adding or removing liquidity in AMM pools; - Staking:
+depositing assets into staking contracts; - NFT Trading: purchasing
+or selling NFTs on supported marketplaces.
+Execution Semantics. The executability of an ICL program depends on the live blockchain state at compilation time. A program
+may be compiled only if its conditions are satisfiable and corresponding contract operations are available. Once compiled, each
+transaction statement is mapped to the respective protocol contracts
+(e.g., UniswapRouter.exactInputSingle, AaveLendingPool.borrow).
+This ensures that high-level intents are concretely realized as sequences of transactions consistent with on-chain semantics.
+
+5
+
+Trusted Intent Compiler
+
+Taking ICL programs as input, Trusted Intent Compiler performs
+two main tasks: (1) checking the correctness of ICL programs; and
+
+(2) trustworthily compiling ICL instructions into a set of transactions.
+
+5.1
+
+ICL Program Compilation
+
+ICL compilation is inherently state-dependent: each statement’s validity and the resulting transaction set hinge on real-time blockchain
+conditions such as asset prices, liquidity, and NFT market activity.
+To handle this, the compiler integrates on-chain data interfaces to
+fetch up-to-date information and interpret conditional expressions
+or fuzzy constraints in user intents. Figure 6 presents details of ICL
+program compilation.
+For a given program 𝑃, the compiler iterates over each trigger
+statement (𝑇 𝑆), performing syntax analysis and decomposing it
+into a trigger condition (𝑇 ), a transaction statement (𝑆), and runtime constraints (𝐶). The conditions in 𝑇 and 𝐶 are parsed and
+stored as data structures that specify, respectively, the execution
+trigger and runtime constraints for the transaction compiled from
+𝑆. These constraints are enforced at runtime but only parsed during
+compilation.
+The compiler then classifies 𝑆 and invokes the appropriate compilation routine. Transfer statements (TranS) map to ERC20 transfer
+calls. Borrow and repayment statements (BorrS, RepaS) compile to
+protocol-specific calls (e.g., borrow, repayBorrow). Swap statements
+(SwapS) invoke decentralized exchange functions such as swap
+or exactInputSingle. Liquidity management statements (AddlS,
+RmvlS) compile to mint, decreaseLiquidity operations.
+More complex intents trigger decision-making modules. Staking
+statements (StakS) query platform data such as pool depth and
+APY, then call a decision module 𝐷 (e.g., weighted ranking, random
+forest, or LLM-based scoring) to select targets before emitting stake
+transactions. NFT buy/sell statements (BuynS, SelnS) gather market
+metrics (volume, price trends, holdings) and use 𝐷 to pick purchase
+or sale parameters before invoking the Opensea [37] API to build
+transactions.
+Specifically, consider the ICL statement in line 3 of Figure 3.
+During compilation, this instruction is parsed into a transaction
+statement specifying the NFT asset, the spending limit of 80 ETH,
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+et al.
+
+and the source wallet. The compiler then queries NFT marketplace
+data and decides to pick an NFT that meets the user’s preferences,
+and constructs a purchase transaction that calls the appropriate
+marketplace contract or API (e.g., OpenSea’s CreateItemOffer)
+with the correct parameters.
+Similarly, the statement in line 4 to 5 of Figure 3 is parsed into
+a trigger condition (checking the USDT balance of wallet) and a
+liquidity-provision transaction. The compiler translates this into a
+sequence of ERC20 approve calls followed by a SushiSwap router
+addLiquidity call, ensuring that the liquidity tokens are credited
+to the specified wallet once the trigger condition is satisfied.
+Once all statements are processed, the compiler emits a structured transaction set ready for execution, while preserving the
+ability to adapt at runtime when on-chain state changes.
+
+User 𝓤
+
+5.2
+
+(2) Generate 𝑘 ∶ < 𝑠𝑘, 𝑝𝑘 > as the EOA
+
+Stage 1: Setup
+
+(3) Establish 𝐶ℎ𝒰→ ℰ , send 𝑝𝑘 for auth
+
+(4) Approve assets to 𝑝𝑘 and send P
+(5) Request snapshot at time 𝑡
+
+Stage 2: Trusted State Acquisition
+
+Given (𝑃, 𝑆), the compiler outputs a signed transaction sequence
+X = ⟨𝑡𝑥 1, . . . , 𝑡𝑥𝑚 ⟩ satisfying:
+Semantic fidelity: X implements the operational semantics of 𝑃
+with respect to 𝑆.
+Authorization: each 𝑡𝑥𝑖 is signed under 𝑘.
+Non-leakage: 𝑃, 𝑠𝑘, 𝑆 never appear in plaintext outside E.
+Protocol Overview. As shown in Figure 7, the protocol proceeds
+in four stages, over secure channels 𝐶ℎ U→E (user → enclave) and
+𝐶ℎ E↔N (enclave ↔ node):
+Stage 1: Setup.
+(1) U → E: Initiate remote attestation to verify enclave measurement 𝑀 E .
+(2) E generates key < 𝑠𝑘, 𝑝𝑘 > as the EOA.
+(3) Establish 𝐶ℎ U→E and transmit 𝑝𝑘 to U.
+(4) U approves assets to be traded to the EOA 𝑝𝑘 controlled by
+TEE.
+Stage 2: Trusted State Acquisition.
+(5) E → N : Request state snapshot at logical time 𝑡.
+(6) N → E: Return 𝑠𝑡 and proof-of-state 𝜋𝑡 (e.g., Merkle proof [17]
+of account balances and contract storage).
+(7) E verifies VerifyProof (𝑠𝑡 , 𝜋𝑡 ) = true.
+Stage 3: Secure Compilation.
+
+(6) Return 𝑠𝑡 , proof 𝜋t (accounts, storage)
+(7) Verify 𝑉𝑒𝑟𝑖𝑓𝑦𝑃𝑟𝑜𝑜𝑓(𝑠𝑡 , 𝜋𝑡 ) = 𝑡𝑟𝑢𝑒
+(8) Parse 𝑃, resolve triggers/constraints vs. 𝑠𝑡
+
+Stage 3: Secure Compilation
+
+(9) Map intents to protocol calls;
+(10) Optional market queries (TLS)
+(11) market data → enclave; rank/filter
+
+(12) Emit unsigned plan 𝜎 = < 𝜎1 , … , 𝜎𝑚 >
+(13) 𝑡𝑥𝑖 = 𝑆𝑖𝑔𝑛 𝜎𝑖 , 𝑠𝑘 for all 𝑖
+
+(14) Export 𝒳 = < 𝑡𝑥1 , … , 𝑡𝑥𝑚 >
+
+Intent Compiler in TEE
+
+C : LICL × 𝑆 → X
+
+Node 𝓝
+
+(1) Remote attestation: verify 𝑀ℰ
+
+Stage 4: Isolated Signing & Submission
+
+We adapt the intent compiler to run inside a TEE. We formalize
+the compilation of ICL programs into blockchain transactions as a
+secure multi-party protocol among three entities:
+– U (User): holds an ICL program 𝑃 ∈ LICL and approves
+assets to be traded to the externally owned account (EOA)
+controlled by TEE.
+– E (Enclave): generates a key pair 𝑘 :< 𝑠𝑘, 𝑝𝑘 > as the EOA
+and the Occlum LibOS [29] runs the compiler, which is attested to the user.
+– N (Blockchain Node): an untrusted full node providing blockchain
+state snapshots (or market data) and corresponding proofs.
+The blockchain is modeled as a state machine B = (𝑆,𝑇 ), where
+𝑆 is the state space and 𝑇 : 𝑆 × X → 𝑆 ′ is the transition function,
+with X the set of valid transactions.
+The compiler is a mapping:
+
+Enclave 𝓔
+
+Figure 7: ICL compilation protocol.
+
+(8) E parses 𝑃 according to the ICL grammar, resolving triggers
+and constraints against 𝑠𝑡 .
+(9) For basic DeFi intents, map to protocol-specific calls (e.g.,
+ERC20 transfer, DEX exactInputSingle, lending protocol
+borrow), verifying feasibility within E.
+(10) For complex DeFi intents, perform internal decision-making.
+External market data queries are performed over 𝐶ℎ E↔N or
+other TLS channels.
+(11) Decision module in E filters and ranks to seek solutions that
+meet user preferences.
+(12) Output unsigned transaction plan 𝜎 = ⟨𝜎1, . . . , 𝜎𝑚 ⟩.
+Stage 4: Isolated Signing.
+(13) For each 𝜎𝑖 ∈ 𝜎, compute 𝑥𝑖 = Sign(𝜎𝑖 , 𝑠𝑘) inside E.
+(14) Export X = ⟨𝑡𝑥 1, . . . , 𝑡𝑥𝑚 ⟩ to user for authorizing submission
+of transactions to the blockchain.
+
+6
+
+Execution Optimizer
+
+Taking the transaction set as input, the execution optimizer submits
+transactions to Ethereum and predicts the risk of failure before each
+transaction is submitted, which consists of two parts: a parallel
+transaction submitter and a feasibility checker.
+
+6.1
+
+Parallel Transaction Submitter
+
+ICL programs often contain multiple intents that map to transactions sharing states (accounts or tokens), creating implicit dependencies. Executing strictly in user-written order [32] is inefficient.
+As shown in phase 1 of Algorithm 1, we therefore build a Transaction Dependency Graph (TDG), in which nodes are transactions and
+edges denote either asset-flow or protocol-level constraints (e.g.,
+collateral must precede borrowing).
+To increase concurrency, the optimizer prunes redundant edges
+while ensuring no unsafe asset underflows occur, as shown in phase
+2 of Algorithm 1. This pruning procedure is formalized as an optimization problem (see appendix C) and solved using a dynamic programming–based algorithm shown in appendix B. Figure 8 shows
+
+OmniIntent: A Trusted Intent-Centric Framework for User-Friendly Web3
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+transactions prevent unsafe execution of successors, ensuring robustness. This design achieves both correctness and responsiveness.
+Practical scalability considerations are deferred to appendix C.
+
+Algorithm 1: Optimally Execute Transaction Sets
+Input : X ← {𝑡𝑥 1 , 𝑡𝑥 2 , . . . , 𝑡𝑥𝑛 } is the transaction set.
+Output : 𝑅 is the report on executed transactions.
+1 𝑊 𝐴𝑖𝑛 ,𝑊 𝐴𝑑𝑒 ← { }
+// Track wallet inflows/outflows
+2 𝐺 ← initialize dependency graph
+
+6.2
+
+Feasibility Checker
+
+// Phase 1: Construct primary dependencies.
+
+X𝑠𝑜𝑟𝑡𝑒𝑑 ← sortByIntentOrder( X )
+for 𝑡𝑥 ∈ X𝑠𝑜𝑟𝑡𝑒𝑑 do
+5
+𝑎𝑠𝑠𝑒𝑡𝑖𝑛 , 𝑤𝑎𝑙𝑙𝑒𝑡𝑖𝑛 ← 𝑥 .getIncrease()
+6
+𝑎𝑠𝑠𝑒𝑡𝑑𝑒 , 𝑤𝑎𝑙𝑙𝑒𝑡𝑑𝑒 ← 𝑥 .getDecrease()
+7
+𝐺 .addVertex(𝑡𝑥 )
+8
+for 𝑡𝑥 𝑝𝑎 ∈ 𝑊 𝐴𝑖𝑛 .𝑔𝑒𝑡 ( ⟨𝑎𝑠𝑠𝑒𝑡𝑑𝑒 , 𝑤𝑎𝑙𝑙𝑒𝑡𝑑𝑒 ⟩ ) do
+9
+𝐺 .addEdge(𝑡𝑥𝑝𝑎 , 𝑡𝑥 )
+
+3
+
+pending txs
+
+4
+
+Mempool
+
+11
+
+Next-Block Txs
+
+shuffling
+
+Target-Related Txs
+voting
+
+𝑊 𝐴𝑖𝑛 .put( ⟨𝑎𝑠𝑠𝑒𝑡𝑖𝑛 , 𝑤𝑎𝑙𝑙𝑒𝑡𝑖𝑛 ⟩ , 𝑡𝑥 )
+𝑊 𝐴𝑑𝑒 .put( ⟨𝑎𝑠𝑠𝑒𝑡𝑑𝑒 , 𝑤𝑎𝑙𝑙𝑒𝑡𝑑𝑒 ⟩ , 𝑡𝑥 )
+
+10
+
+grouping
+
+Target Tx
+
+Warning ?
+
+Contexts
+simulation
+
+Simulation Results
+
+// Phase 2: Simplify dependency graph.
+
+X𝑡𝑜𝑝𝑜 ← 𝐺 .topologicalSort().reverse()
+for 𝑡𝑥 ∈ X𝑡𝑜𝑝𝑜 do
+14
+𝐹𝑎𝑏𝑜𝑟𝑡 ← multipleKnapsack(𝑡𝑥 .getParents(), 𝑡𝑥 .getPredictedBalance() )
+15
+adjustEdgesAndBalances(𝑡𝑥, 𝐹𝑎𝑏𝑜𝑟𝑡 , 𝐺 )
+// Rewire and adjust
+
+12
+
+Figure 9: Feasibility checking framework.
+
+13
+
+// Phase 3: Concurrent validation and execution.
+
+initializeExecutionContext(𝐺 )
+// Counters, flags, and thread pool
+executeGraphConcurrently(𝐺 , processNode) // Submit nodes with all
+
+16
+17
+
+parents done
+
+Function processNode(𝑛𝑜𝑑𝑒 )
+19
+if isSkipped(𝑛𝑜𝑑𝑒 ) then
+20
+𝑅 .log(SKIPPED)
+
+18
+
+else
+
+21
+
+checkFeasibilityAndWaitForUserConfirm(𝑛𝑜𝑑𝑒 )
+𝑟𝑒𝑠𝑢𝑙𝑡 ← submitTransaction(𝑛𝑜𝑑𝑒 )
+𝑅 .log(𝑟𝑒𝑠𝑢𝑙𝑡 )
+if 𝑟𝑒𝑠𝑢𝑙𝑡 ∈ { SKIPPED, FAILED } then
+propagateSkipFlag(𝑛𝑜𝑑𝑒 )
+
+22
+23
+24
+25
+26
+
+27
+
+notifySuccessors(𝑛𝑜𝑑𝑒 )
+
+28
+
+Wait until all nodes are processed.
+
+29
+
+return 𝑅
+
+// Trigger child nodes if ready
+
+how the TDG is updated after some dependencies of 𝑁 1 are removed
+(line 15 in Algorithm 1).
+
+Applied in phase 3 of algorithm 1, the feasibility checker determines whether an intent-generated transaction can safely execute under both user-defined constraints and current blockchain
+conditions. Its core is a simulation-based analysis that estimates
+transaction success probability in near-future states.
+As shown in figure 9, the checker retrieves pending transactions
+from the mempool via RPC, sorts them by gas price to approximate
+miner priorities, and aggregates them up to the block gas limit to
+form a predicted next block. It then constructs execution contexts
+for the target transaction by grouping related transactions using
+a disjoint-set algorithm and generating randomized variants to
+capture execution variability.
+Each context is simulated up to the target transaction, and success rates across contexts determine risk level: transactions succeeding in most simulations are executed, while others trigger warnings.
+This simulation-based feasibility check extends beyond static validation, providing proactive risk assessment under dynamic mempool
+and state changes.
+
+7
+G
+
+G
+F1
+
+F2
+
+N1
+
+N2
+
+S1
+
+S2
+
+F2
+
+F2
+F1
+
+1
+
+G
+
+G
+
+2
+
+F2
+
+F1
+
+N1
+
+N2
+
+N1
+
+S1
+
+S2
+
+S1
+
+N2
+S2
+
+3
+
+F1
+N1
+
+S1
+
+N2
+
+S2
+
+Figure 8: Remove dependency of 𝑁 1 and update the TDG
+1) Add dependency edges from 𝑁 1 to its grandparent nodes. 2) Fix the dependencies of 𝑁 1 ’s child nodes on removed parent nodes. 3) Maintain the
+predicted balance of the removed parent nodes and their descendants.
+
+Protocol-specific dependencies that are not derivable from balances (e.g., collateralization rules) are captured via domain-specific
+patterns.
+Given the optimized TDG, a trigger-based engine submits ready
+transactions in parallel shown in phase 3 of Algorithm 1. Failed
+
+Evaluation
+
+We evaluate system performance from three aspects: expressiveness
+of ICL, efficiency of the compiler, and accuracy of the feasibility
+checker. Testbed and datasets are defined below.
+Testbed. Our system is deployed on a server featuring an Intel
+i7 eight-core processor, 16 GB of RAM, and a 1 Gbps Ethernet
+Internet connection. The operating system on the host is Ubuntu
+20.04 LTS. Within the trusted execution environment, Intel SGX
+SDK (v2.25) [31] is employed, and Occlum (v0.30.1) [29] serves as
+the lightweight enclave OS for running Java JAR applications. For
+blockchain integration, both the Sepolia public test network [26]
+and a customizable private Ethereum chain, operated locally via
+Geth [28], are utilized.
+Dataset 1. We use the DeFi user transaction intent dataset constructed in the work of Bob the Solver [14] as the initial test set. Due
+to the limited availability of similar datasets in existing research to
+the best of our knowledge, we construct a comprehensive dataset
+of user transaction intents by applying mutation and augmentation
+techniques using a large language model (GPT-4o).
+Dataset 2. We construct a synthetic dataset using a program
+generator that produces ICL files of varying sizes. The generator
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+et al.
+
+Table 2: ICL intent expressiveness coverage.
+
+480
+500
+500
+500
+500
+500
+580
+250
+240
+4050
+
+Success Num
+391
+489
+497
+494
+483
+498
+513
+149
+115
+3629
+
+Coverage
+81.5%
+97.8%
+99.4%
+98.8%
+96.6%
+99.6%
+88.4%
+59.6%
+47.9%
+89.6%
+
+randomly samples different categories of intents and instantiates
+instruction parameters with on-chain information as well as the
+contextual dependencies among previously generated instructions,
+thereby ensuring the validity of the resulting ICL commands.
+Dataset 3. We construct a dataset of high-frequency transaction
+flows to simulate realistic blockchain workloads. The flows are generated by JavaScript scripts that continuously submit transactions
+including transfer, swap, and liquidity management to a locally
+deployed Ethereum network, reproducing the congested execution
+conditions observed in practice.
+
+7.1
+
+Expressiveness of ICL
+
+Intent Expressiveness. We prompt GPT-4o to learn ICL grammar
+(appendix D) and sequentially input intents from dataset 1. Outputs
+are parsed by our semantic module to verify conformance. Coverage
+is calculated as the proportion of intents successfully mapped into
+valid ICL instructions (results in Table 2).
+ICL achieves high coverage for DeFi intents: Borrow and Repay
+reach 97.8% and 99.4%; Swap, Add Liquidity, and Remove Liquidity
+exceed 95%. In contrast, NFT-related intents remain low (Purchase:
+59.6%, Sale: 47.9%) due to heterogeneous market semantics. Overall,
+ICL covers 3629 of 4050 intents (89.6%).
+Although ICL covers most common DeFi primitives, its expressiveness is limited to the predefined operator set. Intents requiring
+arbitrary contract logic or unsupported cross-chain behaviors cannot be directly expressed and may require extending the operator
+library or falling back to lower-level interactions. We therefore
+position ICL as a practical, safe middle ground rather than a fully
+Turing-complete language.
+Language Usability. We decompose ICL into triggers, actors, and
+checks, and compare to Solidity/Vyper implementations generated
+with GPT-4o (appendix D). Two metrics are used: relative code
+length (rl) and relative similarity to natural language (rs) [19] (Table 3).
+Solidity code is often an order of magnitude longer: e.g., Asset
+Price triggers require 12.44× more characters in Solidity, 6.04× in
+Vyper. Even Transfer is 1.45× and 3.18× longer. ICL also preserves
+higher semantic similarity: Slippage checks score 0.771 (Solidity)
+and 0.641 (Vyper) vs. ICL baseline, while complex ops like Stake
+
+Type
+
+Action
+
+Solidity(rl)
+
+Vyper(rl)
+
+Solidity(rs)
+
+Vyper(rs))
+
+Trigger
+
+Asset Price
+Slippage
+Time
+Balance
+
+12.44
+1.917
+4.256
+2.575
+
+6.037
+2.875
+1.897
+1.466
+
+0.146
+0.771
+0.349
+0.251
+
+0.178
+0.641
+0.405
+0.483
+
+Main Tx
+
+Transfer
+Borrow
+Repay
+Swap
+Add Liquidity
+Remove Liquidity
+Stake
+NFT Purchase
+NFT Sale
+
+1.454
+5.472
+8.042
+3.671
+6.527
+4.795
+9.357
+2.406
+3.993
+
+3.176
+6.042
+3.915
+8.949
+8.391
+6.137
+7.101
+4.123
+3.392
+
+0.283
+0.183
+0.215
+0.124
+0.191
+0.244
+0.103
+0.346
+0.240
+
+0.234
+0.141
+0.333
+0.058
+0.193
+0.248
+0.145
+0.246
+0.234
+
+Checker
+
+Asset Price
+Slippage
+Time
+Balance
+Tx Fee
+
+16.83
+2.190
+2.639
+2.157
+1.526
+
+10.96
+6.857
+1.889
+1.241
+1.474
+
+0.098
+0.615
+0.257
+0.368
+0.614
+
+0.274
+0.196
+0.380
+0.597
+0.399
+
+Table 4: Gas consumption of different transaction methods.
+Intent Type
+
+Conventional
+
+Cowswap
+
+1Inch Fusion
+
+ICL
+
+21047
+283859
+163013
+126074
+383796
+119692
+191183
+329755
+357423
+
+21471
+/
+/
+148050
+/
+/
+/
+/
+/
+
+22862
+/
+/
+108136
+/
+/
+/
+/
+/
+
+22176
+298082
+157122
+110793
+346948
+147062
+199840
+332154
+341908
+
+Transfer
+Borrow
+Repay
+Swap
+Add Liquidity
+Remove Liquidity
+Stake
+NFT Purchase
+NFT Sale
+
+drop to 0.103 and 0.145. These results confirm ICL’s conciseness
+and semantic alignment.
+
+7.2
+
+Efficiency of Compiler
+
+10000
+8000
+6000
+4000
+
+7.5
+
+serial DI=0.0
+parallel DI=0.0
+serial DI=0.5
+parallel DI=0.5
+serial DI=1.0
+parallel DI=1.0
+speedup DI=0.0
+speedup DI=0.5
+speedup DI=1.0
+
+7.0
+
+speedup
+
+Transfer
+Borrow
+Repay
+Swap
+Add Liquidity
+Remove Liquidity
+Stake
+NFT Purchase
+NFT Sale
+Total
+
+Total Num
+
+latency
+
+Intent Type
+
+Table 3: Language usability.
+
+6.5
+6.0
+
+2000
+0
+
+5.5
+10
+
+30
+
+50
+
+ICL program size
+
+70
+
+100
+
+Figure 10: Latency and speedup of transaction sets under
+serial and parallel submission modes.
+
+OmniIntent: A Trusted Intent-Centric Framework for User-Friendly Web3
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+Table 5: Prediction performance of the feasibility checker.
+Method
+
+Accuracy
+
+Precision
+
+Recall
+
+Naïve baseline (no mempool)
+
+0.836
+
+0.971
+
+0.845
+
+OmniIntent (𝐾 = 1.0)
+OmniIntent (𝐾 = 1.5)
+OmniIntent (𝐾 = 2.0)
+
+0.992
+0.960
+0.893
+
+1.000
+1.000
+1.000
+
+0.991
+0.955
+0.881
+
+Transaction Cost. Gas cost is measured on Sepolia using dataset 1
+and compared with conventional transactions and protocols such
+as Cowswap and 1inch Fusion [12] (Table 4).
+ICL shows no systematic overhead: Transfer and Swap consume
+22,176 and 110,793 gas, comparable to Cowswap (21,471, 148,050)
+and 1inch (22,862, 108,136). For complex ops, ICL is close to conventional: Borrow (298,082 vs. 283,859), Repay (157,122 vs. 163,013),
+and reduces cost in some cases (Add Liquidity: 346,948 vs. 383,796).
+Results show general parity while offering broader expressiveness.
+Transaction Efficiency. Using dataset 2, we evaluate throughput
+under serial vs. parallel execution. Dependency Index (DI1 ) is varied
+at 0.0, 0.5, and 1.0, and latency is measured end-to-end. Results
+(Figure 10) show consistent parallel speedups: at DI=1.0 with 50
+txs, parallelism yields 7.3× acceleration; with 100 txs, 5.4×. Speedup
+declines with scale due to denser dependency graphs, but remains
+>5× even with 100 transactions, validating the dependency-graph
+optimization.
+
+7.3
+
+Accuracy of Feasibility Checker
+
+We evaluate the feasibility checker against a naïve baseline that
+predicts outcomes solely based on current on-chain states without
+mempool awareness. The baseline achieves only 83.6% accuracy,
+97.1% precision, and 84.5% recall.
+As shown in Table 5, our checker substantially improves prediction quality. With the default 𝐾 = 1, it achieves 99.2% accuracy,
+100% precision, and 99.1% recall, with no false positives. Increasing
+𝐾 makes predictions more conservative but lowers recall. Prediction
+latency averages 225.8,ms per transaction (max <400,ms), introducing minimal overhead.
+
+8
+
+Conclusion
+
+This work presents OmniIntent, a trusted framework for intentcentric DeFi. It introduces ICL, a domain-specific language that
+expresses triggers, actions, and constraints for complex financial
+intents; a TEE-based compiler that attests code integrity, generates enclave-controlled EOAs, and signs state-bound transactions;
+and a dependency-graph optimizer with a mempool-aware feasibility checker enabling parallel and predictable execution. Together,
+these components achieve privacy-preserving, auditable, and highthroughput intent execution.
+1 Formally, the Dependency Index is defined as:
+
+DI (𝑥 ) = 𝑃 ∃ 𝑦 < 𝑥 s.t. ICL𝑥 depends on ICL𝑦
+
+
+
+References
+[1] Raphael Auer, Bernhard Haslhofer, Stefan Kitzler, Pietro Saggese, and Friedhelm
+Victor. 2024. The technology of decentralized finance (DeFi). Digital Finance 6, 1
+(2024), 55–95.
+[2] Brad Bachu, Joel Hasbrouck, Fahad Saleh, and Xin Wan. 2025. An overview of
+uniswap v4 for researchers. Available at SSRN 5152215 (2025).
+[3] Carlos Castro-Iragorri, Julian Ramirez, and Sebastian Velez. 2021. Financial
+intermediation and risk in decentralized lending protocols. arXiv preprint
+arXiv:2107.14678 (2021).
+[4] Nir Chemaya, Dingyue Liu, Robert McLaughlin, Nicola Ruaro, Christopher
+Kruegel, and Giovanni Vigna. 2024. The power of default: Measuring the effect
+of slippage tolerance in decentralized exchanges. In International Conference on
+Financial Cryptography and Data Security. Springer, 192–208.
+[5] Tarun Chitra, Kshitij Kulkarni, Mallesh Pai, and Theo Diamandis. 2024. An
+analysis of intent-based markets. arXiv preprint arXiv:2403.02525 (2024).
+[6] José Eduardo de Azevedo Sousa, Vinícius Oliveira, Júlia Valadares, Glauber
+Dias Goncalves, Saulo Moraes Villela, Heder Soares Bernardino, and Alex
+Borges Vieira. 2021. An analysis of the fees and pending time correlation in
+Ethereum. International Journal of Network Management 31, 3 (2021), e2113.
+[7] Tim Geppert, Stefan Deml, David Sturzenegger, and Nico Ebert. 2022. Trusted
+execution environments: Applications and organizational challenges. Frontiers
+in Computer Science 4 (2022), 930741.
+[8] Christopher Goes, Awa Sun Yin, and Adrian Brink. 2023. Anoma: a unified
+architecture for full-stack decentralised applications. Anoma Research Topics,
+Aug (2023).
+[9] Thomas Hardjono and Ned Smith. 2019. Decentralized trusted computing base
+for blockchain infrastructure security. Frontiers in Blockchain 2 (2019), 24.
+[10] Enhao Huang, Pengyu Sun, Zixin Lin, Alex Chen, Joey Ouyang, Hobert Wang,
+Dong Dong, Gang Zhao, James Yi, Frank Li, et al. 2025. DMind Benchmark:
+Toward a Holistic Assessment of LLM Capabilities across the Web3 Domain.
+arXiv preprint arXiv:2504.16116 (2025).
+[11] Patrick Jauernig, Ahmad-Reza Sadeghi, and Emmanuel Stapf. 2020. Trusted
+execution environments: properties, applications, and challenges. IEEE Security
+& Privacy 18, 2 (2020), 56–60.
+[12] Heesang Kim and Dohoon Kim. 2024. Optimal gas fee minimization in defi:
+Enhancing efficiency and security on the ethereum blockchain. IEEE Access
+(2024).
+[13] Mengyuan Li, Luca Wilke, Jan Wichelmann, Thomas Eisenbarth, Radu Teodorescu, and Yinqian Zhang. 2022. A systematic look at ciphertext side channels
+on AMD SEV-SNP. In 2022 IEEE Symposium on Security and Privacy (SP). IEEE,
+337–351.
+[14] Nitanshu Lokhande. 2023. Bob the Solver. https://github.com/nlok5923/solver
+[15] Bernhard K Meister and Henry CW Price. 2024. Gas fees on the Ethereum
+blockchain: from foundations to derivative valuations. Frontiers in Blockchain 7
+(2024), 1462666.
+[16] Marjan Mernik, Jan Heering, and Anthony M Sloane. 2005. When and how to
+develop domain-specific languages. ACM computing surveys (CSUR) 37, 4 (2005),
+316–344.
+[17] Avi Mizrahi, Noam Koren, and Ori Rottenstreich. 2021. Optimizing Merkle proof
+size for blockchain transactions. In 2021 International Conference on COMmunication Systems & NETworkS (COMSNETS). IEEE, 299–307.
+[18] Bhabendu Kumar Mohanta, Soumyashree S Panda, and Debasish Jena. 2018. An
+overview of smart contract and use cases in blockchain technology. In 2018 9th
+international conference on computing, communication and networking technologies
+(ICCCNT). IEEE, 1–4.
+[19] Moshe Munk and Dror G Feitelson. 2022. When Are Names Similar Or the Same?
+Introducing the Code Names Matcher Library. arXiv preprint arXiv:2209.03198
+(2022).
+[20] Praveen Kumar Myakala, Anil Kumar Jonnalagadda, and Sooraj George Thomas.
+2025. Intent-Driven Decentralization: Architectures for Private, Scalable,
+and Autonomous Systems. In 2025 Global Conference in Emerging Technology
+(GINOTECH). IEEE, 1–11.
+[21] Evgenii Onishchuk, Maksim Dubovitskii, and Eduard Horch. 2024. Advancing
+DeFi Analytics: Efficiency Analysis with Decentralized Exchanges Comparison
+Service. arXiv preprint arXiv:2411.01950 (2024).
+[22] Meni Orenbach, Pavel Lifshits, Marina Minkin, and Mark Silberstein. 2017. Eleos:
+ExitLess OS services for SGX enclaves. In Proceedings of the Twelfth European
+Conference on Computer Systems. 238–253.
+[23] Arttu Paju, Muhammad Owais Javed, Juha Nurmi, Juha Savimäki, Brian McGillion,
+and Billy Bob Brumley. 2023. Sok: A systematic review of tee usage for developing trusted applications. In Proceedings of the 18th International Conference on
+Availability, Reliability and Security. 1–15.
+[24] Terence J. Parr and Russell W. Quong. 1995. ANTLR: A predicated-LL (k) parser
+generator. Software: Practice and Experience 25, 7 (1995), 789–810.
+[25] Sandro Pinto and Nuno Santos. 2019. Demystifying arm trustzone: A comprehensive survey. ACM computing surveys (CSUR) 51, 6 (2019), 1–36.
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+[26] Prity Rani, Rohit Kumar Sachan, and Sonal Kukreja. 2023. Academic payment
+tokenization: an online payment system for academia utilizing non-fungible
+tokens and permissionless blockchain. Procedia Computer Science 230 (2023),
+347–356.
+[27] Reepu, Pawan Kumar, Sanjay Taneja, and Ercan Ozen. 2025. Stablecoins: The
+Cornerstone of DeFi. Decentralized Finance and the End of Traditional Banking
+(2025), 165–177.
+[28] Sara Rouhani and Ralph Deters. 2017. Performance analysis of ethereum transactions in private blockchain. In 2017 8th IEEE international conference on software
+engineering and service science (ICSESS). IEEE, 70–74.
+[29] Youren Shen, Hongliang Tian, Yu Chen, Kang Chen, Runji Wang, Yi Xu, Yubin
+Xia, and Shoumeng Yan. 2020. Occlum: Secure and efficient multitasking inside
+a single enclave of intel sgx. In Proceedings of the Twenty-Fifth International
+Conference on Architectural Support for Programming Languages and Operating
+Systems. 955–970.
+[30] Zeshun Shi, Sydney Sweck, and Omar Zaki. 2024. From CoWs to Multi-Chain
+AMMs: A Strategic Optimization Model for Enhancing Solvers. In 2024 IEEE
+International Conference on Blockchain (Blockchain). IEEE, 97–104.
+[31] Dave Tian, Joseph I Choi, Grant Hernandez, Patrick Traynor, and Kevin RB
+Butler. 2019. A practical intel sgx setting for linux containers in the cloud. In
+Proceedings of the Ninth ACM Conference on Data and Application Security and
+Privacy. 255–266.
+[32] Luming Wan, David Eyers, and Haibo Zhang. 2019. Evaluating the impact of network latency on the safety of blockchain transactions. In 2019 IEEE International
+Conference on Blockchain (Blockchain). IEEE, 194–201.
+[33] Shicheng Wan, Hong Lin, Wensheng Gan, Jiahui Chen, and Philip S Yu. 2024.
+Web3: The next internet revolution. IEEE Internet of Things Journal 11, 21 (2024),
+34811–34825.
+[34] Qin Wang, Rujia Li, Qi Wang, and Shiping Chen. 2021. Non-fungible token
+(NFT): Overview, evaluation, opportunities and challenges. arXiv preprint
+arXiv:2105.07447 (2021).
+[35] Weijie Wang, Haotian Deng, Jinwen Liang, and Chuan Zhang. 2024. Achieving Privacy-Preserving Optimizer Architecture for Intent Execution on EVM
+Blockchain. In Proceedings of the 6th ACM International Symposium on Blockchain
+and Secure Critical Infrastructure. 1–9.
+[36] Yibo Wang, Yuzhe Tang, Kai Li, Wanning Ding, and Zhihua Yang. 2024. Understanding Ethereum Mempool Security under Asymmetric { DoS } by Symbolized
+Stateful Fuzzing. In 33rd USENIX Security Symposium (USENIX Security 24). 4747–
+4764.
+[37] Bryan White, Aniket Mahanti, and Kalpdrum Passi. 2022. Characterizing the
+OpenSea NFT marketplace. In Companion Proceedings of the Web Conference 2022.
+488–496.
+[38] Christophe Wilbaut, Said Hanafi, and Said Salhi. 2008. A survey of effective
+heuristics and their application to a variety of knapsack problems. IMA journal
+of management Mathematics 19, 3 (2008), 227–244.
+[39] Wei Zheng, Ying Wu, Xiaoxue Wu, Chen Feng, Yulei Sui, Xiapu Luo, and Yajin
+Zhou. 2021. A survey of Intel SGX and its applications. Frontiers of Computer
+Science 15, 3 (2021), 153808.
+
+A
+
+Syntax Definition of ICL
+
+grammar IntentDSL;
+program: triggerStatement+;
+LPARENT : '('; RPARENT : ')'; LBRACK : '['; RBRACK : ']';
+LOGIC_AND : 'and'; LOGIC_OR : 'or'; LOGIC_NOT : 'not';
+EQ : '=='; NEQ : '!='; LT : '<'; GT : '>'; LE : '<='; GE : '>=';
+ADD : '+'; SUB : '-'; MUL : '*'; DIV : '/'; MOD : '%';
+BALANCE : 'balance'; PRICE : 'price'; SLIPPAGE : 'slippage'; FEE : '
+fee'; WALLET : 'wallet';
+USDT : 'USDT'; USDC : 'USDC'; ETH : 'ETH'; DAI : 'DAI'; BTC : 'BTC';
+WBTC : 'WBTC'; WETH : 'WETH'; UNI : 'UNI'; SUSHI : 'SUSHI';
+AAVE_token : 'AAVE'; MATIC : 'MATIC'; COMP : 'COMAP';
+AAVE : 'Aave'; UNISWAP : 'Uniswap'; COMPOUND : 'Compound'; YEARN : '
+Yearn'; SUSHISWAP : 'Sushiswap'; CURVE : 'Curve'; ONEINCH : '1
+inch'; POLYGON : 'Polygon'; AVAX : 'Avax';
+DEC_INT : '0' | ([1-9][0-9]*);
+DEC_FLOAT
+: [0-9]*'.'[0-9]*(('p'|'P'|'e'|'E')('+'|'-')?[0-9]+)?
+| [0-9]+[.]?[0-9]*('p'|'P'|'e'|'E')(('+'|'-')?[0-9]+)?;
+PRIVATE_KEY : [A-Fa-f0-9]+; KEY : '0'('x'|'X')[0-9A-Fa-f]+;
+TIME : [0-9][0-9][0-9][0-9] '-' ('0'[1-9] | '1'[0-2]) '-' ('0'[1-9] |
+[12][0-9] | '3'[01]) 'T' ([01]?[0-9] | '2'[0-3]) ':' [0-5]?[0-9]
+':' [0-5]?[0-9];
+SEMI : ';'; LINE_COMMENT : '//' .*? '\r'?'\n' -> skip; COMMENT : '/*'
+.*? '*/' -> skip; BLANK : [ \t\r\n]+ -> skip;
+
+et al.
+
+condition : orExpression;
+timeCondition : 'time before' TIME | 'time after' TIME | 'time during'
+TIME 'to' TIME;
+orExpression : andExpression (LOGIC_OR andExpression)*;
+andExpression : (comparisonExpression | timeCondition)(LOGIC_AND (
+comparisonExpression| timeCondition))*;
+comparisonExpression : comparisonElement comparisonOperator
+comparisonElement;
+comparisonElement : walletBalance | assetPrice | number asset | number
+| SLIPPAGE | FEE | LPARENT orExpression RPARENT;
+binaryExpression : lowBinaryExpression (highBinaryOperator
+lowBinaryExpression)*;
+lowBinaryExpression : unaryExpression (lowBinaryOperator
+unaryExpression)*;
+unaryExpression : (unaryOperator)* primaryExpression;
+primaryExpression : number | LPARENT (binaryExpression |
+unaryExpression) RPARENT;
+logicalOperator : LOGIC_AND | LOGIC_OR;
+comparisonOperator : EQ | NEQ | LT | GT | LE | GE;
+highBinaryOperator : MUL | DIV | MOD;
+lowBinaryOperator : ADD | SUB;
+unaryOperator : ADD | SUB | LOGIC_NOT;
+number : DEC_INT | DEC_FLOAT;
+walletBalance : BALANCE wallet;
+assetPrice : PRICE asset;
+amount : binaryExpression asset;
+asset : USDT | USDC | ETH | DAI | BTC | WBTC | UNI | SUSHI |
+AAVE_token | MATIC | COMP | WETH;
+wallet : WALLET LBRACK KEY RBRACK;
+platform : AAVE | UNISWAP | COMPOUND | YEARN | SUSHISWAP | CURVE |
+ONEINCH | POLYGON | AVAX;
+triggerStatement : ('trigger' condition 'then')? statement ('checking'
+condition)? SEMI;
+statement : transferStatement | borrowStatement | repayBorrowStatement
+| swapStatement | addLiquidityStatement |
+removeLiquidityStatement | stakeStatement | buyNFTStatement |
+sellNFTStatement | simpleStakeStatement | simpleBuyNFTStatement |
+simpleSellNFTStatement;
+transferStatement : 'transfer' amount 'from' wallet 'to' wallet;
+borrowStatement : 'borrow' amount 'for' wallet 'from' platform;
+repayBorrowStatement : 'repay' amount 'from' wallet 'to' platform;
+swapStatement : 'swap' amount 'from' wallet 'for' asset 'on' platform;
+addLiquidityStatement : 'add' amount ',' amount 'to' platform '
+receiving liquidity token to' wallet;
+removeLiquidityStatement : 'remove' amount ',' amount 'from' platform
+'returning' DEC_INT 'liquidity' ('of token' LBRACK KEY RBRACK)? '
+from' wallet;
+simpleStakeStatement : 'stake' amount 'from' wallet 'on' platform;
+simpleBuyNFTStatement : 'buy NFT' LBRACK KEY RBRACK 'in collection'
+LBRACK KEY RBRACK 'using at most' amount 'from' wallet;
+simpleSellNFTStatement : 'sell NFT' LBRACK KEY RBRACK 'in collection'
+LBRACK KEY RBRACK 'from' wallet 'for at least' amount;
+stakeStatement : 'stake' amount 'from' wallet (stakeStrategy)?;
+stakeStrategy : 'using' (stakeStrategyQualifiers)* 'strategy';
+stakeStrategyQualifiers : 'low-risk' | 'middle-risk' | 'high-risk' | '
+short-term' | 'middle-term' | 'long-term';
+buyNFTStatement : 'buy' (NFTQualifiers)* 'NFT using at most' amount '
+from' wallet;
+NFTQualifiers : 'mainstream' | 'popular' | 'rare' | 'inexpensive' | '
+price-increasing' | 'price-decreaseing';
+NFTPlatform : 'OpenSea' | 'Rarible' | 'SuperRare' | 'Foundation' | '
+Mintable' | 'BakerySwap' | 'LooksRare';
+sellNFTStatement : 'sell NFT' LBRACK KEY RBRACK 'in collection' LBRACK
+KEY RBRACK 'from' wallet (sellNFTStartegy)?;
+sellNFTStartegy : 'using' (sellNFTStrategyQualifiers)* 'strategy';
+sellNFTStrategyQualifiers : 'time-saving' | 'profitable';
+
+OmniIntent: A Trusted Intent-Centric Framework for User-Friendly Web3
+
+B
+
+Multiple Knapsack for Minimizing
+Dependencies
+
+WWW ’26, April 13–17, 2026, Dubai, UAE
+
+C.2
+
+Redundant Dependency Elimination
+
+To maximize concurrency, we seek a minimal parent set 𝑆 𝑗 ⊆
+Pa(𝑡𝑥 𝑗 ) such that the invariant holds:
+min
+
+|𝑆 𝑗 |
+
+𝑆 𝑗 ⊆Pa(𝑡𝑥 𝑗 )
+
+Algorithm 2: Multiple Knapsack
+Input : 𝑝𝑎𝑐𝑘𝑎𝑔𝑒𝑠 , 𝑐𝑎𝑝𝑎𝑐𝑖𝑡𝑖𝑒𝑠
+Output : List of selected packages
+// capacities: Backpack capacity (item type → item capacity)
+// packages: List of item quantities per package (package →
+item type → item quantity)
+// DP map, record backpack status and its corresponding maximum
+
+(𝑆 )
+s.t. 𝐵ˆ 𝑗 𝑗 (𝑤, 𝑎) ≥ Δ −𝑗 (𝑤, 𝑎) ∀(𝑤, 𝑎).
+
+This corresponds to a multi-dimensional bounded subset-sum
+(knapsack) problem, where each parent provides a “budget” of asset
+effects. We solve this using a dynamic programming–based pruning
+algorithm, as integrated in Phase 2 of Algorithm 1. After pruning,
+the DAG is updated to preserve transitive dependencies (see Fig. 8).
+
+number of packages
+
+𝑑𝑝 ← 𝑀𝑎𝑝 (𝑆𝑡𝑟𝑖𝑛𝑔, 𝐵𝑖𝑔𝐼𝑛𝑡𝑒𝑔𝑒𝑟 )
+2 𝑠𝑒𝑙𝑒𝑐𝑡𝑒𝑑𝑃𝑎𝑐𝑘𝑎𝑔𝑒𝑠 ← 𝑀𝑎𝑝 (𝑆𝑡𝑟𝑖𝑛𝑔, 𝐿𝑖𝑠𝑡 )
+3 𝑖𝑛𝑖𝑡𝐶𝑎𝑝𝑎𝑐𝑖𝑡𝑖𝑒𝑠 ← 𝑀𝑎𝑝 (𝑆𝑡𝑟𝑖𝑛𝑔, 𝐵𝑖𝑔𝐼𝑛𝑡𝑒𝑔𝑒𝑟 )
+1
+
+// Initialization: When capacity is at maximum, no package is
+selected
+
+for each 𝑖𝑡𝑒𝑚𝑇 𝑦𝑝𝑒 in 𝑐𝑎𝑝𝑎𝑐𝑖𝑡𝑖𝑒𝑠 do
+5
+𝑖𝑛𝑖𝑡𝐶𝑎𝑝𝑎𝑐𝑖𝑡𝑖𝑒𝑠 [𝑖𝑡𝑒𝑚𝑇 𝑦𝑝𝑒 ] ← 0
+
+4
+
+𝑑𝑝 [𝑐𝑟𝑒𝑎𝑡𝑒𝐾𝑒𝑦 (𝑖𝑛𝑖𝑡𝐶𝑎𝑝𝑎𝑐𝑖𝑡𝑖𝑒𝑠 ) ] ← 0
+𝑠𝑒𝑙𝑒𝑐𝑡𝑒𝑑𝑃𝑎𝑐𝑘𝑎𝑔𝑒𝑠 [𝑐𝑟𝑒𝑎𝑡𝑒𝐾𝑒𝑦 (𝑖𝑛𝑖𝑡𝐶𝑎𝑝𝑎𝑐𝑖𝑡𝑖𝑒𝑠 ) ] ← [ ]
+8 for each 𝑝𝑎𝑐𝑘𝑎𝑔𝑒𝐼𝑡𝑒𝑚 in 𝑝𝑎𝑐𝑘𝑎𝑔𝑒𝑠 do
+9
+𝑝𝑎𝑐𝑘𝑎𝑔𝑒𝐶𝑜𝑛𝑡𝑒𝑛𝑡𝑠 ← 𝑝𝑎𝑐𝑘𝑎𝑔𝑒𝐼𝑡𝑒𝑚.𝑔𝑒𝑡𝐴𝑠𝑠𝑒𝑡𝐼𝑛𝑐𝑟𝑒𝑎𝑠𝑒 ( )
+10
+𝑐𝑢𝑟𝑟𝑒𝑛𝑡𝑆𝑡𝑎𝑡𝑒𝑠 ← 𝑙𝑖𝑠𝑡 𝑜 𝑓 𝑘𝑒𝑦𝑠 𝑓 𝑟𝑜𝑚 𝑑𝑝
+11
+for each 𝑠𝑡𝑎𝑡𝑒𝐾𝑒𝑦 in 𝑐𝑢𝑟𝑟𝑒𝑛𝑡𝑆𝑡𝑎𝑡𝑒𝑠 do
+12
+𝑠𝑡𝑎𝑡𝑒 ← 𝑝𝑎𝑟𝑠𝑒𝐾𝑒𝑦 (𝑠𝑡𝑎𝑡𝑒𝐾𝑒𝑦) , 𝑛𝑒𝑤𝑆𝑡𝑎𝑡𝑒 ← 𝑠𝑡𝑎𝑡𝑒 ,
+𝑣𝑎𝑙𝑖𝑑 ← true
+13
+for each (𝑖𝑡𝑒𝑚𝑇 𝑦𝑝𝑒, 𝑖𝑡𝑒𝑚𝐶𝑜𝑢𝑛𝑡 ) in 𝑝𝑎𝑐𝑘𝑎𝑔𝑒𝐶𝑜𝑛𝑡𝑒𝑛𝑡𝑠 do
+14
+𝑐𝑢𝑟𝑟𝑒𝑛𝑡𝐶𝑎𝑝𝑎𝑐𝑖𝑡 𝑦 ← 𝑛𝑒𝑤𝑆𝑡𝑎𝑡𝑒 [𝑖𝑡𝑒𝑚𝑇 𝑦𝑝𝑒 ]
+15
+𝑛𝑒𝑤𝐶𝑎𝑝𝑎𝑐𝑖𝑡 𝑦 ← 𝑐𝑢𝑟𝑟𝑒𝑛𝑡𝐶𝑎𝑝𝑎𝑐𝑖𝑡 𝑦 + 𝑖𝑡𝑒𝑚𝐶𝑜𝑢𝑛𝑡
+16
+if 𝑛𝑒𝑤𝐶𝑎𝑝𝑎𝑐𝑖𝑡 𝑦 > 𝑐𝑎𝑝𝑎𝑐𝑖𝑡𝑖𝑒𝑠 [𝑖𝑡𝑒𝑚𝑇 𝑦𝑝𝑒 ] then
+17
+𝑣𝑎𝑙𝑖𝑑 ← false, break
+
+C.3
+
+Complexity Analysis
+
+The worst-case complexity is 𝑂 (2𝑚 ) where 𝑚 is the number of
+direct parents of a node. In practice, transaction dependency graphs
+are sparse, so exact solutions are tractable. For larger graphs, approximate or heuristic solvers [38] can be used to balance accuracy
+and efficiency.
+
+6
+7
+
+18
+19
+20
+
+21
+
+22
+23
+
+24
+
+25
+26
+
+𝑛𝑒𝑤𝑆𝑡𝑎𝑡𝑒 [𝑖𝑡𝑒𝑚𝑇 𝑦𝑝𝑒 ] ← 𝑛𝑒𝑤𝐶𝑎𝑝𝑎𝑐𝑖𝑡 𝑦
+if 𝑣𝑎𝑙𝑖𝑑 then
+𝑛𝑒𝑤𝑆𝑡𝑎𝑡𝑒𝐾𝑒𝑦 ← 𝑐𝑟𝑒𝑎𝑡𝑒𝐾𝑒𝑦 (𝑛𝑒𝑤𝑆𝑡𝑎𝑡𝑒 ) ,
+𝑛𝑒𝑤𝑉 𝑎𝑙𝑢𝑒 ← 𝑑𝑝 [𝑠𝑡𝑎𝑡𝑒𝐾𝑒𝑦 ] + 1
+if 𝑛𝑒𝑤𝑆𝑡𝑎𝑡𝑒𝐾𝑒𝑦 not in 𝑑𝑝 or
+𝑛𝑒𝑤𝑉 𝑎𝑙𝑢𝑒 > 𝑑𝑝 [𝑛𝑒𝑤𝑆𝑡𝑎𝑡𝑒𝐾𝑒𝑦 ] then
+𝑑𝑝 [𝑛𝑒𝑤𝑆𝑡𝑎𝑡𝑒𝐾𝑒𝑦 ] ← 𝑛𝑒𝑤𝑉 𝑎𝑙𝑢𝑒
+𝑛𝑒𝑤𝑃𝑎𝑐𝑘𝑎𝑔𝑒𝐿𝑖𝑠𝑡 ←
+𝑠𝑒𝑙𝑒𝑐𝑡𝑒𝑑𝑃𝑎𝑐𝑘𝑎𝑔𝑒𝑠 [𝑠𝑡𝑎𝑡𝑒𝐾𝑒𝑦 ] + 𝑝𝑎𝑐𝑘𝑎𝑔𝑒𝐼𝑡𝑒𝑚
+𝑠𝑒𝑙𝑒𝑐𝑡𝑒𝑑𝑃𝑎𝑐𝑘𝑎𝑔𝑒𝑠 [𝑛𝑒𝑤𝑆𝑡𝑎𝑡𝑒𝐾𝑒𝑦 ] ←
+𝑛𝑒𝑤𝑃𝑎𝑐𝑘𝑎𝑔𝑒𝐿𝑖𝑠𝑡
+
+𝑏𝑒𝑠𝑡𝑆𝑡𝑎𝑡𝑒𝐾𝑒𝑦 ← 𝑘𝑒𝑦 𝑜 𝑓 𝑡ℎ𝑒 𝑒𝑛𝑡𝑟 𝑦 𝑖𝑛 𝑑𝑝 𝑤𝑖𝑡ℎ 𝑡ℎ𝑒 𝑚𝑎𝑥𝑖𝑚𝑢𝑚 𝑣𝑎𝑙𝑢𝑒
+return 𝑠𝑒𝑙𝑒𝑐𝑡𝑒𝑑𝑃𝑎𝑐𝑘𝑎𝑔𝑒𝑠 [𝑏𝑒𝑠𝑡𝑆𝑡𝑎𝑡𝑒𝐾𝑒𝑦 ]
+
+D
+
+Prompts
+
+Attempt to fulfill the transaction intents in the dataset using the
+designed ICL.. You are a decentralized finance (DeFi) trading assistant. I have designed a decentralized fi-nance trading tool in the
+form of a domain-specific language (DSL). Below is the grammar
+definition of this language:
+<grammar>
+You will receive a trading intent for a decentralized finance
+transaction. Try to accomplish this intent using the appropriate
+instructions from the language.
+If the intent can be fulfilled, output the corresponding instruction
+directly (without any extra content).
+If the intent cannot be fulfilled, output ’DISABLED’.
+Here is the trading intent to fulfill: <intent>
+Attempt to implement the transaction intents using a specific programming language. You are a decentralized finance intent translator. You need to translate the following intent into the shortest
+possible specified code (or code framework).
+Just output the code text without comments or any other content. Now please translate the following intent into <language> :
+<intent>
+Received 20 February 2007; revised 12 March 2009; accepted 5 June 2009
+
+C Execution Optimizer Theoretical Derivations
+C.1 Predicted Balance and Safety Invariant
+For each transaction 𝑡𝑥 𝑗 , let Δ+𝑗 (𝑤, 𝑎) and Δ −𝑗 (𝑤, 𝑎) denote the increase and consumption of asset 𝑎 in wallet 𝑤. With initial balance
+𝐵 0 (𝑤, 𝑎), the predicted balance before 𝑥 𝑗 executes is
+𝐵ˆ 𝑗 (𝑤, 𝑎) = 𝐵 0 (𝑤, 𝑎) +
+
+∑︁
+
+ +
+
+Δ𝑖 (𝑤, 𝑎) − Δ𝑖− (𝑤, 𝑎) ,
+
+𝑡𝑥𝑖 ∈Dom(𝑡𝑥 𝑗 )
+
+where Dom(𝑡𝑥 𝑗 ) are the ancestors of 𝑡𝑥 𝑗 in the dependency graph.
+The safety condition requires:
+∀(𝑤, 𝑎) :
+
+𝐵ˆ 𝑗 (𝑤, 𝑎) ≥ Δ −𝑗 (𝑤, 𝑎).
+
+

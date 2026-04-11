@@ -1,0 +1,347 @@
+2021 - Hand Me Your SECRET MCU Microarchitectural Timing Attacks on Microcontrollers are Practical.pdf
+2021 - SoK - Hardware Defenses Against Speculative Execution Attacks.pdf
+2021 - Store-to-Leak Forwarding Leaking Data on Meltdown-resistant CPUs.pdf
+2022 - Minefield - A Software-only Protection for SGX Enclaves against DVFS Attacks.pdf
+2022 - Simultaneous Suspension Control and Energy Harvesting through Novel Design.pdf
+2023 - Downfall Exploiting Speculative Data Gathering.pdf
+2023 - Trusted Execution Environment.pdf
+2024 - An Edge-Computing Based Industrial Gateway For Industry 4.0 Using ARM TrustZone Technology.pdf
+2024 - Ciphertext Policy Attribute Based Encryption with Intel SGX.pdf
+2024 - Establishing Trust in the Beyond-5G Core Network using Trusted Execution Environments.pdf
+2024 - TEE.fail Breaking Trusted Execution Environments via DDR5 Memory Bus Interposition.pdf
+2024 - TEE_Research_Prospect_Zhang_Wei.pdf
+2024 - TRUST - A Toolkit for TEE-Assisted Secure Outsourced Computation over Integers.pdf
+2024 - TensorTEE - Unifying Heterogeneous TEE Granularity for Efficient Secure Collaborative Tensor Computing.pdf
+2025 - A Formal Approach to Multi-Layered Privileges for Enclaves.pdf
+2025 - A Survey on Privacy Risks and Protection in Large Language Models.pdf
+2025 - A TEE-based Approach for Security and Privacy in Decision Support.pdf
+2025 - A performance analysis of VM-based Trusted Execution Environments for Confidential Federated Learning.pdf
+2025 - AEX-NStep - Probabilistic Interrupt Counting Attacks on Intel SGX.pdf
+2025 - AEX-NStep Probabilistic Interrupt Counting Attacks on Intel SGX.pdf
+2025 - AGATE Augmented Global Attested Trusted Execution in the Universal Composability Framework.pdf
+2025 - ASGARD - Protecting On-Device Deep Neural Networks with Virtualization-Based Trusted Execution Environments.pdf
+2025 - ASGARD: Protecting On-Device Deep Neural Networks with Virtualization-Based Trusted Execution Environments.pdf
+2025 - Abstraction of TEEs Systematization of Knowledge.pdf
+2025 - Abstraction of Trusted Execution Environments as the Missing Layer for Broad Confidential Computing Adoption A Systematization of Knowledge.pdf
+2025 - Abstraction of Trusted Execution Environments as the Missing Layer for Broad Confidential Computing Adoption.pdf
+2025 - Adding All Flavors A Hybrid Random Number Generator for dApps and Web3.pdf
+2025 - Amulet - Fast TEE-Shielded Inference for On-Device Model Protection.pdf
+2025 - Amulet Fast TEE-Shielded Inference for On-Device Model Protection.pdf
+2025 - Amulet Fast TEE-Shielded Inference.pdf
+2025 - An Early Experience with Confidential Computing Architecture for On-Device Model Protection.pdf
+2025 - An Open-Source Trusted Execution Environment for Resource-Constrained RISC-V MCUs.pdf
+2025 - An Open-source Implementation and Security Analysis of Triad TEE Trusted Time Protocol.pdf
+2025 - An Open-source Implementation and Security Analysis of Triad's TEE Trusted Time Protocol.pdf
+2025 - AtomicDisk A Secure Virtual Disk for TEEs against Eviction Attacks.pdf
+2025 - Attestable Audits Verifiable AI Safety Benchmarks Using TEEs.pdf
+2025 - Attestable Audits Verifiable AI Safety Benchmarks Using Trusted Execution Environments.pdf
+2025 - Attestable Builds Compiling Verifiable Binaries on Untrusted Systems using Trusted Execution Environments.pdf
+2025 - AutoTEE - Automated TEE Adaptation with LLMs Identifying Transforming and Porting Sensitive Functions in Programs.pdf
+2025 - Available Attestation - Towards a Reorg-Resilient Solution for Ethereum Proof-of-Stake.pdf
+2025 - BOLT Bandwidth-Optimized Lightning-Fast Oblivious Map powered by Secure HBM Accelerators.pdf
+2025 - BadRAM: Practical Memory Aliasing Attacks on Trusted Execution Environments.pdf
+2025 - Battering RAM: Low-Cost Interposer Attacks on Confidential Computing via Dynamic Memory Aliasing.pdf
+2025 - Blindfold - Confidential Memory Management by Untrusted Operating System.pdf
+2025 - Blindfold: Confidential Memory Management by Untrusted Operating System.pdf
+2025 - COoL-TEE - Client-TEE Collaboration for Resilient Distributed Search.pdf
+2025 - CapsuleFS - A Multi-credential DataCapsule Filesystem.pdf
+2025 - Careful Whisper Attestation for peer-to-peer Confidential Computing networks.pdf
+2025 - Characterization of GPU TEE Overheads in Distributed Data Parallel ML Training.pdf
+2025 - Characterizing Trust Boundary Vulnerabilities in TEE Containers.pdf
+2025 - CipherGuard Compiler-aided Mitigation against Ciphertext Side-channel Attacks.pdf
+2025 - CipherSteal - Stealing Input Data from TEE-Shielded Neural Networks with Ciphertext Side Channels.pdf
+2025 - CoVault - Secure, Scalable Analytics of Personal Data.pdf
+2025 - Confidential Attestable and Efficient Inter-CVM Communication with Arm CCA.pdf
+2025 - Confidential Computing A Security Overview and Future Research Directions.pdf
+2025 - Confidential Computing for Cloud Security - Exploring Hardware based Encryption Using Trusted Execution Environments.pdf
+2025 - Confidential Computing for Cloud Security Exploring Hardware based Encryption Using Trusted Execution Environments.pdf
+2025 - Confidential LLM Inference - Performance and Cost Across CPU and GPU TEEs.pdf
+2025 - Confidential Serverless Computing.pdf
+2025 - Constant-Size Cryptographic Evidence Structures for Regulated AI Workflows.pdf
+2025 - CounterSEVeillance Performance-Counter Attacks on AMD SEV-SNP.pdf
+2025 - CounterSEVeillance: Performance-Counter Attacks on AMD SEV-SNP.pdf
+2025 - Cross-Chain Sealed-Bid Auctions Using Confidential Compute Blockchains.pdf
+2025 - CyFence - Securing Cyber-Physical Controllers via Trusted Execution Environment.pdf
+2025 - DEXO - A Secure and Fair Exchange Mechanism for Decentralized IoT Data Markets.pdf
+2025 - DITING - A Static Analyzer for Identifying Bad Partitioning Issues in TEE Applications.pdf
+2025 - DORAMI - Privilege Separating Security Monitor on RISC-V TEEs.pdf
+2025 - Defeating AutoLock - From Simulation to Real-World Cache-Timing Exploits against TrustZone.pdf
+2025 - Defeating AutoLock From Simulation to Real-World Cache-Timing Exploits against TrustZone.pdf
+2025 - DesignFromX Empowering Consumer-Driven Design Space Exploration through Feature Composition.pdf
+2025 - Deterministic Client - Enforcing Determinism on Untrusted Machine Code.pdf
+2025 - DiStefano - Decentralized Infrastructure for Sharing Trusted Encrypted Facts and Nothing More.pdf
+2025 - DistilLock: Safeguarding LLMs from Unauthorized Knowledge Distillation on the Edge.pdf
+2025 - Distilled Large Language Model in Confidential Computing Environment for System-on-Chip Design.pdf
+2025 - Dorami - Privilege Separating Security Monitor on RISC-V TEEs.pdf
+2025 - Dstack A Zero Trust Framework for Confidential Containers.pdf
+2025 - Emerging Paradigms for Securing Federated Learning Systems.pdf
+2025 - Enabling Low-Cost Secure Computing on Untrusted In-Memory Architectures.pdf
+2025 - Enabling Trustworthy Federated Learning via Remote Attestation for Mitigating Byzantine Threats.pdf
+2025 - Enhancing Rollup Sequencer Security with TEEs.pdf
+2025 - Enhancing the Security of Rollup Sequencers using Decentrally Attested TEEs.pdf
+2025 - Evaluating the Performance of DeepSeek Model in Confidential Computing.pdf
+2025 - Exploring side-channels in Intel Trust Domain Extensions.pdf
+2025 - FAARM - Firmware Attestation and Authentication Framework for Mali GPUs.pdf
+2025 - FAARM Firmware Attestation and Authentication Framework for Mali GPUs.pdf
+2025 - FHE-SQL - Fully Homomorphic Encrypted SQL Database.pdf
+2025 - Fast Networks for High-Performance Distributed Trust.pdf
+2025 - Flexible Remote Attestation System for Trusted Execution Environment using Delegating Verification.pdf
+2025 - Flexway O-Sort - Enclave-Friendly and Optimal Oblivious Sorting.pdf
+2025 - Found in Translation - A Generative Language Modeling Approach to Memory Access Pattern Attacks.pdf
+2025 - GPU Travelling - Efficient Confidential Collaborative Training with TEE-Enabled GPUs.pdf
+2025 - Game of Arrows - On the In-Security of Weight Obfuscation for On-Device TEE-Shielded LLM Partition Algorithms.pdf
+2025 - GhostCache - Timer- and Counter-Free Cache Attacks Exploiting Weak Coherence on RISC-V and ARM Chips.pdf
+2025 - Goldilocks Isolation - High Performance VMs with Edera.pdf
+2025 - Graph in the Vault - Protecting Edge GNN Inference with Trusted Execution Environment.pdf
+2025 - H2O2RAM: Hidden-Hidden-Owner-Hidden-Owner-RAM.pdf
+2025 - HOT Protocol - Smart Contract Key Management via MPC and TEE.pdf
+2025 - Hardening Trusted Execution Environments Against Microarchitectural Side-Channel Attacks A Constructive Approach.pdf
+2025 - IBE-IBE Intent-Based Execution through Identity-Based Encryption and Auctions.pdf
+2025 - LATTEO - A Framework to Support Learning Asynchronously Tempered with Trusted Execution and Obfuscation.pdf
+2025 - LURK-T - Limited Use of Remote Keys With Added Trust in TLS 1.3.pdf
+2025 - Leaking Queries On Secure Stream Processing Systems.pdf
+2025 - Leveraging Trusted Execution Environments For Data Security in Healthcare Workflows.pdf
+2025 - Lost in the Pages WebAssembly Code Recovery through SEV-SNP Exposed Address Space.pdf
+2025 - Lost in the Pages WebAssembly Code Recovery through SEV-SNP's Exposed Address Space.pdf
+2025 - MVTEE - Multi-Variant Trusted Execution for Secure Model Inference.pdf
+2025 - Mole - Breaking GPU TEE with GPU-Embedded MCU.pdf
+2025 - NDAI Agreements.pdf
+2025 - Narrowbeer - A Practical Replay Attack Against the Widevine DRM.pdf
+2025 - Narrowing the Gap between TEEs Threat Model and Deployment Strategies.pdf
+2025 - OBLIVIATOR: OBLIVIous Parallel Joins and other OperATORs in Shared Memory Environments.pdf
+2025 - Obelix Mitigating Side-Channels Through Dynamic Obfuscation.pdf
+2025 - Obfuscation for Deep Neural Networks against Model Extraction Attack Taxonomy and Defense Optimization.pdf
+2025 - Oblivious Digital Tokens.pdf
+2025 - Optimistic TEE-Rollups - Hybrid Architecture for Scalable and Verifiable Generative AI Inference on Blockchain.pdf
+2025 - Optimistic TEE-Rollups A Hybrid Architecture for Scalable and Verifiable Generative AI Inference on Blockchain.pdf
+2025 - PDRIMA - Policy-Driven Runtime Integrity Measurement and Attestation for ARM TrustZone-based TEE.pdf
+2025 - PDRIMA A Policy-Driven Runtime Integrity Measurement and Attestation Approach for ARM TrustZone-based TEE.pdf
+2025 - PDRIMA Policy-Driven Runtime Integrity Measurement and Attestation for ARM TrustZone-based TEE.pdf
+2025 - PDRIMA Policy-Driven Runtime Integrity Measurement.pdf
+2025 - PM-Dedup Secure Deduplication with Partial Migration from Cloud to Edge Servers.pdf
+2025 - PMU-Data Data Traces Could be Distinguished.pdf
+2025 - PORTAL - Fast and Secure Device Access with Arm CCA for Modern Arm Mobile System-on-Chips.pdf
+2025 - Partial Key Overwrite Attacks in Microcontrollers A Survey.pdf
+2025 - Partial Key Overwrite Attacks in Microcontrollers a Survey.pdf
+2025 - Performance of Confidential Computing GPUs.pdf
+2025 - Persistent BitTorrent Trackers.pdf
+2025 - Phantom - Privacy-Preserving Deep Neural Network Model Obfuscation in Heterogeneous TEE and GPU System.pdf
+2025 - Picachv - Formally Verified Data Use Policy Enforcement for Secure Data Analytics.pdf
+2025 - Practical Secure Aggregation by Combining Cryptography and Trusted Execution Environments.pdf
+2025 - ProDiF Protecting Domain-Invariant Features to Secure Pre-Trained Models Against Extraction.pdf
+2025 - Proof of Cloud - Data Center Execution Assurance for Confidential VMs.pdf
+2025 - Proof of Trusted Execution - A Consensus Paradigm for Deterministic Blockchain Finality.pdf
+2025 - Protecting Deep Learning Models on Cloud Platforms with Trusted Execution Environments.pdf
+2025 - Qualcomm Trusted Application Emulation for Fuzzing Testing.pdf
+2025 - RContainer: A Secure Container Architecture through Extending ARM CCA Hardware Primitives.pdf
+2025 - RaceTEE - A Practical Privacy-Preserving Off-Chain Smart Contract Execution Architecture.pdf
+2025 - RaceTEE - Enabling Interoperability of Confidential Smart Contracts.pdf
+2025 - Recipe - Hardware-Accelerated Replication Protocols.pdf
+2025 - Reinforcing Secure Live Migration through Verifiable State Management.pdf
+2025 - Rethinking the Confidential Cloud through a Unified Low-Level Abstraction for Composable Isolation.pdf
+2025 - Rollbaccine - Herd Immunity against Storage Rollback Attacks in TEEs.pdf
+2025 - SCASE - Automated Secret Recovery via Side-Channel-Assisted Symbolic Execution.pdf
+2025 - SCRUTINIZER: Towards Secure Forensics on Compromised TrustZone.pdf
+2025 - Save what must be saved - Secure context switching with Sailor.pdf
+2025 - Scalable GPU-Based Integrity Verification for Large Machine Learning Models.pdf
+2025 - SecONNds - Secure Outsourced Neural Network Inference on ImageNet.pdf
+2025 - Secure Autonomous Agent Payments.pdf
+2025 - Secure Caches for Compartmentalized Software.pdf
+2025 - Secure Information Embedding in Forensic 3D Fingerprinting.pdf
+2025 - Secure Integration of Trusted Execution Environments into Distributed Applications.pdf
+2025 - Secure User-friendly Blockchain Modular Wallet Design Using Android and OP-TEE.pdf
+2025 - Secure phasing of private genomes in a trusted execution environment with TX-Phase.pdf
+2025 - SecureInfer - Heterogeneous TEE-GPU Architecture for Privacy-Critical Tensors for Large Language Model Deployment.pdf
+2025 - SecureInfer Heterogeneous TEE-GPU Architecture for Privacy-Critical Tensors for LLM Deployment.pdf
+2025 - SecureInfer Heterogeneous TEE-GPU Architecture for Privacy-Critical Tensors for Large Language Model Deployment.pdf
+2025 - SecureInfer Heterogeneous TEE-GPU for LLM.pdf
+2025 - Securing Generative AI in Healthcare A Zero-Trust Architecture Powered by Confidential Computing on Google Cloud.pdf
+2025 - Securing Nested Attestation of Confidential Serverless Computing without Intra-Enclave Isolation.pdf
+2025 - Securing Private Federated Learning in a Malicious Setting A Scalable TEE-Based Approach with Client Auditing.pdf
+2025 - Securing Transformer-based AI Execution via Unified TEEs and Crypto-protected Accelerators.pdf
+2025 - Security Assertions for Trusted Execution Environments.pdf
+2025 - Security Enclave Architecture for Heterogeneous Security Primitives for Supply-Chain Attacks.pdf
+2025 - Separate but Together - Integrating Remote Attestation into TLS.pdf
+2025 - Serverless Functions Made Confidential and Efficient with Split Containers.pdf
+2025 - Shadows in Cipher Spaces Exploiting Tweak Repetition in Hardware Memory Encryption.pdf
+2025 - ShieldReduce Fine-Grained Shielded Data Reduction.pdf
+2025 - Signing Right Away.pdf
+2025 - Silentflow Leveraging Trusted Execution for Resource-Limited MPC via Hardware-Algorithm Co-design.pdf
+2025 - SoDA - Sovereign Digital Avatar - An Efficient Interaction Paradigm for the Agentic Web.pdf
+2025 - SoK - A Cloudy View on Trust Relationships of CVMs.pdf
+2025 - SoK Trusted Execution in SoC-FPGAs.pdf
+2025 - Spore in the Wild - A Case Study of Spore.fun as an Open-Environment Evolution Experiment with Sovereign AI Agents on TEE-Secured Blockchains.pdf
+2025 - Supporting Intel SGX on Multi-Package Platforms.pdf
+2025 - TDXploit - Novel Techniques for Single-Stepping and Cache Attacks on Intel TDX.pdf
+2025 - TEE Time at P4 Performance Analysis of Trusted Execution Environments for Packet Processing.pdf
+2025 - TEE is not a Healer - Rollback-Resistant Reliable Storage.pdf
+2025 - TEE-BFT Pricing the Security of Data Center Execution Assurance.pdf
+2025 - TEE-based Key-Value Stores a Survey.pdf
+2025 - TEEBFT - Pricing the Security of Data Center Execution Assurance.pdf
+2025 - TEEBFT - Pricing the Security of Proof of Cloud.pdf
+2025 - TEEBFT Pricing the Security of Proof of Cloud.pdf
+2025 - TEEMS - A Trusted Execution Environment based Metadata-protected Messaging System.pdf
+2025 - TEEMS A Trusted Execution Environment based Metadata-protected Messaging System.pdf
+2025 - TEEcorrelate - An Information-Preserving Defense against Performance-Counter Attacks on TEEs.pdf
+2025 - TEEcorrelate: An Information-Preserving Defense against Performance-Counter Attacks on TEEs.pdf
+2025 - TELESCOPE - TDX Exploit Leaking Encrypted Data using Sibling Core Performance Counters.pdf
+2025 - TERRA Trojan-Resilient Reverse-Firewall for Cryptographic Applications.pdf
+2025 - TETD: Trusted Execution in Trust Domains.pdf
+2025 - THEMIS Towards Practical Intellectual Property Protection for Post-Deployment On-Device Deep Learning Models.pdf
+2025 - TICAL - Trusted and Integrity-protected Compilation of AppLications.pdf
+2025 - TICAL Trusted and Integrity-protected Compilation of AppLications.pdf
+2025 - TLBlur - Compiler-Assisted Automated Hardening against Controlled Channels on Off-the-shelf Intel SGX Platforms.pdf
+2025 - TLBlur Compiler-Assisted Automated Hardening against Controlled Channels.pdf
+2025 - TME-Box Scalable In-Process Isolation through Intel TME-MK Memory Encryption.pdf
+2025 - TME-Box: Scalable In-Process Isolation through Intel TME-MK Memory Encryption.pdf
+2025 - TPM2.0-Supported Runtime Customizable TEE on FPGA-SoC with User-Controllable vTPM.pdf
+2025 - TREE - Bridging the gap between reconfigurable computing and secure execution.pdf
+2025 - TZ-DATASHIELD Automated Data Protection for Embedded Systems via Data-Flow-Based Compartmentalization.pdf
+2025 - TZ-LLM Protecting On-Device LLMs with Arm TrustZone.pdf
+2025 - TZ-LLM Protecting On-Device Large Language Models with Arm TrustZone.pdf
+2025 - Technical Position Paper on Confidential Computing - ANSSI.pdf
+2025 - TensorShield - Safeguarding On-Device Inference by Shielding Critical DNN Tensors with TEE.pdf
+2025 - The Forking Way: When TEEs Meet Consensus.pdf
+2025 - The Road to Trust - Building Enclaves within Confidential VMs.pdf
+2025 - The Road to Trust: Building Enclaves within Confidential VMs.pdf
+2025 - Toward Provably Private Analytics and Insights into GenAI Use.pdf
+2025 - Toward Trustworthy Agentic AI - A Multimodal Framework for Preventing Prompt Injection Attacks.pdf
+2025 - Toward provably private analytics and insights into GenAI use.pdf
+2025 - Towards Confidential and Efficient LLM Inference with Dual Privacy Protection.pdf
+2025 - Towards Trusted Service Monitoring - Verifiable Service Level Agreements.pdf
+2025 - Transparent Attested DNS for Confidential Computing Services.pdf
+2025 - TriHaRd - Higher Resilience for TEE Trusted Time.pdf
+2025 - TriHaRd Higher Resilience for TEE Trusted Time.pdf
+2025 - TrustDS A Policy-First Privacy-Preserving Framework for Interoperable Data Exchange with Real-World Validation.pdf
+2025 - Trusted AI Agents in the Cloud.pdf
+2025 - Trusted Compute Units A Framework for Chained Verifiable Computations.pdf
+2025 - Trusted Execution for Private and Secure Computation.pdf
+2025 - Trusted Hardware-Assisted Leaderless Byzantine Fault Tolerance Consensus.pdf
+2025 - Trusted Platform and Privacy Management in Cyber Physical Systems The DUCA Framework.pdf
+2025 - Trusted execution environments for quantum computers.pdf
+2025 - Trustworthy LLM with TEE-GPU Execution.pdf
+2025 - Trustworthy and Controllable Professional Knowledge Utilization in Large Language Models with TEE-GPU Execution.pdf
+2025 - Trustworthy and Controllable Professional Knowledge Utilization in Large Language Models with TEE–GPU Execution.pdf
+2025 - Usage Control for Process Discovery through a Trusted Execution Environment.pdf
+2025 - Validation of GPU Computation in Decentralized, Trustless Networks.pdf
+2025 - Verification of Lightning Network Channel Balances with Trusted Execution Environments (TEE).pdf
+2025 - WAVEN: WebAssembly Memory Virtualization for Enclaves.pdf
+2025 - WEBCAT Web-based Code Assurance and Transparency.pdf
+2025 - Wait a Cycle Eroding Cryptographic Trust in Low-End TEEs via Timing Side Channels.pdf
+2025 - Weave - Efficient and Expressive Oblivious Analytics at Scale.pdf
+2025 - What You Trust Is Insecure Demystifying How Developers (Mis)Use Trusted Execution Environments in Practice.pdf
+2025 - What You Trust Is Insecure Demystifying How Developers MisUse Trusted Execution Environments in Practice.pdf
+2025 - What You Trust Is Insecure.pdf
+2025 - WireTap - Breaking Server SGX via DRAM Bus Interposition.pdf
+2025 - ZIPNet - Low-bandwidth Anonymous Broadcast from (dis)Trusted Execution Environments.pdf
+2025 - ZIPNet.pdf
+2025 - poqeth Efficient Post-Quantum Signature Verification on Ethereum.pdf
+2025 - poqeth Efficient, post-quantum signature verification on Ethereum.pdf
+2025 - zkFL-Health Blockchain-Enabled Zero-Knowledge Federated Learning for Medical AI Privacy.pdf
+2026 - A TEE-Based Architecture for Confidential and Dependable Process Attestation in Authorship Verification.pdf
+2026 - A TEE-based Approach for Preserving Data Secrecy in Process Mining with Decentralized Sources.pdf
+2026 - A402 - Binding Cryptocurrency Payments to Service Execution for Agentic Commerce.pdf
+2026 - ACTS - Attestations of Contents in TLS Sessions.pdf
+2026 - AEX Non-Intrusive Multi-Hop Attestation and Provenance for LLM APIs.pdf
+2026 - Analysis and Vulnerabilities in zkLogin.pdf
+2026 - Arca A Lightweight Confidential Container Architecture for Cloud-Native Environments.pdf
+2026 - Architecting Trust - A Framework for Secure IoT Systems Through Trusted Execution and Semantic Middleware.pdf
+2026 - Architecting Trust A Framework for Secure IoT Systems Through Trusted Execution and Semantic Middleware.pdf
+2026 - AttestLLM - Efficient Attestation Framework for Billion-scale On-device LLMs.pdf
+2026 - Automated Code Annotation with LLMs for Establishing TEE Boundaries.pdf
+2026 - Beyond Context Sharing - Unified Agent Communication Protocol ACP.pdf
+2026 - Bitcoin Smart Accounts - Trust-Minimized Native Bitcoin DeFi Infrastructure.pdf
+2026 - Bitcoin Smart Accounts Trust-Minimized Native Bitcoin DeFi Infrastructure.pdf
+2026 - CaMeLs Can Use Computers Too - System-Level Security for Computer Use Agents.pdf
+2026 - Committee Configuration Optimization for Parallel Byzantine Consensus in a Trusted Execution Environment.pdf
+2026 - Confidential Databases Without Cryptographic Mappings.pdf
+2026 - DNN Latency Sequencing: Extracting DNN Architectures from Intel SGX Enclaves with Single-Stepping Attacks.pdf
+2026 - Designing Trustworthy Layered Attestations.pdf
+2026 - Distributed Broadcast Encryption for Confidential Interoperability across Private Blockchains.pdf
+2026 - EXIA - Trusted Transitions for Enclaves via External-Input Attestation.pdf
+2026 - EXIA: Trusted Transitions for Enclaves via External-Input Attestation.pdf
+2026 - EigenAI - Deterministic Inference, Verifiable Results.pdf
+2026 - EigenAI Deterministic Inference Verifiable Results.pdf
+2026 - EnC# - Frictionless Trusted Execution for Managed Languages.pdf
+2026 - Enabling SSI-Compliant Use of EUDI Wallet Credentials through Trusted Execution Environment and Zero-Knowledge Proof.pdf
+2026 - Enhancing the Security of Rollup Sequencers using Decentrally Attested TEEs.pdf
+2026 - External Entropy Supply for IoT Devices Employing a RISC-V Trusted Execution Environment.pdf
+2026 - External entropy supply for IoT devices employing a RISC-V Trusted Execution Environment.pdf
+2026 - From-Task-Solving-to-Robust-Real-World-Adaptation-in-LLM-Agents.pdf
+2026 - Gyokuro - Source-assisted Private Membership Testing using Trusted Execution Environments.pdf
+2026 - Gyokuro Source-assisted Private Membership Testing using Trusted Execution Environments.pdf
+2026 - HPCCFA - Leveraging Hardware Performance Counters for Control Flow Attestation.pdf
+2026 - HPCCFA Leveraging Hardware Performance Counters for Control Flow Attestation.pdf
+2026 - LiteAtt - Secure and Seamless IoT Services Using TinyML-based Self-Attestation as a Primitive.pdf
+2026 - LiteAtt Secure and Seamless IoT Services Using TinyML-based Self-Attestation as a Primitive.pdf
+2026 - MVP-ORAM - Wait-free Concurrent ORAM for Confidential BFT Storage.pdf
+2026 - MemTrust - A Zero-Trust Architecture for Unified AI Memory System.pdf
+2026 - MirageNet A Secure Efficient and Scalable On-Device Model Protection in Heterogeneous TEE and GPU System.pdf
+2026 - MirageNet A Secure, Efficient, and Scalable On-Device Model Protection in Heterogeneous TEE and GPU System.pdf
+2026 - OMNIINTENT - A Trusted Intent-Centric Framework for User-Friendly Web3.pdf
+2026 - OMNIINTENT A Trusted Intent-Centric Framework for User-Friendly Web3.pdf
+2026 - On Securing the Software Development Lifecycle in IoT RISC-V Trusted Execution Environments.pdf
+2026 - PALM - Property Attestation for Large Generative Models.pdf
+2026 - PIRANHAS - PrIvacy-Preserving Remote Attestation in Non-Hierarchical Asynchronous Swarms.pdf
+2026 - Pallas and Aegis: Rollback Resilience in TEE-Aided Blockchain Consensus.pdf
+2026 - Peacock - UEFI Firmware Runtime Observability Layer for Detection and Response.pdf
+2026 - Privacy-Preserving AI-Enabled Decentralized Learning and Employment Records System.pdf
+2026 - Proof-of-Guardrail in AI Agents and What (Not) to Trust from It.pdf
+2026 - Proof-of-Guardrail in AI Agents and What Not to Trust from It.pdf
+2026 - Proteus Append-Only Ledgers for (Mostly) Trusted Execution Environments.pdf
+2026 - Red-Teaming Claude Opus and ChatGPT-based Security Advisors for Trusted Execution Environments.pdf
+2026 - Ringmaster - How to juggle high-throughput host OS system calls from TrustZone TEEs.pdf
+2026 - Ringmaster How to juggle high-throughput host OS system calls from TrustZone TEEs.pdf
+2026 - SCALE-FL - Scalable Cryptography-based Aggregation with Lightweight Enclaves for Federated Learning.pdf
+2026 - SCALE-FL Scalable Cryptography-based Aggregation with Lightweight Enclaves for Federated Learning.pdf
+2026 - SECV - Securing Connected Vehicles with Hardware Trust Anchors.pdf
+2026 - SECV: Securing Connected Vehicles with Hardware Trust Anchors.pdf
+2026 - SNPeek - Side-Channel Analysis for Privacy Applications on Confidential VMs.pdf
+2026 - SPOILER - TEE-Shielded DNN Partitioning of On-Device Secure Inference with Poison Learning.pdf
+2026 - SPOILER TEE-Shielded DNN Partitioning of On-Device Secure Inference with Poison Learning.pdf
+2026 - STIP - Three-Party Privacy-Preserving and Lossless Inference for Large Transformers in Production.pdf
+2026 - Security Assessment of Intel TDX with support for Live Migration.pdf
+2026 - Security Awareness in LLM Agents - The NDAI Zone Case.pdf
+2026 - Security awareness in LLM agents the NDAI zone case.pdf
+2026 - SettleFL - Trustless and Scalable Reward Settlement Protocol for Federated Learning on Permissionless Blockchains.pdf
+2026 - Sharing is Caring - Attestable and Trusted Workflows out of Distrustful Components.pdf
+2026 - Sharing is Caring Attestable and Trusted Workflows out of Distrustful Components.pdf
+2026 - Sharing is caring - Attestable and Trusted Workflows out of Distrustful Components.pdf
+2026 - SoK Agentic Skills - Beyond Tool Use in LLM Agents.pdf
+2026 - SoK: Analysis of Accelerator TEE Designs.pdf
+2026 - Sovereign Agents - Towards Infrastructural Sovereignty and Diffused Accountability in Decentralized AI.pdf
+2026 - Sovereign Agents Towards Infrastructural Sovereignty and Diffused Accountability in Decentralized AI.pdf
+2026 - Space Fabric - A Satellite-Enhanced Trusted Execution Architecture.pdf
+2026 - Space Fabric A Satellite-Enhanced Trusted Execution Architecture.pdf
+2026 - StackWarp - Breaking AMD SEV-SNP Integrity via Deterministic Stack-Pointer Manipulation.pdf
+2026 - Styx Collaborative and Private Data Processing With TEE-Enforced Sticky Policy.pdf
+2026 - Supercharging Federated Intelligence Retrieval.pdf
+2026 - Systematic Survey on Privacy-Preserving Architectures for IoT and Vehicular Data Sharing.pdf
+2026 - TAIP - Trustworthy AI Posture A Framework for Continuous AI Assurance of Agentic Systems.pdf
+2026 - TALUS - Threshold ML-DSA with One-Round Online Signing via Boundary Clearance and Carry Elimination.pdf
+2026 - TALUS Threshold ML-DSA with One-Round Online Signing via Boundary Clearance and Carry Elimination.pdf
+2026 - TAMI-MPC Trusted Acceleration of Minimal-Interaction MPC for Efficient Nonlinear Inference.pdf
+2026 - TAMU - Emulating Trusted Applications at the GlobalPlatform-API Layer.pdf
+2026 - TAMU Emulating Trusted Applications at the (GlobalPlatform)-API Layer.pdf
+2026 - TEE for Solving the Replication Crisis in Academia.pdf
+2026 - TRUST-SQL-Tool-Integrated-Multi-Turn-Reinforcement-Learning-for-Text-to-SQL.pdf
+2026 - TeeMAF - A TEE-Based Mutual Attestation Framework for On-Chain and Off-Chain Functions in Blockchain DApps.pdf
+2026 - TeeMAF A TEE-Based Mutual Attestation Framework for On-Chain and Off-Chain Functions in Blockchain DApps.pdf
+2026 - TessPay - Verify-then-Pay Infrastructure for Trusted Agentic Commerce.pdf
+2026 - The Real Menace of Cloning Attacks on SGX Applications.pdf
+2026 - Towards Secure Retrieval-Augmented Generation.pdf
+2026 - TriHaRd: Higher Resilience for TEE Trusted Time.pdf
+2026 - Trust-Aware Routing for Distributed Generative AI Inference at the Edge.pdf
+2026 - TrustMee Self-Verifying Remote Attestation Evidence.pdf
+2026 - Trusted Execution Environment for Decentralized Process Mining.pdf
+2026 - Trusted-Execution Environment (TEE) for Solving the Replication Crisis in Academia.pdf
+2026 - Trusted-Execution Environment for Solving the Replication Crisis in Academia.pdf
+2026 - Trusting What You Cannot See - Auditable Fine-Tuning and Inference for Proprietary AI.pdf
+2026 - Trusting What You Cannot See Auditable Fine-Tuning and Inference for Proprietary AI.pdf
+2026 - UC-Secure Star DKG for Non-Exportable Key Shares with VSS-Free Enforcement.pdf
+2026 - UIEE: Secure and Efficient User-space Isolated Execution Environment for Embedded TEE Systems.pdf
+2026 - Vulnerabilities in Partial TEE-Shielded LLM Inference with Precomputed Noise.pdf
+2026 - Walma - Learning to See Memory Corruption in WebAssembly.pdf
+2026 - What You Trust Is Insecure Demystifying How Developers MisUse TEEs.pdf
+2026 - You Told Me to Do It - Measuring Instructional Text-induced Private Data Leakage in LLM Agents.pdf
+2026 - vCause - Efficient and Verifiable Causality Analysis for Cloud-based Endpoint Auditing.pdf

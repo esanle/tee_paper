@@ -1,0 +1,1401 @@
+arXiv:2602.00182v1 [cs.CR] 30 Jan 2026
+
+EigenAI: Deterministic Inference, Verifiable Results
+David Ribeiro Alves
+david@eigenlabs.org
+
+Vishnu Patankar
+vishnu@eigenlabs.org
+
+Matheus Pereira
+matheus@eigenlabs.org
+
+Jamie Stephens
+jamie@eigenlabs.org
+
+Nima Vaziri
+nima@eigenlabs.org
+
+Sreeram Kannan
+sreeram@eigenlabs.org
+
+Verifiability as a missing primitive. Blockchains
+revolutionized finance by making state transitions
+publicly verifiable and economically final. In contrast, AI systems remain opaque: the mapping from
+prompt to output is hidden behind proprietary infrastructure, and inference itself is nondeterministic
+on modern GPUs. Two identical queries to the same
+model can yield divergent outputs because of floatingpoint non-associativity, kernel scheduling, and variable batching. Without reproducibility, verification
+through re-execution—the approach underpinning optimistic blockchains—is impossible.
+
+Abstract
+EigenAI is a verifiable AI platform built on top of the
+EigenLayer restaking ecosystem. At a high level, it
+combines a deterministic large–language model (LLM)
+inference engine with a cryptoeconomically secured optimistic re–execution protocol so that every inference
+result can be publicly audited, reproduced and, if necessary, economically enforced. An untrusted operator
+runs inference on a fixed GPU architecture, signs and
+encrypts the request and response, and publishes the
+encrypted log to EigenDA. During a challenge window,
+any watcher may request re–execution through EigenVerify; the result is then deterministically recomputed
+inside a trusted execution environment (TEE) with a
+threshold–released decryption key, to allow a public
+challenge with private data. Because inference itself
+is bit–exact, verification reduces to a byte–equality
+check and a single honest replica suffices to detect
+fraud. We show how this architecture yields sovereign
+agents—prediction–market judges, trading bots, scientific assistants—that enjoy state–of–the–art performance while inheriting security from Ethereum’s
+validator base.
+
+1
+
+EigenAI’s proposition. EigenAI closes this gap
+by introducing a complete verifiable-AI stack:
+1. Deterministic inference: bit-exact reproducibility on fixed GPU architectures using custom kernels, version-pinned drivers, and canonical reduction orders.
+2. Optimistic verification: inference results are
+posted, encrypted, to EigenDA and enter a challenge period. Any verifier can re-execute deterministically; mismatches trigger slashing of the
+operator’s stake.
+3. Privacy: all user prompts and results remain confidential through threshold key management and
+TEE-based attestation before decryption.
+
+Introduction and Motivation
+
+4. Economic security: backed by EigenLayer’s validator base—millions of restaked ETH—providing
+orders of magnitude more collateral than bespoke
+AI networks.
+
+Large-language-model (LLM) inference is rapidly
+evolving from a consumer-facing chatbot interface into
+a critical back-end service for autonomous and semiautonomous agents. These agents may trade assets,
+adjudicate market outcomes, draft contracts, or curate
+social feeds; in all cases, they must be trusted. Today’s cloud AI APIs offer impressive performance but
+provide no cryptographic or economic assurance that
+an inference was executed faithfully on the claimed
+model and inputs. This trust gap renders current AI
+infrastructure unsuitable for high-stakes or on-chain
+contexts.
+
+Sovereign verifiable agents. On top of this foundation, developers can deploy “sovereign” agents whose
+logic and reasoning steps are cryptographically traceable. Prediction-market adjudicators, AI traders, scientific analysts, or verifiable NPCs in games can all
+operate under the same principle: every inference is
+reproducible, every deviation is detectable, and every
+1
+
+misbehavior is penalized.
+
+Statistical or Consensus-Based Replication An
+alternative is to execute the same query on multiple replicas and accept the majority or the statistically consistent output. Methods include MonteCarlo dropout and deep ensembles [3, 4] and, more
+recently, self-consistency decoding [5]. However, these
+approaches only bound the probability of correctness
+and cannot detect rare but adversarial divergences [6].
+Moreover, their cost scales with O(ε−2 log n) replicas
+to achieve error ε—impractical for billion-parameter
+models.
+
+Where verifiability matters most. Verifiable inference is most valuable when an agent’s output triggers an irreversible external action or resolves a dispute between mutually distrusting parties. Concrete
+classes of sovereign-agent applications that benefit the
+most include:
+
+1. On-chain adjudication and dispute resolution: prediction markets, insurance claims, and
+DAO governance that require a publicly auditable
+Deterministic Execution Environments Deterruling rather than a trusted intermediary.
+ministic inference guarantees bit-for-bit identical out2. Autonomous execution agents: trading, liqui- puts for identical inputs. CPU or WebAssembly sanddation, and treasury-management bots whose ac- boxes (e.g., PyTorch deterministic mode [7], ONNX
+tions move real capital and therefore benefit from Runtime Web [8]) provide reproducibility but are
+10–100× slower than GPU back-ends and cannot serve
+accountable, replayable decision traces.
+production-scale LLMs. Recent vendor documenta3. Compliance- and audit-driven workflows: tion (e.g., NVIDIA cuBLAS reproducibility guide
+contract drafting, policy enforcement, and sci- [9, 10]) and research [11, 12] show that determinism
+entific/engineering assistants where later au- on GPUs is attainable if hardware architecture, driver,
+ditability (“what was executed, under which and library versions are fixed and atomic reductions
+model/environment, and why?”) is as important as avoided.
+raw model quality.
+Optimistic Verification and Cryptoeconomic
+In these settings, deterministic receipts plus an en- Guarantees Optimistic rollups in blockchain systems
+forceable challenge process turn an opaque API call introduced a model where results are accepted by deinto a verifiable, economically accountable computa- fault but can be challenged through re-execution; distion.
+honest operators are economically penalized. EigenAI
+extends this idea to AI inference. Determinism enables
+disputes to collapse to a simple byte-equality check
+Paper organization. Section 1 motivates the need
+rather than a full consensus or proof-generation profor verifiable inference. Section 2 reviews prior apcess. EigenVerify—the verification layer—leverages
+proaches to verifiable computation and deterministic
+EigenLayer’s restaked validator pool to provide the
+execution. Subsequent sections will describe the Eigenecessary bonded capital for slashing. Because verifinAI architecture, deterministic-GPU methodology,
+cation is only invoked under dispute, the steady-state
+optimistic-re-execution protocol, economic guarantees,
+cost approaches that of normal inference while mainand empirical results.
+taining cryptographic accountability.
+
+2
+
+Trusted Hardware and Threshold Key Manage-
+
+Background and Related Work ment Trusted Execution Environments (TEEs) such
+
+as Intel SGX or AMD SEV provide hardware isolation
+and remote attestation [13]. When combined with
+threshold cryptography, they allow privacy-preserving
+verification: encrypted requests on EigenDA are deCryptographic Proofs of Correctness Zerocrypted only inside attested enclaves that prove corknowledge (ZK) and interactive proof systems can, in
+rect code execution. This design mitigates the tradeprinciple, produce a succinct proof that an untrusted
+off between verifiability and confidentiality.
+operator executed a neural network faithfully. Systems
+such as SafetyNets [1] and later zkDNN frameworks
+[2] demonstrate this feasibility but remain impractical Summary. Table 1 summarizes these paradigms by
+for frontier LLMs: even with hardware acceleration, latency, cost, and trust assumptions. EigenAI comproving a full transformer forward pass takes minutes bines deterministic inference (for fast re-execution)
+to hours. The high cost of circuit synthesis and proof with optimistic cryptoeconomic enforcement (for secugeneration limits adoption to small or static models. rity), achieving a unique balance of speed, cost, and
+
+Three broad paradigms exist for making AI inference
+verifiable:
+
+2
+
+trust-minimization.
+
+3
+
+Submission. A client constructs and signs an inference request req that fixes the model, container
+digest, GPU architecture, driver/toolkit version, decoding policy, PRNG seed, and (optionally) prompt
+commitments. The signed req is transmitted to an operator for execution. In practice, treating these fields
+as immutable execution parameters is what later allows any verifier to replay the request under identical
+conditions.
+
+System Model and Threats
+
+EigenAI’s trust model extends EigenLayer’s Autonomous Verifiable Services (AVS) framework to AI
+inference. It formalizes how operators, verifiers, and
+users interact under deterministic execution and cryptoeconomic guarantees. This section defines the system participants, their responsibilities, the security Execution. Upon receipt, the operator runs the
+assumptions, and adversarial capabilities.
+model under the declared environment, producing
+the output out together with (optionally) auxiliary
+artifacts such as per-step logits. Because the execution
+3.1 System Entities
+stack is deterministic (cf. Section 6), any honest reClient / Requester Submits an inference request run of the same request on the same architecture will
+req consisting of a model identifier, container digest, yield a byte-identical out.
+GPU architecture tag, driver/toolkit version, decoding policy, and prompt commitments. Requests Publication. To preserve confidentiality while enare signed and optionally encrypted to the EigenAI abling public audit, the operator encrypts (req, out)
+public key before dispatch.
+to the application public key pkapp and posts the resulting ciphertext, together with a signed receipt σop ,
+Operator Executes inference inside a containerized
+to EigenDA. The receipt canonically commits to the
+runtime fixed to a single GPU architecture (e.g.,
+request and output via their hashes and may include
+H100). Produces outputs (out, logits), constructs a
+a TEE attestation quote and timestamp, along with
+signed receipt committing to input/output hashes,
+a durable pointer to the DA record. This publication
+and posts the ciphertext and receipt to EigenDA.
+anchors both availability (via EigenDA) and integrity
+Each operator maintains an on-chain identity and
+(via the operator’s signature and the receipt fields) of
+bonded stake in EigenLayer.
+the claimed execution.
+EigenDA A data-availability layer ensuring immutable publication of receipts and ciphertexts. Challenge window. Published results are tentative
+Provides inclusion proofs for challenge adjudica- for a fixed dispute horizon of ∆ epochs. During this
+tion.
+window, any party may inspect receipts and either
+initiate a low-cost light audit or file a formal full
+EigenVerify A decentralized network of verifiers,
+challenge. The former offers probabilistic coverage
+economically secured by EigenLayer stake, that
+without slashing authority; the latter invokes on-chain
+handles challenges. Each verifier runs a thresholdadjudication and possible penalties.
+cryptography Key Management Service (KMS) and
+trusted execution environment (TEE) runtime. On
+challenge, it re-executes the inference deterministi- Re-execution and voting. When a full challenge
+is raised, EigenVerify samples a stake-weighted comcally to confirm or refute the operator’s claim.
+mittee of verifiers. Each verifier boots an attested
+KMS Shards Hold encrypted key shares for the TEE running the approved container, establishes muEigenAI application private key. They release tually attested channels to KMS shards to reconstruct
+shares only to enclaves that successfully attest cor- skapp inside the enclave, decrypts the EigenDA cipherrect code identity, enabling privacy-preserving re- text, and deterministically re-executes Infer(req). The
+execution.
+committee then decides by byte-equality vote: each
+c v = out ], and the verdict is
+member casts bv = [ out
+determined by threshold (e.g., ≥ 2/3).
+
+3.2
+
+Workflow Overview
+
+At a high level, EigenAI follows an optimistic submit–publish–verify pipeline whose correctness hinges
+on deterministic re-execution. We briefly narrate the
+end-to-end flow and then detail each phase.
+
+c =
+Finalization. If the committee agrees that out
+out, the result is finalized; otherwise, the operator is
+slashed and the committee’s majority output replaces
+the disputed one. This optimistic design amortizes
+3
+
+Table 1: Comparison of verifiable-inference paradigms.
+Paradigm
+
+Latency
+
+Cost
+
+Guarantee
+
+ZK proofs
+Statistical replication
+CPU/WASM Det.
+GPU determinism + optimism (EigenAI)
+
+very high
+medium
+very high
+low
+
+high
+high (many replicas)
+low
+low
+
+mathematical
+cryptoeconomical
+cryptoeconomical
+cryptoeconomical
+
+cost—verification runs only under dispute—while de- 2. Colluding verifiers. A minority of EigenVerify stake
+terminism collapses adjudication to a binary equality
+coordinates to bias votes, delay challenges, or atcheck.
+tempt to exfiltrate plaintext via misconfigured enclaves.
+3. Compromised KMS shard. A single (or minority)
+shard discloses partial key material or responds to
+The security of the protocol rests on standard, explicit
+non-attested endpoints.
+assumptions that align with its layered design:
+4. Malicious DA participant. Censors or withholds
+• Deterministic execution. Holding fixed the GPU
+ciphertexts/receipts to prevent effective challenges
+architecture, driver, toolkit, and decoding policy,
+or inclusion proof verification.
+repeated runs of Infer(req) are bit-identical (Section 6). This guarantees that honest re-executions 5. Timing/side-channel attacker. Observes or perconverge to a unique c
+out.
+turbs enclave execution to infer private data or
+influence control flow without altering code iden• Data availability. EigenDA provides durable stortity.
+age and inclusion proofs for all posted receipts and
+ciphertexts, ensuring that disputes can always retrieve the exact bytes committed at publication.
+3.5 Threats and Mitigations
+
+3.3
+
+Security Assumptions
+
+Table 2 consolidates the principal threat classes
+with their first-line defenses.
+In combination—deterministic kernels and pinned environments
+(technical reproducibility), on-chain receipts and DA
+proofs (cryptographic integrity), TEEs and threshold KMS (confidentiality), and stake-backed slashing
+• TEE integrity. Verifier enclaves support remote (economic deterrence)—the system achieves layered,
+attestation that binds code identity (container di- defense-in-depth protection.
+gest) and GPU mode to a measurement; only enclaves presenting valid quotes may participate in
+decryption and re-execution.
+4 Protocol Overview
+• Stake honesty. During any challenge epoch, at
+least two thirds of EigenVerify stake behaves honestly. This Byzantine-style assumption underwrites
+the committee vote and the credibility of slashing
+events.
+
+• Threshold confidentiality. The EigenAI application private key is t-of-n secret-shared across KMS
+shards; fewer than t colluding shards learn nothing
+useful, and shares are released only to enclaves that
+satisfy attestation policy.
+
+3.4
+
+EigenAI implements an optimistic, verifiable inference
+pipeline in which results are accepted by default but
+can be efficiently disputed and re-executed under cryptoeconomic guarantees. In what follows, we present
+the submission path, the receipt and data-availability
+interface, the audit and challenge flows, and the deterministic re-execution procedure that together realize
+this trust model.
+
+Adversary Model
+
+We consider a powerful adversary that may compromise some off-chain components, subject to the assumptions above:
+
+4.1
+
+Submission and Dataflow
+
+1. Dishonest operator. Attempts to report falsified Each inference traverses a structured lifecycle (Fig. 1).
+outputs, substitute models/containers, or replay The design principle is that every parameter that can
+stale receipts in lieu of fresh computation.
+influence numerical outcomes is fixed and committed
+4
+
+Table 2: Primary threat classes and mitigations.
+Threat
+
+Mitigation
+
+Model / kernel
+tampering
+
+Immutable container digests; signed
+receipts; open-source deterministic
+kernels.
+Single-arch policy per request; explicit
+gpu_arch field in receipt; verifier enforcement.
+Container pinned by digest; toolkit
+and driver version fixed; GPU clock
+locking.
+Batch-invariant reduction kernels;
+fixed decode seeds.
+t-of-n threshold policy; attestationgated share release.
+Hardware attestation; code measurement checks; enclave-to-shard TLS.
+Stake-weighted majority voting; light
+audits; fork-choice backstop.
+EigenDA inclusion proofs; redundancy across operators.
+
+Crossarchitecture
+drift
+Library
+/
+driver drift
+Batch nondeterminism
+KMS compromise
+TEE compromise
+Verifier collusion
+Data
+withholding (DA)
+
+Publishing to EigenDA establishes durable availability
+(for future disputes), while the operator’s signature
+anchors integrity and provenance.
+4. Data availability and challenge window.
+Upon publication, the result enters a fixed dispute
+horizon of ∆ blocks. During this challenge window,
+any party may retrieve the receipt and either perform
+a low-cost light audit or lodge a formal full challenge.
+The former offers randomized coverage without onchain penalties; the latter triggers adjudication with
+the possibility of slashing.
+
+4.2
+
+Light Audit versus Full Challenge
+
+Light audit. A user or watchdog recruits a small,
+randomly chosen subset of EigenVerify nodes to reexecute the request off-chain. This provides probabilistic assurances at minimal cost and is well-suited
+for continuous, background integrity monitoring.
+
+Full challenge. If an inconsistency is detected—or
+if a counterparty disputes a result—an on-chain challenge is filed. EigenVerify then samples a stakeweighted committee V representing a supermajority of
+1. Request preparation. The client constructs a bonded capital. Committee members re-execute the
+request in attested TEEs and vote by byte equality
+canonical request
+on the operator’s claim.
+D
+E
+container_digest, gpu_arch, driver_tag,
+req = decode_policy,
+.
+seed, prompt_commitments
+
+up front, enabling any verifier to replay the request in
+an identical environment.
+
+4.3
+
+Deterministic Re-Execution and
+
+signs it, and submits it to an operator. All fields
+Voting
+are treated as immutable execution parameters for
+reproducibility; in particular, prompt_commitments The adjudication step consists of reproducing the
+(when present) is a Merkle root that binds any external claimed computation inside trusted enclaves and dedocuments or tool outputs referenced by the prompt. ciding by equality of bytes. Concretely, each verifier
+v ∈ V:
+2. Deterministic execution. The operator runs
+1. boots an enclave with the approved container (prothe model inside the declared container on the declared
+ducing an attestation quote),
+hardware architecture, producing the token sequence
+and, optionally, per-step logits. By construction (Sec- 2. proves attestation to the KMS shards and recontion 6), this execution is bit-deterministic: rerunning
+structs skapp in-enclave,
+the same request under the same environment yields
+3. fetches the ciphertext and receipt from EigenDA
+the identical byte stream.
+and verifies σop ,
+c v,
+3. Receipt formation and publication. To cou- 4. deterministically runs Infer(req) to obtain out
+ple confidentiality with auditability, the operator enc v = out ].
+5. casts a vote bv = [ out
+crypts (req, out) to the application public key pkapp
+and posts the ciphertext together with a signed receipt Assume τ = 2/3. If the vote fraction satisfies
+P
+to EigenDA. The receipt commits to the request and
+bv /|V| ≥ τ , the result is accepted; otherwise, the
+output via their hashes and may include attestation operator is slashed and the committee’s majority outevidence and timing metadata:
+put replaces the disputed one. Determinism collapses
+D
+E
+the decision to a binary equality test, eliminating
+H(out), model_id,
+receipt = H(req),
+, σop = Signskop (receipt).
+ambiguity and extensive deliberation.
+chainid, da_pointer
+5
+
+Operator
+
+Client
+
+EigenDA
+
+Light audits:
+minority stake
+(no slashing)
+
+EigenVerify
+
+Full challenges:
+majority committee,
+deterministic re-exec,
+byte-equality voting,
+slashing on mismatch
+
+Figure 1: Swimlane depicting Client → Operator → EigenDA → EigenVerify. Light audits sample a small
+minority of stake (no slashing); full challenges invoke a majority committee for deterministic re-execution,
+byte-equality voting, and slashing on mismatch.
+Table 3: Receipt schema and field semantics.
+Field
+
+Purpose
+
+model_id
+chain_id
+gpu_arch
+req_hash
+out_hash
+da_pointer
+sig
+
+Identifier of model weights
+Identifier of the chain
+Hardware generation (e.g., H100)
+Hash of request parameters
+Hash of output logits/tokens
+EigenDA inclusion reference
+Operator’s digital signature
+
+Algorithm 2 Full challenge verification (deterministic
+re-execution).
+1: Input: DA pointer p, receipt rcp, signature σop
+2: V ← stake-weighted committee sample
+3: for v ∈ V in parallel do
+4:
+Boot attested enclave; obtain quote qv
+
+Establish attested channels to KMS; reconstruct skapp
+6:
+Download (cipher, rcp) from EigenDA
+7:
+Verify σop ; decrypt to (req, out)
+c v ← Infer(req)
+8:
+out
+Algorithm 1 Operator submission routine (canoni- 9:
+c v = out ]
+Vote bv ← [ out
+calized).
+10: end for
+P
+11: if
+bv /|V| < τ then
+1: Input: req, model M, container C, GPU arch a
+c
+12:
+Slash
+operator stake; finalize majority out
+2: out ← Infer(M, C, a, req)
+13:
+else
+3: rcp ← ⟨H(req), H(out), t⟩
+14:
+Finalize out as verified
+4: σop ← Signskop (rcp)
+15:
+end
+if
+5: cipher ← Encpkapp (req, out)
+6: Publish (cipher, rcp, σop ) to EigenDA
+7: Start challenge timer ∆
+allows verification of correctness without revealing the
+underlying user data.
+Cost amortization. Because re-execution is invoked
+only under dispute, steady-state operation mirrors
+5.1 End-to-End Encryption and Key
+ordinary inference costs. When challenges do occur,
+Management
+determinism ensures that even a single honest verifier
+suffices to detect fraud, and a small committee can Every inference request and its corresponding output
+finalize outcomes with minimal overhead.
+are encrypted to the EigenAI application public key
+5:
+
+pkapp before publication. The corresponding private
+key skapp is never held in a single location; instead, it
+5 Privacy Architecture: Thresh- is fragmented
+into n shares and distributed across the
+EigenVerify Key Management Service (KMS) network
+old KMS and TEEs
+using a t-of-n threshold scheme, such as Shamir’s seWhile verifiability necessarily promotes transparency, cret sharing. No single KMS shard can decrypt or
+many EigenAI users operate on sensitive data that reconstruct skapp independently, and shards only remust remain private. To reconcile these opposing lease key shares to enclaves that successfully prove
+demands, EigenAI layers a robust confidentiality sub- their authenticity and code integrity via remote attesstrate atop its verifiable infrastructure through a com- tation. This design enforces that decryption can occur
+bination of threshold key management and trusted only within verified, attested enclaves, ensuring that
+execution environments (TEEs). This architecture plaintext data never exists outside of secure execution
+6
+
+contexts.
+
+5.2
+
+5.4
+
+Key Epochs, Rotation, and Policy
+Enforcement
+
+Remote Attestation and Secure To further mitigate long-term compromise risk, EigenAI enforces periodic key rotation through key epochs.
+Share Release
+
+Each receipt explicitly records the key epoch used
+during encryption. KMS policies track these epochs
+and automatically deny reconstruction requests for
+retired keys. When a rotation event occurs—either
+on schedule or triggered by a security incident—new
+key shares are generated, and governance proposals
+via
+EigenVerify are used to update metadata across
+1. A verifier launches a TEE running the approved
+participants.
+This guarantees forward secrecy while
+container image, producing a hardware-signed atmaintaining
+uninterrupted
+availability for active retestation quote q that includes a cryptographic
+quests.
+hash of the loaded binary (the measurement).
+2. Each KMS shard validates q, confirming that the Taken together, these mechanisms ensure that verifiaenclave is both genuine and running an authorized bility and confidentiality coexist harmoniously. DeterEigenAI image. Quotes are also checked for fresh- ministic execution and public receipts make correctness independently checkable, while threshold crypness to prevent replay attacks.
+tography and attested enclaves guarantee that user
+3. After successful validation, shards establish mu- data remains inaccessible to all parties except during
+tually attested TLS sessions with the enclave, en- secured, ephemeral re-execution inside TEEs.
+suring end-to-end confidentiality and integrity of
+communication.
+
+The interaction between verifier enclaves and KMS
+shards follows a mutually authenticated sequence, depicted conceptually in Fig. 2. This sequence guarantees that key material is distributed only to legitimate
+enclaves running approved EigenAI software stacks:
+
+6
+
+Deterministic Inference: Tech-
+
+6.1
+
+Why Determinism Matters
+
+4. Shards transmit their encrypted key shares to the
+nical Foundations
+enclave, which reconstructs skapp entirely in volatile
+memory. Using this key, the enclave decrypts the
+Deterministic inference forms the technical cornerEigenDA ciphertext and proceeds with determinisstone of EigenAI’s verifiability framework. Without
+tic re-execution of the inference task.
+strict bit-level reproducibility, optimistic re-execution
+5. Upon completion, the enclave securely zeroizes would become ambiguous—disputes could not be reskapp and all session-specific secrets, preventing solved by simple equality checks, and consensus would
+residual key material from persisting after verifica- devolve into probabilistic agreement. This section surveys the sources of nondeterminism in modern GPUtion.
+based deep-learning systems, outlines the engineering
+This remote attestation sequence is central to Eige- controls used to eliminate them, and discusses their
+nAI’s privacy architecture: it cryptographically binds empirical validation. It extends our prior Bit-Exact
+data access to verified code identity, thereby elimi- Inference on GPUs work with new insights specific to
+nating the possibility of decryption by compromised cryptoeconomic verification.
+nodes or untrusted software.
+
+5.3
+
+Auditability Without Decryption
+
+Large language model (LLM) inference comprises
+thousands of parallel GPU kernels performing linear algebra and nonlinear reductions. Minute variations in operation ordering, rounding behavior, or
+kernel selection can perturb the resulting logits and,
+consequently, alter sampled tokens. In everyday applications this variability is imperceptible; in a verifiable
+execution setting it is catastrophic. Because EigenVerify relies on comparing the outputs of independent
+re-executions, even a single bit of nondeterministic
+drift would undermine the ability to distinguish honest
+disagreement from dishonesty.
+
+Importantly, confidentiality does not come at the expense of transparency. Because each inference is accompanied by cryptographic commitments—H(req)
+and H(out)—external auditors can verify inclusion
+proofs on EigenDA and validate operator signatures
+without accessing any plaintext data. This property allows independent parties to conduct statistical audits
+of operator honesty and data-availability compliance
+while maintaining end-to-end encryption of user content. In effect, the system preserves both verifiable
+correctness and privacy by design.
+7
+
+TEE enclave
+(EigenAI verifier)
+
+attest
+attested TLS
+
+Attestation quote
+(container measurement)
+
+KMS shards
+(t-of-n shares)
+
+Verify quote
+& enclave identity
+
+Release encrypted
+key shares over
+attested TLS
+
+Reconstruct skapp
+in-enclave
+
+Deterministic
+re-execution
+& verification
+
+Decrypt payload
+from EigenDA
+
+Zeroize skapp and
+all session secrets
+
+Figure 2: TEE–KMS negotiation flow. The enclave attests its container measurement; KMS shards verify the
+quote, establish attested TLS connections, and release key shares. The enclave reconstructs skapp in memory,
+decrypts the payload, performs verification, and zeroizes all secrets afterward.
+Establishing determinism transforms inference from a
+stochastic numerical process into a pure function:
+
+both of which compromise reproducibility. Furthermore, “fast math” and mixed-precision modes
+often trade consistency for throughput.
+
+F : (model, arch, prompt, seed, decode) −→ output,
+
+3. Inference Engine. Framework-level optimizations—dynamic graph fusion, asynchronous kernel
+where output is guaranteed to be bit-identical for all
+launches, and stochastic decoding—introduce anhonest re-executions given the same parameters.
+other layer of variability. Although frameworks
+such as PyTorch and TensorFlow offer determinis6.2 Sources of Nondeterminism
+tic flags, these apply only to a subset of supported
+operations.
+Determinism in GPU inference is fragile and may be
+compromised by variations across the hardware and
+software stack. We categorize four principal layers of 6.3 Hardware-Level Determinism
+variability, illustrated conceptually in Fig. 3.
+Modern NVIDIA GPUs can achieve bit-exact repro1. Hardware. Floating-point units differ slightly ducibility when operated under controlled conditions.
+across GPU generations (e.g., A100 vs. H100), im- The Hopper architecture family (H100, GH200) guarplementing fused multiply-add (FMA) and round- antees repeatable outputs from cuBLAS routines on
+ing modes with subtle architectural distinctions. identical GPUs and toolkit versions [10, 9]. IndepenDeterministic inference therefore requires enforcing dent investigations confirm that discrepancies between
+single-architecture policies.
+architectures stem primarily from software scheduling,
+not from arithmetic pipelines [12, 11].
+2. Math Libraries. Core libraries such as cuBLAS,
+cuDNN, or TensorRT may invoke atomic operations EigenAI enforces a single-architecture policy within
+or rely on non-associative accumulation orders, each deployment: all operators and verifiers must
+8
+
+Table 4: Visibility matrix for EigenAI’s privacy and verification components.
+Component
+
+Access to Plaintext?
+
+Description
+
+Client
+Operator
+EigenDA
+KMS Shard
+TEE Verifier
+External Auditor
+
+Yes
+No
+No
+No
+Yes (in-enclave)
+No
+
+Originator and owner of prompts and outputs.
+Encrypts all data to pkapp ; never sees plaintext.
+Stores ciphertext and receipts; provides inclusion proofs only.
+Holds encrypted key shares; cannot reconstruct full key.
+Attested enclave temporarily reconstructs skapp for verification
+Validates hashes, receipts, and signatures without accessing plaintext.
+
+Hardware
+GPU microarchitecture,
+rounding, warp
+scheduling
+
+Driver /
+Runtime
+CUDA toolkit,
+autotuners,
+kernel dispatch
+
+Math Libraries
+cuBLAS, cuDNN,
+TensorRT;
+atomic ops,
+accumulation
+
+Inference Engine
+Graph fusion,
+decode policies
+
+Figure 3: Sources of nondeterminism across the GPU stack: (1) Hardware microarchitecture, (2)
+Driver/runtime, (3) Math libraries and kernels, (4) Inference engine and decode policy. Each layer must be
+pinned or replaced with deterministic equivalents.
+;
+utilize identical GPU SKUs, while persistence mode 2. Warp-synchronous reductions. Within each
+is enabled to avoid state transitions that might alter block, threads compute partial dot-products and perkernel execution order.
+form a canonical binary-tree reduction using warp
+intrinsics:
+
+6.4
+
+Determinism in Base Libraries
+
+for (int off = warpSize/2; off > 0; off /= 2)
+sum += __shfl_down_sync(0xffff, sum, off);
+
+The inference engine underpinning EigenAI builds
+upon llama.cpp, an open-source C/CUDA implementation with a small and auditable numerical surface.
+Its quantized matrix-multiplication kernels (e.g., Q4,
+Q5) are inherently deterministic: they avoid atomics and implement warp-synchronous reductions with
+fixed thread order. For remaining operations that
+delegate to cuBLAS or cuBLASLt, EigenAI enforces
+deterministic configuration flags [25]:
+
+The reduction order is identical across runs, guaranteeing reproducible rounding paths [26, 27].
+
+3. No floating-point atomics. All accumulations
+are explicitly ordered through register or sharedmemory operations. Floating-point atomics are entirely disabled because their non-associative semantics
+can yield nondeterministic results. Despite this restriction, deterministic kernels maintain 95–98% of
+These settings forbid nondeterministic atomics and
+standard cuBLAS throughput on Hopper-class hardnon-associative mixed-precision reductions. Although
+ware.
+cuBLAS is proprietary, its deterministic guarantees
+have been repeatedly validated in empirical testing.
+
+6.6
+6.5
+
+Deterministic Kernel Design
+
+Deterministic
+Decoding
+PRNG Control
+
+and
+
+Token generation, which often involves sampling
+At the core of EigenAI’s reproducibility efforts are
+from probability distributions (e.g., top-k or nucleus
+custom GEMM kernels and reduction primitives that
+sampling), introduces another source of variability.
+enforce deterministic ordering. Each kernel satisfies
+EigenAI enforces deterministic decoding by employthree invariants:
+ing a fixed-seed pseudorandom number generator
+(PRNG) and canonical iteration order. For any pair
+1. Fixed block–thread mapping. Thread blocks (seed, decode_policy), the emitted token sequence
+are deterministically mapped to output tiles with no is reproducible. Users seeking nondeterministic saminter-block communication, ensuring that the GPU’s pling may simply vary the seed but can still verify
+scheduler cannot affect numerical outcomes.
+that any output matches the declared seed and policy
+9
+
+recorded in the operator’s receipt.
+
+6.7
+
+• Disable all nondeterministic math primitives and
+autotuners.
+
+End-to-End Determinism Experi- • Seed PRNGs deterministically and record seeds in
+receipts.
+ments
+
+We validated EigenAI’s deterministic guarantees • Hash and sign (prompt, out) tuples for auditability
+through systematic experiments on NVIDIA Hopper
+GPUs. Each test identical container digests, and con- 6.10 Discussion
+sistent runtime environments.
+Our experiments confirm that bit-exact determinism
+is achievable on contemporary GPU hardware with
+Setup. Two independent H100 nodes, both execut- negligible performance loss. By constraining variabiling llama.cpp-based inference, processed a 1,000- ity at every level of the software and hardware stack,
+prompt benchmark spanning summarization, reason- EigenAI converts opaque numerical computation into
+ing, and code generation tasks. For each execution a reproducible process amenable to independent rewe recorded the hash:
+execution. This engineering discipline is what enables
+cryptoeconomic assurance: in EigenAI, correctness
+SHA256(prompt || logits || tokens).
+can be proven by anyone through mere repetition,
+with no reliance on statistical tests or zero-knowledge
+Results. Across 10,000 runs, all hashes matched proofs.
+exactly—no bit-level divergence was observed. Crossarchitecture comparisons (A100 vs. H100) yielded
+Implementation Details and
+measurable but expected deviations (∼ 10−7 in log- 7
+its), confirming architecture-dependent rounding and
+Developer Experience
+motivating per-architecture verifier pools.
+EigenAI is designed to feel like a familiar cloud AI
+6.8 Reproducibility and Verifiability service while embedding deterministic and verifiable
+execution at every layer. Developers interact through
+Determinism collapses verification to a simple equality an OpenAI-compatible API, and each response carries
+check. Because every honest re-execution yields an deterministic metadata, a cryptographic receipt, and
+identical byte string, the verification predicate
+a pointer into EigenDA for later verification.
+(
+True,
+out1 = out2 ,
+7.1 API Compatibility and Metadata
+Verify(out1 , out2 ) =
+False, otherwise
+The
+EigenAI
+API
+mirrors
+the
+/v1/chat/completions
+and
+/v1/completions
+becomes both sound and complete. This property
+enables EigenAI to scale: verification of thousands of endpoints used by OpenAI. Clients can substitute the
+inference tasks reduces to constant-time byte compar- EigenAI base URL without changing request syntax.
+isons rather than probabilistic voting or cryptographic Responses contain deterministic metadata fields as
+shown in Table 6.
+proofs.
+
+6.9
+
+Implementation Guidelines
+
+For practitioners deploying deterministic inference under EigenAI, the following guidelines are mandatory:
+
+This metadata allows any verifier to retrieve the corresponding entry from EigenDA and re-run the request
+under the same environment.
+
+• Pin exact CUDA and driver versions (e.g.,
+CUDA 12.4 with R550 driver).
+
+7.2
+
+Container and Hardware Constraints
+
+All inference containers are built atop fixed
+• Reference container images by digest and avoid CUDA/driver pairs, referenced by digest. Operamutable tags.
+tors must enable persistence mode and turn on ECC
+memory. During the testing phase we discovered non• Enable persistence mode.
+determinism due to faulty memory; this problem was
+• Enable deterministic modes in cuBLAS/cuBLASLt mitigated by making sure that ECC was turned on.
+and disallow atomics.
+Container and driver versions are registered on-chain
+10
+
+Table 5: Empirical determinism verification on Hopper GPUs.
+Test Condition
+
+Match Rate
+
+Notes
+
+100.0%
+100.0%
+100.0%
+0.0%
+
+Bitwise identical outputs
+Bitwise identical outputs
+Bitwise identical outputs
+Diff. exec paths, rounding
+
+Same host, same GPU
+Same host, same GPU arch but diff number of GPUs
+Different hosts, same cpu arch/GPU SKU
+Different GPU architecture (A100 vs. H100)
+
+S
+
+s0123
+
+s4567
+
+s01
+
+v0
+
+s23
+
+v1
+
+v2
+
+s45
+
+v3
+
+v4
+
+s67
+
+v5
+
+v6
+
+v7
+
+Figure 4: Canonical warp-level reduction tree used in deterministic kernels. Each thread contributes a
+partial value vi and participates in pairwise summations in a fixed binary-tree pattern, ensuring identical
+accumulation order and reproducible results across executions.
+and verified by EigenVerify committees during chal- Algorithm 3 Reproduce-and-Verify Procedure
+lenges.
+1: Input: EigenDA pointer p, metadata meta from
+API response
+2:
+Download (cipher, receipt) from EigenDA
+7.3 Reproduction Cookbook for Audi3:
+Verify operator signature σop
+tors
+4: Launch container C with exact digest and driver
+Auditors can independently reproduce any inference
+5: Set
+environment
+variables
+per
+using the following minimal procedure (Algorithm 3).
+meta.system_fingerprint
+Because inference is deterministic, matching hashes
+c ← Infer(req, seed, decode)
+6: Run out
+suffice to validate correctness.
+7: Compare SHA256( c
+out) with receipt.out_hash
+8: if hashes match then return VERIFIED
+Auditors may also verify EigenDA inclusion proofs to
+9: elsereturn INVALID
+ensure the operator’s record was properly published
+10: end if
+and unaltered.
+
+8
+
+Economic and Governance Mechanics
+
+EigenAI inherits its security not only from deterministic execution but also from the broader cryptoeconomic foundation provided by EigenLayer. The
+economic layer determines how honest behavior is
+incentivized, how disputes are resolved, and how pro11
+
+tocol parameters evolve. In this section we outline
+the lightweight audit pathway, the full challenge-andslashing mechanism, and the governance structures
+that maintain long-term system health.
+
+Table 6: Key response metadata for deterministic verification.
+
+8.1
+
+Field
+
+Description
+
+system_fingerprint
+determinism.seed
+receipt.req_hash
+receipt.out_hash
+receipt.sig
+eigendalink
+
+Concatenation of container digest, GPU arch, driver version
+Fixed PRNG seed used for decoding
+SHA256 of request parameters
+SHA256 of model output
+Operator signature over receipt tuple
+Pointer to EigenDA inclusion proof
+
+Light Audits
+
+8.3
+
+Light audits provide an inexpensive integrity check on
+the behavior of operators. A watcher or client may recruit a small, randomly selected subset of EigenVerify
+nodes to re-execute a published inference off-chain. Because these audits lack slashing authority, they impose
+minimal cost and latency overhead. Their purpose
+is statistical: by maintaining a nonzero background
+probability of inspection, they deter latent collusion
+and encourage operators to remain honest even when
+they believe they are not under direct scrutiny. Light
+audits may be rewarded through small bounties or
+micro-incentives funded by EigenAI usage fees.
+
+8.2
+
+Fork-Choice Backstop
+
+If an extreme collusion scenario were ever to push
+an invalid result through verification, EigenLayer’s
+fork-choice rule provides a final safety net. Restakers
+may coordinate a social fork to penalize misbehaving
+validators, restoring correctness. This mechanism
+ensures economic finality of truth: the equilibrium
+strategy for long-term actors is always to preserve
+correctness rather than collude.
+
+Full Challenges and Slashing
+
+8.4
+
+Governance and Parameterization
+
+EigenAI’s operational parameters—stake requirements, slashing fractions, challenge thresholds, and
+audit frequencies—are governed through the EigenLayer governance process. Governance proposals may
+tune these values over time as workloads, economic
+conditions, or adversarial models evolve. Looking
+ahead, governance may also introduce dynamic fee
+markets for audit capacity, enabling users to purchase
+higher integrity assurance on demand.
+
+A full challenge is invoked when a receipt is formally
+disputed. EigenVerify samples a stake-weighted committee V and requires a supermajority (e.g., ≥ 2/3)
+agreement to finalize the result. Each verifier reexecutes the inference inside an attested enclave and
+votes on byte-level equality with the operator’s outSecurity Analysis
+put. A mismatch triggers slashing of the operator’s 9
+bonded stake, which is redistributed to challengers
+We now examine EigenAI’s security properties in agand verifiers:
+gregate, showing how determinism, confidentiality,
+data availability, and economic incentives interact to
+Rewardchallenger = αSslash ,
+Rewardverifier = βSslash ,
+form a cohesive and robust trust model.
+with α and β set by governance. Remaining stake may
+be burned or returned to the EigenLayer treasury.
+
+9.1
+
+Security Properties and Enabling
+Features
+
+Because the cost of verification is low compared to
+potential fraud gains, the expected utility of cheat- We separate security properties (what the system
+ing becomes negative for any reasonable challenge should guarantee) from features of the construction
+(engineering choices that help realize those guaranprobability πc :
+tees).
+E[Gain] = (1 − πc )G − πc Sslash < 0,
+
+Desired security properties. EigenAI targets the
+following security properties for each published inferwhere G denotes the maximum benefit from dishonence:
+esty. Since πc is augmented by both light audits and
+user-initiated challenges, rational operators are eco- • Integrity (correctness): the published output
+nomically driven to behave honestly.
+out corresponds to the unique result of running the
+12
+
+E[U ]
+G
+
+cheating utility
+
+honest baseline
+πc∗ =
+
+G
+Sslash
+
+πc (challenge probability)
+
+−Sslash
+
+Figure 5: Payoff diagram comparing operator utilities under varying challenge probabilities πc . A dishonest
+operator’s expected utility becomes negative once πc > G/Sslash , making cheating economically irrational.
+declared model and request under the committed
+execution parameters.
+
+9.2
+
+• Confidentiality (privacy): prompts and output
+remain hidden from unauthorized parties; plaintext
+is exposed only to authorized clients and, during dispute resolution, transiently inside attested verifier
+enclaves.
+
+Soundness and Completeness
+
+Soundness. Soundness requires that dishonest behavior be detectable. If an operator deviates from the
+canonical deterministic execution, any honest verifier
+will compute a different output during re-execution.
+Because verification reduces to byte-equality, disagreement is unambiguous, and the probability of undetected fraud falls exponentially with the fraction of
+honest stake participating in the committee.
+
+• Availability: the evidence needed to audit or dispute an inference (ciphertext, receipt, and DA inclusion evidence) remains retrievable throughout Completeness. Completeness requires that honest
+the challenge window.
+operators never be penalized. Determinism guarantees that re-executions match the operator’s output
+• Accountability: if an operator publishes an incor- exactly, irrespective of runtime noise (e.g., cache state,
+rect result, there exists a publicly checkable proce- thread scheduling). Fixed PRNG seeds and canonical
+dure that can penalize the operator (slashing) and reduction orders ensure that honest executions always
+finalize a correct outcome.
+converge to the same result, preventing false slashing.
+Enabling features of the constructions. These
+properties are supported by (non-exhaustively):
+
+9.3
+
+• Compute determinism (Section 6), which makes
+inference effectively single-valued and enables unambiguous re-execution.
+• Cryptographic commitments and data availability (operator receipts and EigenDA publication), which bind claims to immutable bytes retrievable for disputes.
+
+Privacy and Confidentiality
+
+Confidentiality is preserved through threshold key
+management and TEE-based attestation (Section 5).
+Only attested enclaves executing approved containers ever reconstruct skapp . All other components—including operators, DA nodes, auditors, and
+even KMS shards—observe only cryptographic commitments or encrypted payloads. Thus, verifiability
+and confidentiality reinforce one another: verification
+speaks to correctness, while TEEs guarantee that verification does not leak sensitive user data.
+
+• TEE-based private re-execution with threshold keys (Section 5), which permits verification on
+9.4 Liveness and Fault Tolerance
+private data without revealing plaintext in steady
+state.
+EigenDA ensures that ciphertexts and receipts remain
+retrievable for the duration of the challenge window.
+• Optimistic verification with stake-backed EigenVerify’s committee sampling tolerates partial
+slashing, which turns detected mismatches into failures: if some verifiers are offline or unresponsive,
+enforceable economic penalties.
+the remaining honest majority can still reach a verdict.
+13
+
+Table 7: Residual risks and planned mitigations.
+Residual Risk
+
+Mitigation / Roadmap
+
+Crossarchitecture
+portability
+Closed-source
+library paths
+Economic parameter drift
+Operator
+cartelization
+
+Maintain per-architecture verifier
+pools; explore numeric normalization
+for cross-device verification.
+Replace remaining cuBLAS/cuDNN
+calls with open deterministic kernels.
+Regular governance calibration and
+dynamic fee markets.
+Stake decentralization; randomized
+committee sampling.
+
+Table 8: Determinism evaluation across hosts and
+configurations.
+Configuration
+Same host
+Different hosts / same SKU
+Batch-size variance ±20%
+Diff arch (A100 vs H100)
+
+Batches
+
+Match
+
+1
+2
+2
+2
+
+10
+10
+20
+10
+
+100.0%
+100.0%
+100.0%
+0.0%
+
+Table 9: Throughput and latency comparison (batch
+= 8, seq = 1024).
+Kernel Type
+
+Timeouts ensure that the system progresses even if
+no challenge is raised, providing liveness equivalent to cuBLAS (baseline)
+Det. GEMM (EigenAI)
+other optimistic systems.
+
+Det. mixed-precision
+End-to-end LLM inference
+
+9.5
+
+Hosts
+
+Rel. Thrpt
+
+Overhead
+
+1.00×
+0.97×
+0.95×
+0.98×
+
+–
++2.4%
++4.1%
++1.8%
+
+Residual Risks and Mitigations
+
+Table 7 summarizes remaining risks. Some stem
+from hardware trust assumptions (TEEs), others from
+portability constraints (GPU architecture differences).
+In each case, we outline roadmap items to further
+reduce exposure.
+
+we perturb the batch size by ±20%, observing no divergence. As expected, cross-architecture tests (A100
+versus H100) do not match bitwise due to differences
+in floating-point rounding behavior, underscoring the
+need for per-architecture verifier sets.
+
+Overall, EigenAI achieves layered, composable security: determinism provides technical reproducibility,
+TEEs enforce confidentiality, EigenDA guarantees
+availability, and EigenLayer adds cryptoeconomic cor- 10.2 Stress and Batch-Invariance Tests
+rectness. These layers interlock to produce a verifiable
+To evaluate robustness under operational noise, we
+inference system resilient to both adversarial behavior
+co-schedule background GPU workloads that induce
+and accidental faults.
+synthetic jitter and scheduling variability. Despite
+this perturbation, all runs produced identical outputs,
+10 Evaluation and Experiments confirming that deterministic kernel design—warpsynchronous reductions, fixed decoding order, and
+We evaluate EigenAI along three axes: (i) the ro- pinned software stack—effectively isolates inference
+bustness of bit-exact determinism under realistic de- from transient runtime effects. These results indicate
+ployment conditions, (ii) the performance overhead that EigenAI’s determinism holds not only under ideof deterministic kernels relative to vendor-optimized alized conditions but also in realistic multi-tenant and
+baselines, and (iii) the end-to-end cost of verification performance-variable environments.
+in light and full challenge scenarios. All experiments
+were conducted on NVIDIA H100 GPUs using pinned
+container digests and identical software environments. 10.3 Performance Overhead
+
+10.1
+
+Determinism Verification
+
+We first assess whether EigenAI’s execution stack produces bit-identical outputs across repeated runs and
+heterogeneous deployment settings. Repeated inference on the same host yielded perfect equality across
+all logits and generated tokens. Cross-host experiments—running identical containers on two independent H100 nodes—also produced exact matches. To
+probe sensitivity to batching and runtime variability,
+14
+
+Next, we quantify the throughput and latency cost
+of deterministic kernels relative to vendor-optimized
+baselines. On Hopper GPUs, our deterministic
+GEMM kernels achieve 97–99% of cuBLAS throughput for quantized matrix multiplications, and approximately 95% for mixed-precision projection layers.
+End-to-end LLM inference shows only a modest latency increase (≈ 1.8%), demonstrating that determinism can be achieved without compromising stateof-the-art performance.
+
+11
+
+Limitations and Future Work
+
+Although EigenAI achieves deterministic inference and
+robust verification, several open challenges remain:
+• Cross-Architecture Reproducibility. Determinism currently holds only within fixed GPU families. Future work includes portable numeric normalization to enable heterogeneous verifier sets.
+• Residual Library Paths. Certain cuBLAS and
+cuDNN operations remain closed-source; we plan
+to replace them with open deterministic equivalents
+to achieve complete auditability.
+
+[5] Wang, X., Wei, J., Schuurmans, D., et al. “SelfConsistency Improves Chain-of-Thought Reasoning in Language Models.” Proc. ICLR 2023.
+[6] Atıl, B., Aykent, S., Chittams, A., et al. “NonDeterminism of ‘Deterministic’ LLM Settings.”
+arXiv:2408.04667 (v2 Apr 2025).
+[7] PyTorch Core Team. “Reproducibility—Notes on
+Randomness and Determinism.” PyTorch Documentation v2.7, 2023.
+[8] ONNX Runtime Team. “Performance Tips for
+ONNX Runtime Web (WASM Backend).” Technical note, 2023.
+
+• Tool and API Determinism. Agents that call
+external APIs or tools require deterministic transcript recording; EigenAI will extend receipts to
+include signed external call logs.
+
+[9] NVIDIA Corporation. cuBLAS Library User
+Guide, Release 12.3, §2.1 “Results Reproducibility.” Santa Clara, CA, Aug 2023.
+
+12
+
+[10] NVIDIA Corporation. cuBLAS Library User
+Guide, CUDA Toolkit v12.9, §2.4.20, 2023.
+
+Conclusion
+
+[11] Shanmugavelu, A., et al. “Impacts of FloatingEigenAI unites deterministic GPU inference, privacyPoint Non-Associativity on Reproducibility
+preserving verification, and EigenLayer’s cryptoecofor HPC and Deep Learning Applications.”
+nomic guarantees into a single coherent platform. By
+arXiv:2403.11545, 2024.
+making AI results reproducible, auditable, and slashable under fraud, it delivers a practical route to veri- [12] Coleman, C., and Siemons, J. “Non-Determinism
+fiable AI at state-of-the-art performance. These
+in GPU-Accelerated Deep Learning Frameworks.”
+properties enable trustworthy sovereign agents—AI
+arXiv:2208.13040, 2022.
+systems that can autonomously act, reason, and transact across high-stakes domains both on- and off-chain. [13] EigenLabs. EigenVerify Overview (Objective Dispute Resolution Preview). EigenCloud DocumenAs deterministic computation and cryptoeconomic
+tation, 2025.
+security converge, verifiable intelligence becomes a
+first-class primitive for decentralized and enterprise [14] EigenLabs. EigenCloud Brings Verifiable AI to
+ecosystems alike.
+Mass Market with EigenAI and EigenCompute
+Launches. EigenCloud Blog, Sept 2025.
+
+References
+
+[15] NVIDIA Corporation. CUDA Compatibility
+Guide for Developers, 2023.
+
+[1] Ghodsi, Z., Gu, T., and Garg, S. “SafetyNets:
+Verifiable Execution of Deep Neural Networks [16] NVIDIA Corporation. NVIDIA System Management Interface (nvidia-smi) User Guide, 2023.
+on an Untrusted Cloud.” Advances in Neural
+Information Processing Systems 30, 2017.
+[17] NVIDIA Corporation. “Best Practices for
+NVIDIA Container Images.” Technical documen[2] Kang, D., Hashimoto, T., Stoica, I., and Sun, Y.
+tation, rev. 2024.
+“Scaling Up Trustless DNN Inference with ZeroKnowledge Proofs.” arXiv:2210.08674, 2022.
+[18] EigenLabs. EigenLayer Core Protocol and Restaking Architecture. Technical white paper, 2025.
+[3] Gal, Y., and Ghahramani, Z. “Dropout as a
+Bayesian Approximation: Representing Model
+[19] Shamir, A. “How to Share a Secret.” CommuniUncertainty in Deep Learning.” Proc. 33rd ICML,
+cations of the ACM, 22(11):612–613, 1979.
+2016.
+[20] Intel Corporation. Intel Software Guard Exten[4] Lakshminarayanan, B., Pritzel, A., and Blundell,
+sions (SGX) Developer Guide, 2016.
+C. “Simple and Scalable Predictive Uncertainty
+Estimation Using Deep Ensembles.” NeurIPS 30, [21] AMD. Secure Encrypted Virtualization (SEV)
+2017.
+Architecture Reference Manual, rev. 1.55, 2020.
+15
+
+[22] Murphy, S. “Building CUDA Images on GitHub
+Runners with Nix.” Technical note, 2024.
+[23] NVIDIA. Megatron-LM: Training Multi-Billion
+Parameter Language Models Using Model Parallelism. GitHub repository, accessed May 2025.
+[24] Stoyanov, R., et al. “CRIUgpu: Transparent
+Checkpointing of GPU-Accelerated Workloads.”
+arXiv:2502.16631, 2025.
+[25] NVIDIA Developer Blog. “Reproducible Results
+with cuBLASLt.” June 2023.
+[26] NVIDIA Developer Blog. “Using CUDA WarpLevel Primitives.” July 2018.
+[27] Riach, D. “Determinism in Deep Learning.”
+NVIDIA GTC Presentation S9911, 2019.
+[28] EigenLabs. EigenLayer Economic Security and
+Slashing Parameters. Technical whitepaper, 2025.
+[29] EigenLabs. EigenLayer Governance Framework.
+Documentation, 2025.
+[30] EigenLabs. EigenDA: Data Availability for Verifiable Compute. Whitepaper, 2025.
+[31] EigenLabs. EigenCompute: Verifiable Container
+Runtime for Deterministic Agents. Technical documentation, 2025.
+[32] EigenLabs Research. Empirical Evaluation of Deterministic Inference Kernels on Hopper GPUs.
+Internal report, 2025.
+[33] Zhang, Y., and Coleman, C. “DetBench: Benchmarking Deterministic Deep Learning Kernels.”
+arXiv:2411.01854, 2024.
+[34] Blackman, D., and Vigna, S. “Scrambled Linear Pseudorandom Number Generators.” ACM
+Transactions on Mathematical Software, 45(2):28,
+2018.
+[35] Docker Inc. Content Addressable Storage and Image Digests in Docker. Technical documentation,
+2023.
+[36] EigenLabs. EigenDA Proof Structures and Merkle
+Verification API. Developer documentation, 2025.
+
+16
+
+

@@ -1,0 +1,1239 @@
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+1
+
+PDRIMA: A Policy-Driven Runtime Integrity
+Measurement and Attestation Approach for ARM
+TrustZone-based TEE
+
+arXiv:2512.06500v1 [cs.CR] 6 Dec 2025
+
+Jingkai Mao, Xiaolin Chang
+Abstract—Trusted Execution Environments (TEEs) such as ARM TrustZone are widely used in IoT and embedded devices to protect
+sensitive code and data. However, most existing defenses focus on secure boot or REE-side monitoring and provide little visibility into
+the runtime integrity of the TEE. This leaves TrustZone-based devices exposed to persistent TEE compromises.
+We propose Policy-Driven Runtime Integrity Measurement and Attestation (PDRIMA), a runtime integrity protection approach for
+TrustZone-based TEEs. PDRIMA systematically analyzes TEE attack surfaces and introduces two in-TEE subsystems: a Secure Monitor
+Agent (SMA) that performs policy-driven measurement, appraisal, logging, and time-based re-measurement over the TEE kernel,
+static components, user-TAs, and security-critical system calls; and a Remote Attestation Agent (RAA) that aggregates tamper-evident
+evidence and exposes a remote attestation protocol for verifying. We analyze PDRIMA’s security against identified attack surfaces,
+implement a prototype on OP-TEE for Raspberry Pi 3B+, and evaluate its performance overhead to indicate its practicability.
+Index Terms—Trusted Computing, Trusted Execution Environment, ARM TrustZone, Runtime Integrity, Integrity Measurement
+Architecture.
+
+✦
+
+1
+
+I NTRODUCTION
+
+T
+
+HE Internet of Things (IoT) and embedded systems
+are now widely used in daily life, powering intelligent transportation, unmanned aerial vehicles, smart
+homes. However, large-scale deployments of heterogeneous, resource-constrained devices expose many security
+vulnerabilities that can be exploited by attackers [1]. Although numerous defenses have been proposed, they are
+still difficult to deploy consistently across diverse hardware
+and often fail to withstand sophisticated attacks [2].
+To overcome these limitations, Trusted Execution Environments (TEEs) provide a hardware-backed Root of Trust
+(RoT) and an isolated environment for critical code and
+data [3]. ARM TrustZone is the dominant TEE technology in
+embedded and IoT devices, partitioning the platform into a
+Rich Execution Environment (REE) for normal applications
+and a TEE for security-sensitive services [4]. However, due
+to design and implementation constraints, TrustZone alone
+does not provide complete secure-boot, runtime integrity
+protection, or Remote Attestation (RA) mechanisms [5], so
+relying solely on TrustZone cannot guarantee device security. As illustrated by arrows (a)–(c) in Fig. 1, TrustZonebased devices remain vulnerable to both boot-time and runtime attacks [6]–[11]. Therefore, achieving end-to-end trust
+for TrustZone-enabled devices requires a full life-cycle protection mechanism that combines (i) a secure boot mechanism and (ii) runtime integrity protection that continuously
+verifies the executing software stack on the device [12].
+For secure boot mechanism, existing works [12]–[15]
+build secure and trusted chains anchored in a hardware-
+
+based RoT. As illustrated in Fig. 1, these schemes verify
+boot-able components before execution to effectively mitigate boot-time attacks (arrow (a)), but the trust chain stops
+after static verification. They do not track runtime kernel
+or application state, leaving devices exposed to long-lived
+runtime attacks beyond boot (arrows (b) and (c)) [6], [10],
+[11].
+For runtime integrity protection, the Linux Integrity
+Measurement Architecture (IMA) provides a basic framework for runtime integrity protection [16], and later work
+strengthens functions and security of IMA [17]–[22]. Recently, many schemes dedicated to move monitoring and
+protection modules into TEE to harden REE runtime integrity [12], [23]–[28]. As illustrated in Fig. 1, these designs
+mainly target REE-side attacks (arrow (b)) and provide no
+visibility into TEE runtime state (arrow (c)).
+In fact, runtime integrity protection must cover both REE
+and TEE, since the TEE itself has been shown vulnerable
+through attacks on Trusted Applications (TAs) and TEE kernels [6], [8]–[11]. Nevertheless, runtime integrity protection
+for TrustZone-based TEEs remains limited. To date, the only
+deployed mechanism is OPTEE-RA [29], which measures
+and attests user-TA inside the TEE. However, it offers narrow coverage and limited functionality for TEE runtime
+protection, so attacks can still bypass it and compromise
+TEE integrity [9] (detailed in Section 3.1). Therefore, there
+is a strong need for a more comprehensive TEE runtime
+integrity solution. However, achieving such protection still
+faces at least three critical challenges:
+•
+•
+
+•
+
+Jingkai Mao, and Xiaolin Chang are with the Beijing Key Laboratory
+of Security and Privacy in Intelligent Transportation, Beijing Jiaotong
+University, P.R.China. (e-mail: {23111143, xlchang}@bjtu.edu.cn)
+
+•
+
+C1: Vulnerable to some attacks.
+C2: Lack of Suitable TEE Runtime Protection.
+C3: Limited RA for TEE Runtime State.
+
+To address these challenges, we propose Policy-
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+Boot
+Phase
+
+IMA
+REE
+Runtime
+
+(b)
+
+Current Situation
+
+(a)
+
+Secure
+Boot
+(c)
+
+TEE
+Runtime
+
+or
+
+TEE
+Runtime
+
+TEE Runtime
+Attacks
+
+TEE
+Runtime
+
+Fig. 1: Security coverage of a TrustZone-based device without (bottom-left) and with PDRIMA (bottom-right). Existing
+secure boot and REE-side IMA protect the boot phase and
+REE runtime (arrows (a), (b)), but leave the TEE runtime
+exposed (arrow (c), bottom-left). PDRIMA closes this gap
+with TEE runtime integrity protection (bottom-right).
+Driven Runtime Integrity Measurement and Attestation
+(PDRIMA), a novel approach that fills the remaining gap
+in full life-cycle security and trust for TrustZone-based
+devices, as illustrated by arrow (c) in Fig. 1 (bottom-right).
+PDRIMA first systematically analyzes the attack surfaces
+that affect the runtime integrity of TrustZone-based TEEs,
+and then designs two subsystems, the Secure Monitor Agent
+(SMA) and the Remote Attestation Agent (RAA), to provide
+policy-driven TEE runtime integrity solution across these
+surfaces and to support on-demand RA of TEE state. Our
+approach is orthogonal to existing secure boot schemes [12]–
+[15] and REE runtime integrity mechanisms [12], [23]–[28],
+and can be deployed alongside them without interference,
+enabling protection over the device full life-cycle. To the
+best of our knowledge, this is the first work that implements runtime integrity measurement and RA with full
+coverage of the attack surfaces that may compromise the
+runtime integrity of TrustZone-based TEEs.
+The contributions of this paper are summarized as follows:
+•
+
+•
+
+•
+
+The rest of this paper is organized as follows. Section 2
+introduces the background and related work. Section 3
+presents the threat model, security goals, and an overview of
+the PDRIMA system. Sections 4 and ?? describe the design
+and implementation of PDRIMA, respectively. Section 5
+provides the security and performance evaluation. Finally,
+Section 6 concludes the paper and outlines future work.
+
+2
+
+With PDRIMA
+
+PDRIMA
+
+TEE Runtime
+Attacks
+
+2
+
+Comprehensive TEE Attack Surface Analysis. We
+systematically analyze the runtime attack surfaces
+that affect TrustZone-based TEEs, using OP-TEE as
+a representative case. Thus, PDRIMA addresses C1.
+Policy-Driven TEE Runtime Integrity Solution Design and Implementation. We design the SMA subsystem in PDRIMA to provide comprehensive runtime integrity protection for TrustZone-based TEEs
+across the three identified attack surfaces, thus addressing C2.
+RA Design and Implementation. We design the
+RAA subsystem to export tamper-evident integrity
+evidence from SMA and support RA of the TEE’s
+runtime integrity state, thus addressing C3.
+
+We implemented a prototype on the Raspberry Pi 3B+
+to demonstrate the feasibility of our design and evaluate its
+performance, showing that PDRIMA is practical in resourceconstrained environments.
+
+BACKGROUND AND R ELATED W ORK
+
+This section describes the background to PDRIMA in Section 2.1. Section 2.2 reviews related work on runtime integrity measurement.
+2.1
+
+Background
+
+This section presents the background, including the ARM
+TrustZone, OP-TEE, and the principles of integrity measurement.
+2.1.1 ARM TrustZone and OP-TEE
+This section introduces ARM TrustZone, a TEE technology
+commonly used in embedded and IoT devices; and OPTEE, a popular open-source TEE Operation System (OS)
+implementation based on ARM TrustZone-based TEE.
+ARM TrustZone. ARM TrustZone provides hardware
+isolation by partitioning the platform into the Normal World
+(NW, or REE) and the Secure World (SW, or TEE) [30].
+Isolation is enforced by the Non-Secure (NS) bit and by
+memory/peripheral access control. ARMv8-A defines four
+Exception Levels (EL0–EL3). The Secure Monitor, such as
+ARM Trusted Firmware (ATF), runs at EL3 and switches
+NW/SW on a Secure Monitor Call (SMC) by saving context, toggling NS, and restoring the target world [4]. Both
+worlds maintain separate privilege levels: EL0 and EL1 in
+REE run Client Applications (CAs) and the REE kernel,
+such as Linux kernel, while S-EL0 and S-EL1 in TEE run
+Trusted Applications (TAs) and the TEE kernel. Secure boot
+establishes initial trust by verifying REE/TEE kernel images
+before execution.
+OP-TEE. Open Portable Trusted Execution Environment
+(OP-TEE) is an open-source TEE OS implementation that
+follows GlobalPlatform (GP) specifications [31]. The OP-TEE
+core at S-EL1 manages secure memory, threads, and crypto.
+Pseudo-TAs (pTAs) are statically linked services with kernel
+privilege, while user-TAs are ELFs loaded on demand by
+ldelf, which are identified by Universally Unique IDentifiers (UUIDs). OP-TEE provides TEE Client API and TEE
+Internal Core API for developing CAs and TAs. A user-space
+daemon, tee-supplicant, runs in the REE to provide user-TA
+loading and file-system access on behalf of the TEE and
+to read/write shared memory. Our work builds on these
+architectural elements and targets runtime integrity in OPTEE without changing GP semantics or the world-switch
+path.
+2.1.2 Principles of Integrity Measurement
+This section introduces Integrity measurement mechanism
+commonly used for runtime integrity protection. This is
+a effective method for verifying that system remains in a
+known-good state. The IMA introduced in Linux version
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+2.6.30 implements it by hashing content on access and
+maintaining an log of measurements [16]. IMA interposes
+on file use (e.g., execute, read), computes a cryptographic
+digest, and extends it to an tamper-evident list. With a
+Trusted Platform Module (TPM), digests can be extended
+into Platform Configuration Registers (PCRs) to produce a
+succinct state summary for verification [32].
+IMA provides four core functions [33]: collect (compute
+hashes), store (maintain a protected list and PCR extensions),
+appraise (compare against trusted “golden” values, often
+in extended attributes), and attest (sign logs for remote
+verifiers using TPM-protected keys). A policy controls what
+to measure and when, using rules keyed on object type,
+path, owner, and operation. The measurement list forms a
+tamper-evident sequence and supports both local appraisal
+and RA.
+These principles motivate a TEE-oriented design: selective, policy-driven collection; protected, append-only logging; aggregation into registers for efficient checks; and a
+signed report for RA.
+2.2
+
+Related Work
+
+This section reviews and outlines the evolution of related
+work on runtime integrity measurement. We then compare
+PDRIMA with several representative schemes.
+2.2.1 Traditional Measurements for REE
+Traditional mechanisms lay the foundation for policy-driven
+measurement and tamper-evident evidence in REE kernels.
+The representative and foundational work was the IMA [16]
+proposed in 2004. IMA-Appraisal [17] enhanced IMA with
+local appraisal against pre-computed golden values, reducing the risk of offline tampering and rollback attacks.
+Beyond these baselines, many works extended IMA in
+different directions. Davi et al. proposed DynIMA [18],
+which dynamically adjusts IMA to improve security. Sun et
+al. [19] and Lou et al. [20] adjusted the coverage of IMA
+and split measurement logs and PCRs to support container–aware IMA. Sassu et al. [21] design a protocol that refines IMA-based RA by sealing keys to predictable IMA PCR
+values. Eckel et al. [22] proposed USIM, which measures
+user-space text files that are not covered by IMA. Although
+these improvements strengthen IMA, they still depend on
+a correct REE kernel and thus inherit its attack surface,
+allowing attackers to undermine its security guarantees.
+2.2.2 TEE-based Measurements for REE
+To reduce reliance on REE, many works deploy the monitor
+inside a TEE. Deyannis et al. proposed SGX-Mon [34], which
+places monitor inside an SGX-based enclave to verify the
+state of an untrusted OS. Galanou et al. [35] proposed Revelio for applications integrity verification inside Confidential
+Virtual Machines (CVMs). Other studies [36]–[38] apply
+virtual TPMs to CVMs so that integrity evidence can be
+recorded and attested without trusting the underlying hypervisor. In addition, several studies focus on heterogeneous
+devices, such as FPGA platform, using TEE technologies as
+the RoT to protect its integrity [14], [15].
+On ARM TrustZone, researches deploy monitors in SW
+for monitoring the REE. Samsung TIMA (Knox) [23] performs periodic kernel checks and protects sensitive kernel
+
+3
+
+structures from S-EL1, providing supervision of the REE
+kernel (Android). SPROBES [24] instruments sensitive kernel instructions, enforcing kernel code integrity. KIMS [25]
+computes and compares digests of the REE kernel and
+dynamic data structures under TEE control. Ling et al. [12]
+proposed a paging-based process integrity measurement
+for TrustZone-based IoT devices, enabling monitoring of
+REE runtime state at the process granularity. TZ-IMA [26]
+relocates IMA’s measurement and appraisal modules into
+the TEE and encrypts the measurement log, thereby enhancing IMA with TrustZone protection; it also defines a
+RA protocol that allows verifiers to verify and assess the
+integrity evidence of REE. TZEAMM [27] builds a measurement and fallback mechanism for REE applications based
+on TrustZone, and Dimac [28] monitors container life-cycle
+events and records measurements in container-specific logs
+and PCRs, providing a RA protocol for container integrity.
+2.2.3
+
+TEE-based Measurements for TEE
+
+Recently, many security issues and exploitable vulnerabilities have been reported in TEEs [6], [10], [11]. A compromised TEE OS or privileged TA can break the trust
+assumptions of REE-based monitors and other security services that rely on the TEE. Consequently, recent work has
+begun to move runtime integrity measurement into the TEE
+itself and to cover the runtime state of trusted kernels and
+applications.
+Several solutions start to measure the runtime state
+of TEEs. Zhou et al. [39] proposed SMILE, which allows
+enclave owners to check the integrity of SGX enclaves. Morbitzer et al. [40] presented GuaranTEE, which uses controlflow attestation to ensure the integrity of a service running
+within a TEE. Ozga et al. [41] designed TRIGLAV, which
+attests the runtime integrity of CVMs by binding VM state
+to a secure login channel.
+Within TrustZone-based devices, there is still limited research on runtime integrity measurement. To date, the only
+implemented solution is OPTEE-RA, proposed by Suzaki et
+al. [29]. OPTEE-RA implements a pTA for measuring and
+RA. While OPTEE-RA provides an first solution toward
+TEE-side monitoring, its monitoring scope and functionality
+are limited to individual TA binaries and coarse-grained evidence, making it difficult to comprehensively demonstrate
+the TEE’s runtime integrity status.
+
+3
+
+S YSTEM OVERVIEW
+
+This section details the threat model, security goals and the
+system description of PDRIMA.
+3.1
+
+Threat Model
+
+We first introduce adversary capabilities and security assumptions, then analyze three major attack surfaces to establish a threat model.
+Adversary Capabilities. We consider a powerful adversary with the following capabilities:
+•
+
+REE System Compromise. The adversary fully controls the REE system, enabling arbitrary code execution. It can also read/write all non-secure memory
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+TEE
+User TA
+
+Shared Library
+TEE Internal Call
+
+REE
+User TA
+
+Request SML
+
+SMA
+
+Log
+
+Appraisal
+Engine
+
+Policy-Driven
+
+Manager Policy
+Module Manager
+
+vPCRs
+SML
+
+Key
+Manager
+
+User
+CA
+
+pTA
+
+RAA
+SMA Hook
+
+Measurement
+Engine
+
+4
+
+vPCR0
+vPCR1
+vPCR2
+vPCR3
+
+❶ Device
+Enrollment
+❺ Integrity
+Evidence
+Generation
+
+teesupplicant
+
+Extend
+
+SML Module
+
+TEE
+Driver
+
+TTP
+
+❷ Verifier
+
+Enrollment
+
+❼ Integrity
+
+Verification
+
+❹ Challenge
+
+Kernel
+
+Device
+
+Secure Monitor
+
+❻ Response
+
+Verifier
+
+❸ Device Booting
+
+Fig. 2: The architecture and the workflow of the PDRIMA. The left side of the figure depicts the PDRIMA architecture,
+with the SMA and RAA subsystems located within the TEE and comprising five components. The right side of the figure
+illustrates the PDRIMA workflow, involving three participants and six key steps.
+
+•
+
+•
+
+and Compromise the tee-supplicant daemon. Moreover, it can tamper with shared-memory parameters,
+and corrupt responses from the TEE.
+REE File system Control. The adversary can replace
+TA binaries (ELFs) with downgraded, vulnerable
+versions. It can also read, replace, or delete persistent
+storage of the TEE.
+Network Control. The adversary can control the
+channel between the device and remote verifiers. It
+can intercept, modify, replay, or drop packets in the
+network channel.
+
+Security Assumptions. We assume all hardware and the
+cryptographic primitives are correctly implemented. Then,
+we do not consider the physical attacks, side-channel attacks, denial-of-service attack, and the TOCTOU attacks [8].
+Finally, we assume secure boot has verified the authenticity
+and integrity of the ATF and TEE image at boot time [12].
+Attack Surfaces Analysis. Given the above adversary
+capabilities and security assumptions, we analyzed the three
+key Attack Surfaces (ASs):
+•
+•
+•
+
+3.2
+
+Based on the threat model, we establish the following Security Goals/Requirements (SRs) for PDRIMA.
+•
+•
+•
+•
+•
+
+3.3
+
+•
+
+•
+
+•
+
+AS1: Boot-Time to Runtime Gap.
+AS2: REE-TEE Interface Boundary.
+AS3: User–Kernel Spaces Privilege Boundary.
+Security Goals
+
+•
+
+runtime integrity protection through measurement, appraisal,
+and logging. It hooks events that affect integrity and records
+evidence in the Security Measurement Log (SML). The RAA
+then requests the SML from the SMA, prepares attestation
+data, and interacts with remote verifiers. The system and
+architecture of PDRIMA are illustrated as Fig. 2, which
+consists of three participants and five components.
+Participants. Denoted by purple letters in Fig. 2 (right).
+
+SR1: Trusted Deployment.
+SR2: Policy-Driven Flexibility.
+SR3: AS1 Coverage.
+SR4: AS2 Coverage.
+SR5: AS3 Coverage.
+SR6: Remote Attestability.
+
+Components. As indicated by the blue dashed box in
+Fig. 2 (left), the SMA comprises four components, whereas
+the RAA consists of a single component.
+•
+
+•
+•
+
+System Description
+
+To satisfy SR1-SR6, we propose PDRIMA, a policy-driven
+runtime integrity measurement and attestation approach for
+ARM TrustZone-enabled devices. PDRIMA comprises two
+subsystems: Secure Monitor Agent (SMA) and Remote Attestation Agent (RAA). Guided by policies, the SMA enables
+
+Trusted Third Party (TTP). The TTP is the enrollment authority. It provisions the device and verifier
+with identities and certificates. It delivers user-TA
+binaries and customized TEE kernel images that embed PDRIMA. It also maintains reference hash values
+(“golden hashes”) for the kernel and TAs.
+Device. The device is the TrustZone-based platform
+requiring TEE runtime integrity verification. We assume it can securely boot the TEE and support
+running PDRIMA. It supports networking and can
+establish secure channels to the verifier.
+Verifier. The verifier is the remote challenger. It can
+set up a secure session with the device and generate
+a fresh nonce. It does not store reference hashes;
+instead, it forwards the received evidence to the TTP
+and accepts the TTP’s decision.
+
+•
+
+•
+
+SMA: Manager Module. It manages SMA workflow.
+It includes: (i) a Policy Manager submodule; (ii) a Key
+Manager submodule; (iii) a Main Control Logic.
+SMA: Measurement Engine (ME). It calculates
+hashes over objects according to the policies.
+SMA: Appraisal Engine (AE). It matches UUIDs in
+the Reference Measurement List (RML) entries based
+on policy configuration and compares the digest to
+classify the object as trusted or untrusted.
+SMA: SML Module (SMLM). It maintains the SML
+as an append-only, hash-chained log. It also maintains four vPCRs.
+RAA: RA-pTA. It is implemented as a pTA inside the
+TEE core.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+5
+
+PDRIMA Workflow. The complete system operation
+and RA workflow is illustrated in Fig. 2 (right):
+(1) Enrollment (Step 1 - 2 ). The TTP provisions the device and verifier with certificates, and delivers a policyembedded TEE kernel and a TTP-signed RML to the device.
+(2) Secure boot and monitoring (Step 3 ). The device securely boots the TEE. The SMA loads policies and RML,
+drives the ME and AE, which collect evidence at runtime
+and append it to the SML.
+(3) Challenge-Response (Step 4 - 6 ). The verifier sends a
+fresh nonce. The RA-pTA gets SML (and vPCRs), binds them
+to the nonce, seals/signs the evidence, and returns it.
+(4) Verification (Step 7 ). The verifier forwards the response to the TTP, which validates freshness and digests
+against the RML and issues the integrity verdict.
+The above workflow provides a comprehensive
+overview of the device’s TEE runtime integrity status.
+
+4
+
+S YSTEM D ESIGN
+
+This section presents the design of PDRIMA’s core functions
+and explains how they interact to protect TEE runtime
+integrity.
+4.1
+
+Policy Manager Design
+
+The policy manager is a rule-based controller for SMA
+actions. Each Policy Rule (PR) is a triple with an action, an
+event type, and an optional set of conditions:
+
+PR = ⟨action, event, ⟨condition1 , condition2 , . . .⟩⟩.
+
+(1)
+
+The action and event are mandatory; the condition set
+is optional and variable-length. The action states whether to
+measure or appraise. The event selects the target events. The
+conditions limit when a rule applies. A policy set contains
+one or more PRs. During image building, the set is compiled
+into a binary blob and embedded into the TEE kernel image
+by the TTP. Thus, changing policy requires rebuilding and
+re-signing the kernel, which prevents tampering.
+At boot, the SMA loads the policy set from the image,
+parses it, and stores it in secure memory belonging to the
+TEE kernel. When an event occurs, SMA scans rules in order
+and stops at the first match. If no rule matches, the SMA
+takes the default action to bypass measurement/appraisal
+for that event, limiting cost on non-critical paths.
+4.2
+
+Measurement Mechanism
+
+The measurement mechanism generates digests of securitycritical objects and events. The ME can perform three types
+of measurements, including: static measurements, dynamic
+measurements, and time-based re-measurements.
+4.2.1 Static Measurement
+Static measurements occur during system initialization and
+component loading. It binds measurement to the code that
+will execute by hashing selected memory segments. This
+establishes a trusted baseline before any execution and
+enables detection of unauthorized changes to binaries and
+initialization data.
+TEE Kernel Measurement. When ATF loads the TEE
+kernel, the ME hashes security-critical segments. It also
+
+includes kernel metadata such as function tables and ARM
+exception tables.
+Static Components Measurement. Since pTAs are statically linked into the kernel image, their code and read-only
+data are already covered by the kernel measurement.
+User-TA Measurement. When OP-TEE loads a TA’s ELF,
+the ME hashes the TA’s some segments before its first
+execution. It can also measure TA properties if the policy
+permits.
+The measurement process employs a segmented hashing
+approach. The ME processes each segment independently
+and calculates its hash. Subsequently, it combines each value
+into a hash chain to compute the final hash as the result:
+
+
+Resultsegment = H H(... H(0 ∥ S1 ) ∥ S2 ∥ ... ∥ Sn ) (2)
+where Si represents the i-th segment. After that, the engine
+determines whether appraisal is required based on the policy configuration (detailed in Section 4.3). Meanwhile, the
+measurement results are recorded in a new SML entry in
+SMLM. The hash value of the SML entry also extends to
+the appropriate vPCRs by event type, enabling verifiers to
+confirm the trustworthiness of SML (detailed in Section 4.4).
+4.2.2 Dynamic Measurement
+Dynamic measurement records runtime events including user-TA invocations, inter-TA communications, and
+security-critical system calls, as illustrated in Fig. 3. The
+SMA installs hooks (SMA Hooks) at selected system call
+entry points.
+TA Invocation Measurement. When a CA in the REE
+opens a user-TA session or invokes a user-TA command, a
+hook intercepts the call in the TEE core. The hook records
+the some parameters and the return code. These records
+help detect unauthorized access and abnormal invocation
+patterns.
+Inter-TA Communication Measurement. When a CA or
+user-TA invokes a pTA, the SMA hook at the pTA-related
+system calls applies the same process.
+System Call Measurement. For security-critical system
+calls, the SMA Hook captures relevant parameters and
+execution result, proving that a sensitive system call event
+occurs.
+After interception, the SMA hooks extract identifiers and
+parameters. The ME then normalizes and serializes this data
+and computes a digest, as shown in the “Dynamic Measure”
+box in Fig. 3. Each measurement comprises three parts: (i)
+metadata D1 ; (ii) parameters D2 ; and (iii) results D3 . The
+ME binds these parts into a system call measurement result:
+
+Resultsyscall = H D1 ∥ D2 ∥ D3 ).
+
+(3)
+
+This composite hash captures the complete operation context. Finally, the ME extends the result as a new entry to the
+SML in SMLM and extends to vPCRs.
+4.2.3 Time-based Re-Measurement
+To address the integrity verification of long-running components, the SMA supports configurable re-measurement intervals for kernel structures and user-TAs. This mechanism
+detects runtime modifications that might occur through
+memory corruption or exploitation.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+Dynamic Measure
+D1 Metedata
+
+Output
+
+TEE User-TA
+
+User-TA
+
+REE
+
+User-TA
+UserCA
+
+pTA
+
+D2 Param
+
+6
+
+teesupplicant
+
+……
+
+vPCRs
+
+……
+
+SML
+Entry
+
+Last Entry Hash
+(H(SEn))
+
+TEE Driver
+
+TEE Core
+
+CA-to-TA
+TA-to-pTA
+TA-to-SysCall
+
+SML
+
+SMA
+SMLM
+
+SMA
+System Call
+SMA Hook
+
+ME
+
+Dynamic Measure
+
+H(D1||D2||D3)
+
+Secure Monitor
+
+……
+
+Header
+
+EventData
+
+Size
+
+PCR
+
+Event
+Type
+
+Digest
+(H(SE3))
+
+SEn
+Result
+
+Pre-SE Digest
+(H(SE2))
+
+SE = ⟨SEHeader, event data, size, result⟩.
+
+(4)
+
+Re-measurement hashes only static segments. The ME then
+compares the new digest against the baseline recorded
+during the static measurement process to detect drift or
+tampering.
+If the comparison succeeds, dynamic measurement proceeds as usual for the intercepted call and restarts the
+timer; if it fails, the SMA blocks the call or emits an alert,
+according to policy. In all cases, the re-measurement events
+are extended as a new entry to the SML, creating an audit
+trail of system state evolution.
+Appraisal Mechanism
+
+The AE determines component integrity by checking measurements against known-good references. It maintains an
+RML composed of one or more RML Entries (REs). Each RE
+is a triple with a component UUID, its expected digest, and
+a minimum acceptable version:
+
+RE = ⟨UUID, golden hash, min version⟩.
+
+SE3
+
+records. It consists of global metadata and a hash-chained
+SML Entry List, as illustrated in Fig. 4. Each SML Entry (SE)
+is a quadruple:
+
+Formally,
+Re-Measure ⇐⇒ Tcurrent − Tlast > Interval.
+
+SE2
+
+Fig. 4: Design of secure measurement log in PDRIMA. SEs
+are organized in a hash-chained list, where each SE header
+includes the target vPCR index, event type, its own digest,
+and the previous SE digest.
+
+REE
+Core
+
+Fig. 3: Dynamic measurement mechanism of PDRIMA.
+
+(5)
+
+During the build process, the TTP constructs the RML
+and signs it with a dedicated private key SKrml . The signature covers the entire RML structure, preventing modification of entries. The TTP then embeds the signed RML and
+the corresponding public key P Krml into the TEE kernel
+image. At SMA initialization, the Manager Module loads
+the P Krml , verifies the signature, and only then places a
+valid RML into secure memory for appraisal operations.
+After the ME computes a component hash, the Policy
+Module specifies whether appraisal is required. If appraisal
+is enabled, the AE locates an RE by UUID and compares
+the measured digest with the golden hash. The comparison
+must match exactly for appraisal to succeed. The AE also
+enforces version constraints by rejecting components whose
+version is below the RML-specified minimum, thereby preventing rollback attacks.
+4.4
+
+SE1
+
+Count = n
+Max Count
+
+D3 Result
+
+4.3
+
+Secure Measurement
+Log
+SML Entry List
+
+Evidence Logging Mechanism
+
+The evidence logging mechanism in PDRIMA primarily
+includes extension of the SML and vPCRs.
+Security Measurement Log (SML). The SML is a
+tamper-evident log structure for storing measurement
+
+(6)
+
+The SEHeader contains key metadata for this SE:
+
+SEHeader = ⟨vPCR, event type, digest, pre-SE digest⟩. (7)
+Here, digest authenticates the current SE, and pre-SE digest binds it to the previous SE, creating a cryptographic
+dependency across entries. The event data captures eventspecific context: for static measurements, measurement results (Resultsegment ) of the kernel, pTAs, and user TAs; for
+dynamic measurements, syscall metadata and parameters
+(Resultsyscall ).
+The SML is append-only: a new SE is added to the
+tail; existing entries cannot be modified or deleted. This
+preserves a complete audit trail. The SMA pre-allocates
+SML storage during initialization to avoid dynamic memory
+allocation during measurement operations.
+vPCR Aggregation. The SMA maintains four vPCRs to
+summarize the log for attestation: Kernel measurements
+extend to vPCR[0]; static component measurements to
+vPCR[1]; user-TA measurements to vPCR[2]; and dynamic
+measurements to vPCR[3]. Each extension hashes the concatenation of the current vPCR value and the new measurement digest m:
+
+vP CR[i] ← H vP CR[i] ∥ m .
+(8)
+Verifiers can validate the SML in batch by recomputing
+chain hashes and comparing the result to the values of
+vPCRs. They can also perform selective checks over relevant
+components (e.g., only kernel or only a TA’s entries) to
+validate specific security properties efficiently.
+4.5
+
+The PDRIMA RA Protocol
+
+The protocol lets an external verifier assess a device’s TEE
+runtime integrity. It uses a challenge–response flow with
+freshness and authenticated evidence, as shown in Fig. 2
+(right).
+This workflow consists of 6 steps.
+(1) Step 1 - 2 . Device and verifier enroll with the
+TTP. The device can obtain related cryptographic keys
+such as P KT T P , and CertT T P (P KDev ) for establishing
+the secure channel with the verifier. Meanwhile, the TEE
+image embeds P KAttest /SKAttest to sign the integrity
+evidence. The verifier holds P KV erif ier /SKV erif ier and
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+7
+
+TABLE 1: Comparison of Initialization Times Between
+PDRIMA and Original OP-TEE
+
+Origin OP-TEE
+
+PDRIMA Measurement
+
+120
+Origin
+
+PDRIMA Overhead
+
+Kernel Initialization
+
+285 ms
+
+298 ms
+
+≈ 4.6%
+
+SMA Initialization (1.6 KB; 0.7KB)
+
+N/A
+
+39 ms
+
+-
+
+Kernel Measurement (305 KB)
+
+N/A
+
+20 ms
+
+-
+
+Baseline Generation (284 KB)
+
+N/A
+
+15 ms
+
+-
+
+pTA Measurement (Count: 7)
+
+N/A
+
+4 ms
+
+-
+
+Total Time
+
+285 ms
+
+376 ms
+
+≈ 31.9%
+
+CertT T P (P KV erif ier ) and can obtain P KT T P to validate
+certificates.
+(2) Step 3 . The device securely boots. The SMA initializes, loads P KAttest /SKAttest , and begins collecting integrity evidence (SML, vPCRs).
+(3) Step 4 . The verifier first establishes a secure channel
+with the device. Then, it sends a challenge with a fresh
+N once via the REE network stack to the RA-pTA.
+(4) Step 5 . Upon receiving the challenge, the RA-pTA
+requests Integrity Evidence (IE), including a snapshot of the
+vPCRs and the SML, from the SMA. Subsequently, RA-pTA
+concatenates the N once and IE into an Attestation Evidence
+(AE) and computes a digest. Next, RA-pTA obtains the
+SKAttest to generate a Quote by signing the AE, which acts
+as a digital seal guaranteeing the authenticity and integrity
+of the entire evidence.
+(5) Step 6 . RA-pTA concatenates AE and Quote as the
+response to the challenge for verification.
+(6) Step 7 . The verifier forwards AE and Quote to the
+TTP. The TTP (i) verifies Quote with P KAttest , (ii) checks
+H(AE) and the N once for integrity and freshness, and
+(iii) replays the SML against reference values and validates
+vPCRs to decide device integrity.
+
+5
+
+E VALUATION
+
+We provide the performance evaluation in this section.
+5.1
+
+Performance Evaluation
+
+This section presents the performance evaluation of
+PDRIMA, focusing on initialization and runtime overhead.
+5.1.1 Experiment Setup
+All experiments were run on a Raspberry Pi 3B+ with a
+quad-core Arm Cortex-A53 (ARMv8) and 1 GB SDRAM.
+The REE is Raspbian Linux (kernel 4.19.93-v7); the TEE is
+OP-TEE 3.16.0. All measurements are collected from OPTEE kernel output to avoid user-space variability.
+5.1.2 Initialization Overhead
+Table 1 compares original OP-TEE with PDRIMA enabled.
+The original OP-TEE kernel initialization takes 285 ms.
+With PDRIMA, total initialization time increases to 376 ms,
+resulting in an overhead of approximately 31.9%.
+This one-time initialization cost is acceptable for IoT
+or embedded devices. In exchange, PDRIMA establishes a
+comprehensive measurement baseline for the kernel and all
+pTAs at boot time, which the original OP-TEE lacks.
+
+100
+Time (ms)
+
+Phase
+
+80
+
++39.7%
++27.0%
+
++39.4%
++28.8%
+
+80 88
+
+85 92
+
+60
+40
+20
+0
+
+63
+
+51.1K
+
+66
+
+PDRIMA Apprisal
+
++39.7%
++27.4%
+
+73
+
+93 102
+
+92.1K
+145.3K
+User-TA Size
+
++34.8%
++22.5%
+
+89
+
+109 120
+
+247.7K
+
+Fig. 5: Storage and cryptographic system call latency across
+varying data sizes and cryptographic parameter configurations under original OP-TEE and PDRIMA.
+5.1.3
+
+Runtime Overhead
+
+We compare the runtime overhead of original OP-TEE with
+PDRIMA under three aspects: (i) user-TA loading, (ii) timebased re-measurement, and (iii) interception of securitycritical system calls.
+User-TA Loading. Fig. 5 shows the user-TAs loading
+latency across four TA sizes (51.1 KB-247.7 KB) for three
+configurations: the original OP-TEE as baseline, PDRIMA
+with measurement-only mode, and PDRIMA with appraisal
+mode. For the 51.1 KB TA, load time rises from 63 ms
+(baseline) to 80 ms (measurement, +27.0%) and 88 ms
+(appraisal, +39.7%). As TA size increases, the absolute
+loading time grows for all three configurations, while the
+measurement overhead remains relatively stable at approximately 22–28%, whereas the appraisal overhead consistently stays around 35–40%. The overhead stems from two
+primary sources: (i) hashing TA segments and updating
+the SML/vPCRs in the measurement phase, and (ii) RML
+lookup, golden-hash comparison, and version checks in the
+appraisal phase, which add approximately 8–11 ms. Since
+most TAs load once, this cost is amortized and acceptable
+for typical TEE applications.
+
+6
+
+C ONCLUSION
+
+In this paper, we presented PDRIMA, a policy-driven runtime integrity measurement and attestation approach for
+ARM TrustZone-based TEEs. To the best of our knowledge,
+PDRIMA is the first approach to provide comprehensive
+TEE runtime integrity protection, filling the remaining gap
+in the full life-cycle security of TrustZone-based TEE.
+
+R EFERENCES
+[1]
+
+[2]
+
+[3]
+
+P. Sun, S. Shen, Y. Wan, Z. Wu, Z. Fang, and X.-z. Gao, “A survey
+of iot privacy security: Architecture, technology, challenges, and
+trends,” IEEE internet things journal, vol. 11, no. 21, pp. 34 567–
+34 591, 2024.
+Z. Zhao, M. Armanuzzaman, X. Tan, and Z. Ma, “Trusted execution environments in embedded and iot systems: A cactilab
+perspective,” in 2024 International Symposium on Secure and Private
+Execution Environment Design (SEED). IEEE, 2024, pp. 96–106.
+GlobalPlatform, “TEE System Architecture v1.3,” https://
+globalplatform.org/specs-library/tee-system-architecture/, 2022,
+gPD SPE 009, Public Release v1.3.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+ARM Limited, TrustZone for ARMv8-A, ARM, 2019,
+version 1.0. [Online]. Available: https://developer.arm.com/-/
+media/Arm%20Developer%20Community/PDF/Learn%20the%
+20Architecture/TrustZone%20for%20Armv8-A.pdf
+[5] M. Schneider, R. J. Masti, S. Shinde, S. Capkun, and R. Perez, “Sok:
+Hardware-supported trusted execution environments,” arXiv
+preprint arXiv:2205.12742, 2022.
+[6] D. Cerdeira, N. Santos, P. Fonseca, and S. Pinto, “Sok: Understanding the prevailing security vulnerabilities in trustzone-assisted tee
+systems,” in 2020 IEEE Symposium on Security and Privacy (SP).
+IEEE, 2020, pp. 1416–1432.
+[7] N. Koutroumpouchos, C. Ntantogian, and C. Xenakis, “Building
+trust for smart connected devices: The challenges and pitfalls of
+trustzone,” Sensors, vol. 21, no. 2, p. 520, 2021.
+[8] I. De Oliveira Nunes, S. Jakkamsetti, N. Rattanavipanon, and
+G. Tsudik, “On the toctou problem in remote attestation,” in
+Proceedings of the 2021 ACM SIGSAC conference on computer and
+communications security, 2021, pp. 2921–2936.
+[9] Y. Chen, Y. Zhang, Z. Wang, and T. Wei, “Downgrade attack on
+trustzone,” arXiv preprint arXiv:1707.05082, 2017.
+[10] A. Machiry, E. Gustafson, C. Spensky, C. Salls, N. Stephens,
+R. Wang, A. Bianchi, Y. R. Choe, C. Kruegel, and G. Vigna,
+“Boomerang: Exploiting the semantic gap in trusted execution
+environments.” in NDSS, 2017, p. 35.
+[11] M. Busch, P. Mao, and M. Payer, “Spill the {TeA}: An empirical
+study of trusted application rollback prevention on android smartphones,” in 33rd USENIX Security Symposium (USENIX Security
+24), 2024, pp. 5071–5088.
+[12] Z. Ling, H. Yan, X. Shao, J. Luo, Y. Xu, B. Pearson, and X. Fu, “Secure boot, trusted boot and remote attestation for arm trustzonebased iot nodes,” J. Syst. Archit., vol. 119, p. 102240, 2021.
+[13] M. Lazarou, M. Grammatikakis, and G. Kornaros, “Measured
+firmware management for integrity of edge devices,” in 2025 IEEE
+International Symposium on Circuits and Systems (ISCAS). IEEE,
+2025, pp. 1–5.
+[14] Y. Wang, X. Chang, H. Zhu, J. Wang, Y. Gong, and L. Li, “Towards
+secure runtime customizable trusted execution environment on
+fpga-soc,” IEEE Trans. on Comput., vol. 73, no. 4, pp. 1138–1151,
+2024.
+[15] J. Mao and X. Chang, “Tpm2. 0-supported runtime customizable
+tee on fpga-soc with user-controllable vtpm,” arXiv preprint
+arXiv:2505.12256, 2025.
+[16] R. Sailer, X. Zhang, T. Jaeger, and L. Van Doorn, “Design and implementation of a tcg-based integrity measurement architecture.”
+in USENIX Security symposium, vol. 13, no. 2004, 2004, pp. 223–238.
+[17] M. Zohar et al., “Ima appraisal and evm in the linux
+integrity subsystem,” 2012, lWN.net article. [Online]. Available:
+https://lwn.net/Articles/488906/
+[18] L. Davi, A.-R. Sadeghi, and M. Winandy, “Dynamic integrity
+measurement and attestation: towards defense against returnoriented programming attacks,” in Proceedings of the 2009 ACM
+workshop on Scalable trusted computing, 2009, pp. 49–54.
+[19] Y. Sun, D. Safford, M. Zohar, D. Pendarakis, Z. Gu, and T. Jaeger,
+“Security namespace: making linux security frameworks available
+to containers,” in 27th USENIX Security Symposium (USENIX Security 18), 2018, pp. 1423–1439.
+[20] W. Luo, Q. Shen, Y. Xia, and Z. Wu, “{Container-IMA}: A privacypreserving integrity measurement architecture for containers,” in
+22nd International Symposium on Research in Attacks, Intrusions and
+Defenses (RAID 2019), 2019, pp. 487–500.
+[21] R. Sassu, “A simple protocol for remote attestation of
+system integrity,” in Linux Security Summit Europe (LSS EU),
+2018. [Online]. Available: https://events19.linuxfoundation.org/
+wp-content/uploads/2017/12/LSS EU 2018 Roberto Sassu
+Simple RA Protocol Roberto-Sassu.pdf
+[22] M. Eckel and T. Riemann, “Userspace software integrity measurement,” in Proceedings of the 16th International Conference on
+Availability, Reliability and Security, 2021, pp. 1–11.
+[23] U. Kanonov and A. Wool, “Secure containers in android: the
+samsung knox case study,” in Proceedings of the 6th Workshop on
+Security and Privacy in Smartphones and Mobile Devices, 2016, pp.
+3–12.
+[24] X. Ge, H. Vijayakumar, and T. Jaeger, “Sprobes: Enforcing kernel
+code integrity on the trustzone architecture,” arXiv preprint
+arXiv:1410.7747, 2014.
+[25] S. Dong, Y. Xiong, W. Huang, and L. Ma, “Kims: kernel integrity
+measuring system based on trustzone,” in 2020 6th International
+[4]
+
+8
+
+Conference on Big Data Computing and Communications (BIGCOM).
+IEEE, 2020, pp. 103–107.
+[26] L. Song, Y. Ding, P. Dong, Y. Guo, and C. Wang, “Tz-ima: Supporting integrity measurement for applications with arm trustzone,” in
+International Conference on Information and Communications Security.
+Springer, 2022, pp. 342–358.
+[27] X. Liu, Y. Lai, J. Liu, and S. Luo, “Tzeamm: An efficient and
+secure active measurement method based on trustzone,” Secur.
+Commun. Networks, vol. 2023, no. 1, p. 6921960, 2023.
+[28] L. Song, Y. Ding, Y. Guo, B. Li, and B. Zhou, “Dimac: Dynamic
+integrity measurement architecture for containers with arm trustzone,” in 2024 IEEE International Conference on Web Services (ICWS).
+IEEE, 2024, pp. 844–852.
+[29] K. Suzaki, “Arm trustzone OP-TEE with VERAISON
+verifier,”
+in
+OpenSSF
+Community
+Day
+Japan
+2025.
+Open
+Source
+Security
+Foundation
+(OpenSSF),
+Jun.
+2025. [Online]. Available: https://events.linuxfoundation.org/
+openssf-community-day-japan/program/schedule/
+[30] S. Pinto and N. Santos, “Demystifying arm trustzone: A comprehensive survey,” ACM computing surveys (CSUR), vol. 51, no. 6,
+pp. 1–36, 2019.
+[31] ——, “Trusted execution environments: Properties, applications,
+and challenges,” in IEEE Security & Privacy, vol. 17, no. 2. IEEE,
+2019, pp. 56–60.
+[32] Trusted Computing Group, “TPM 2.0 library specification,”
+Trusted Computing Group, Tech. Rep., 2016, family 2.0, Level 00,
+Revision 01.38.
+[33] Linux IMA Project, “Integrity measurement architecture
+(IMA),”
+https://sourceforge.net/p/linux-ima/wiki/Home/,
+2024, accessed: November 2024.
+[34] D. Deyannis, D. Karnikis, G. Vasiliadis, and S. Ioannidis, “An
+enclave assisted snapshot-based kernel integrity monitor,” in Proceedings of the Third ACM International Workshop on Edge Systems,
+Analytics and Networking, 2020, pp. 19–24.
+[35] A. Galanou, K. Bindlish, L. Preibsch, Y.-A. Pignolet, C. Fetzer,
+and R. Kapitza, “Trustworthy confidential virtual machines for
+the masses,” in Proceedings of the 24th International Middleware
+Conference, 2023, pp. 316–328.
+[36] J. Pecholt and S. Wessel, “Cocotpm: Trusted platform modules
+for virtual machines in confidential computing environments,”
+in Proceedings of the 38th Annual Computer Security Applications
+Conference, 2022, pp. 989–998.
+[37] J. Mao, X. Chang, L. Li, H. Zhu, and J. Fan, “Towards verifiable
+trust proof for trusted confidential virtual machines,” IEEE Trans.
+on Netw. Sci. Eng., vol. 13, pp. 552–567, 2026.
+[38] V. Narayanan, C. Carvalho, A. Ruocco, G. Almasi, J. Bottomley,
+M. Ye, T. Feldman-Fitzthum, D. Buono, H. Franke, and A. Burtsev,
+“Remote attestation of confidential vms using ephemeral vtpms,”
+in Proceedings of the 39th Annual Computer Security Applications
+Conference, 2023, pp. 732–743.
+[39] L. Zhou, X. Ding, and F. Zhang, “Smile: Secure memory introspection for live enclave,” in 2022 IEEE Symposium on Security and
+Privacy (SP). IEEE, 2022, pp. 386–401.
+[40] M. Morbitzer, B. Kopf, and P. Zieris, “Guarantee: Introducing control-flow attestation for trusted execution environments,”
+in 2023 IEEE 16th International Conference on Cloud Computing
+(CLOUD). IEEE, 2023, pp. 547–553.
+[41] W. Ozga, C. Fetzer et al., “Triglav: Remote attestation of the virtual
+machine’s runtime integrity in public clouds,” in 2021 IEEE 14th
+International Conference on Cloud Computing (CLOUD). IEEE, 2021,
+pp. 1–12.
+
+

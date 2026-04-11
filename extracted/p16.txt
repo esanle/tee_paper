@@ -1,0 +1,2699 @@
+Trusting What You Cannot See: Auditable Fine-Tuning and Inference for
+Proprietary AI
+
+arXiv:2603.07466v1 [cs.CR] 8 Mar 2026
+
+Heng Jin
+Virginia Tech
+
+Chaoyu Zhang
+Virginia Tech
+
+Hexuan Yu
+Virginia Tech
+
+Ning Zhang
+Washington University in St. Louis
+
+Y. Thomas Hou
+Virginia Tech
+
+Abstract
+
+Wenjing Lou
+Virginia Tech
+
+mental visibility gap. Clients provide data and configurations
+but cannot independently verify whether providers execute
+fine-tuning and inference as contracted, and lack evidence
+linking delivered models or inference outputs to actual internal computation. Untrusted providers may downgrade the
+service or embed biases or even backdoors into the model.
+We outline some possible attacks in Appendix A, with attackers’ objectives and examples. At the same time, service
+providers lack the means to prove that they executed finetuning and inference as contracted, especially when they cannot provide model weights to the client (e.g., under API-only
+or proprietary-model deployments).
+For proprietary models such as GPT and Gemini, model
+parameters must remain confidential, preventing clients from
+directly inspecting models to verify execution. This confidentiality requirement necessitates that both fine-tuning and
+inference be performed in the cloud. Thus, protecting only
+one process is insufficient: even if a service provider faithfully
+executes fine-tuning, they may engage in unexpected behavior
+during inference, and vice versa. This necessitates a unified
+verification framework that protects both processes.
+
+Cloud-based infrastructures have become the dominant platform for deploying large models, particularly large language
+models (LLMs). Fine-tuning and inference are increasingly
+delegated to cloud providers for simplified deployment and
+access to proprietary models, yet this creates a fundamental
+trust gap: although cryptographic and TEE-based verification
+exist, the scale of modern LLMs renders them prohibitive,
+leaving clients unable to practically audit these processes.
+This lack of transparency creates concrete security risks that
+can silently compromise service integrity.
+We present AFTUNE, an auditable and verifiable framework that ensures the computation integrity of cloudbased fine-tuning and inference. AFTUNE incorporates a
+lightweight recording and spot-check mechanism that produces verifiable traces of execution. These traces enable
+clients to later audit whether the training and inference processes followed the agreed configurations. Our evaluation
+shows that AFTUNE imposes practical computation overhead
+while enabling selective and efficient verification, demonstrating that trustworthy model services are achievable in today’s
+cloud environments.
+
+1
+
+Shanghao Shi
+Washington University in St. Louis
+
+Existing literature and challenges on verifying fine-tuning
+and interference of LLM. Verifiable computation in cloud
+environments has been a long-standing research topic. Most
+prior works aiming to enable verification without exposing
+details fall into two categories: zero-knowledge proof (ZKP)
+based approaches and trusted execution environment (TEE)
+based approaches. However, the increasing scale of modern large models introduces new challenges that existing
+approaches fail to address, due to the enormous memory occupation and computational requirements of these models.
+ZKP-based approaches [3, 17, 23, 30, 38, 43] provide mathematical integrity for computations but incur prohibitive overhead due to the complexity of generating proofs for largescale neural network operations. For example, state-of-the-art
+ZKP systems for model inference [30, 38] incur commitment
+overheads that are on the order of thousands times slower than
+standard plaintext execution (e.g., up to 15 minutes of overhead for a single-token inference of a 13B model [38]). [23]
+
+Introduction
+
+Cloud-based infrastructures have become the dominant platform for deploying and customizing modern AI models [5,
+9–11, 28, 34]. Infrastructure providers now host LLMs and
+provide managed APIs for fine-tuning, inference, and Modelas-a-Service deployments. For instance, OpenAI [28] offers
+GPT fine-tuning and hosted inference through its API, where
+clients submit data and access tuned models exclusively via
+API endpoints. Hundreds of thousands of models have been
+fine-tuned using OpenAI’s service [27]. As models grow ever
+larger, even for open-source models, enterprises are increasingly inclined to use the cloud to host fine-tuning and inference rather than maintaining local infrastructure.
+However, this division of responsibility creates a funda1
+
+applies ZKP to LLMs training but only supports LoRA (i.e.,
+only a small portion of parameters can be trained) due to the
+overhead issue. For TEE-based approaches, [37, 40] run the
+inference pipeline within TEEs, and [13,26,31] run the whole
+pipeline within TEEs. Whether using TEEs on CPUs, GPUs,
+or NPUs, those approaches require the TEE to hold the entire
+model.
+
+practicality, which requires near-baseline training/inference
+performance and bounded verification effort.
+Solution 2) map-reduce style hashing and sampling-based
+verification: We address execution overhead by making commitments accelerator-friendly. Instead of sequentially hashing each large tensor, we partition tensors into chunks, hash
+chunks in parallel on the accelerator, and aggregate them into
+a single commitment. This reduces the impact on the baseline pipeline. We address verification overhead by sampling.
+The client verifies only a sampled subset of blocks, with randomness chosen by the verifier and hidden until audit time.
+This yields probabilistic detection guarantees and compounds
+deterrence over repeated audits. Because block checks are
+independent, audits can be parallelized across TEEs without consuming accelerator resources, allowing verification to
+scale while leaving accelerators available for primary workloads.
+
+Full Model
+
+Our work. Given that ZKP-based approaches introduce unavoidable computational overhead, we adopt the TEE-based
+paradigm. However, to make TEE-based verification practical for large language models, the fundamental challenges
+mentioned above must be resolved. We present AFTUNE, a
+framework that enables verifiable integrity for cloud-based
+fine-tuning and inference while aiming to address the following limitations of all types of TEEs:
+Challenge 1) Memory constraints: Modern LLMs exceed
+the trusted memory available to a single TEE instance. Models are routinely too large for one enclave-capable device
+and must be deployed via sharding across multiple GPUs
+or nodes. Fine-tuning makes this worse. Unlike inference,
+training requires additional persistent state such as optimizer
+moments and variance, plus large transient working sets including activations, gradients, and batch buffers. The memory
+footprint during fine-tuning is fundamentally different from
+inference and typically much larger. Directly applying existing run-inside-TEE techniques to fine-tuning is therefore
+impractical, as fine-tuning exceeds both the computational
+resources of a single node and its working set capacity.
+Solution 1) Block decomposition with compositional verification: We exploit a key structural property of neural computation. Within a contiguous region of layers and steps, all internal states are deterministic functions of the region’s boundary
+states and the model/optimizer state at step boundaries. This
+allows us to decompose execution into independently verifiable blocks along layer and step dimensions. We record only
+boundary states, such as activations and gradients at layerblock edges and parameters plus optimizer state at step-block
+boundaries. Each block can be replayed inside an attested
+TEE as an atomic unit. Adjacent blocks share boundary tensors. Enforcing boundary continuity makes these local checks
+compose into end-to-end verification without requiring the
+full model or trace to reside in trusted memory.
+Challenge 2) Cost of evidence generation and verification:
+Verifying the provider introduces two unavoidable costs. The
+provider must produce binding evidence during normal execution by computing commitments over large boundary tensors.
+Since clients cannot access proprietary model weights, verification must be performed on the provider side inside a TEE.
+At LLM scale, both are expensive. Cryptographic hashing
+over millions of tensor elements can become a throughput
+bottleneck if done naively. Recomputation-based audits can
+be substantial when replaying long segments with strict determinism requirements. This creates a tension between integrity,
+which demands dense evidence and thorough checking, and
+
+TEE
+
+Model Training Process
+
+Figure 1: Each rectangle represents the full model at one
+training step. The red dashed border indicates blocks that
+will be independently verified, each of which contains only a
+portion of the training procedure.
+The main contributions of this paper are:
+• We propose AFTUNE, a verifiable framework for cloudbased fine-tuning and inference that decouples verification from the fine-tuning process by block-based evidence generation. This allows AFTUNE overcome the
+resource constraints in trusted container, allowing users
+to verify the fine-tuning process while preserving proprietary model parameters.
+• We introduce a sampling-based verification strategy that
+provides probabilistic detection guarantees at practical
+costs, along with a map-reduce style hashing scheme for
+efficient commitment generation.
+• We implemented AFTUNE and integrated it into CUDAbased training and inference pipelines. We evaluated our
+system on real TEE hardware with multiple open-source
+models across different model families and sizes, using
+both full fine-tuning and parameter-efficient fine-tuning,
+2
+
+demonstrating near-baseline performance and practical
+verification costs.
+
+2
+
+establish secure channels to provision verification workloads
+to attested enclaves. Due to TEE memory constraints, we do
+not assume that the entire model can be loaded into the TEE
+at once for either training or inference. We do assume, however, that no single parameter tensor (i.e., individual weight
+array that is the unit of computation in the model) exceeds
+the TEE’s memory capacity. In our TEE setting, we have not
+observed any existing model, regardless of parameter count,
+that fails to satisfy this requirement.
+We assume the attacker is a misbehaving or compromised
+cloud provider who aims to manipulate training or inference
+processes while evading detection. The adversary may control
+all software and infrastructure outside the TEE, fully understand AFTUNE’s design and verification mechanisms, and
+perform training manipulation or inference attacks as detailed
+in Appendix A. While potential attacks against TEEs or cryptographic hash functions exist, addressing or mitigating such
+attacks is outside the scope of this work.
+We assume the defender is the client of the cloud service
+provider. The objective of AFTUNE is to enable the client to
+verify that training adhered to the contracted dataset, model,
+and hyperparameters, and that inference outputs are genuine
+predictions from the verified model, without requiring access
+to model parameters.
+
+Related Work
+
+Various approaches have been proposed to establish trust in
+cloud-based AI services, spanning behavioral testing, cryptographic verification, and hardware-based isolation.
+Red-team evaluations can expose functional or safety issues
+in deployed models [16, 24], but only test known threat patterns and cannot verify whether fine-tuning followed the contracted procedure or whether the served model corresponds
+to the expected checkpoint. These approaches provide behavioral validation rather than process integrity guarantees.
+Cryptographic approaches, particularly zero-knowledge
+proofs, offer strong integrity guarantees for computation [3,
+17, 23, 30, 32, 38, 43]. As discussed in Section 1, existing ZKbased approaches incur prohibitive computational overhead,
+making them impractical for production deployment. Trusted
+execution environments provide hardware-enforced isolation
+that preserves code and data integrity even when the OS is
+compromised. Common TEEs include ARM TrustZone [4],
+Intel SGX [12], and RISC-V Keystone [21]. TEEs support
+remote attestation, allowing verifiers to cryptographically validate software state through hardware-signed measurements.
+Prior work has applied TEE-backed remote attestation to
+model execution [8, 13, 26, 31, 37, 40, 48, 49]. However, as
+discussed in Section 1, running entire fine-tuning or inference
+pipelines inside TEEs is impractical for large models due to
+memory constraints and performance overhead.
+Some recent attempts address verification through indirect methods, but their scope remains limited. SVIP [39] requires service providers to return hidden states and verifies
+model identity through designed tasks, but only addresses the
+problem of providers using cheaper models during inference.
+VTUNE [47] inserts backdoors into training datasets and detects their presence afterward, but only catches cases where
+the provider completely skips fine-tuning and uses the base
+model.
+
+3
+
+4
+
+Overview
+
+TEEs have seen significant growth over the past decade, with
+GPU TEEs now emerging. However, due to the size of modern LMs, it remains impractical to train any practical LM on
+a single node, let alone within the TEE on that node. TEEs
+inherently limit computational capability due to security constraints [22]. Furthermore, modern LM training uses heterogeneous accelerators such as GPUs, NPUs, FPGAs, and ASICs
+to tackle performance challenges [14, 19, 36, 41, 45]. While
+CPU TEEs are widely available, TEE support for these accelerators remains inconsistent, and extending TEE-based verification across such distributed heterogeneous fabrics presents
+unique technical and deployment challenges. In this work,
+we take a different approach. Rather than requiring TEEs on
+all components of the training infrastructure, we anchor trust
+in widely available CPU TEEs and extend this trust to the
+fine-tuning process without requiring systematic changes to
+the complex training infrastructure.
+Our approach relies on the practical availability of TEE
+infrastructure, supported by the growing adoption of confidential computing across major cloud platforms such as
+Google Cloud [1] and AWS [2]. We leverage remote TEE
+enclaves on the provider side. Clients specify verification
+tasks that execute inside the TEE, where the enclave accesses
+model parameters, verifies computations, and returns only
+verification results to the client. This design ensures model
+parameters never leave the secure enclave while still providing clients with attestation of correct execution. Instead
+
+Threat Model
+
+We assume the client supplies the training dataset and specifies fine-tuning hyperparameters, while the service provider
+operates the training infrastructure. We consider proprietary
+model fine-tuning, where the client cannot access model parameters at any stage and must rely entirely on the provider
+for both training and inference.
+We assume the service provider publicly releases the hash
+commitment of the base model as the initial trusted checkpoint for verifiable fine-tuning. We assume the cloud platform
+provides TEE-enabled infrastructure supporting remote attestation, allowing the client to verify TEE measurements and
+3
+
+Setup & Negotiation
+
+Fine-Tuning Process
+
+Service Provider releases model
+information to Public
+
+Auditable Tr ail
+
+... Layer Layer Layer
+...
+Step
+4
+5
+6
+6 Layer
+Step
+... Layer
+Step
+... Layer
+Step
+...
+...
+6
+6
+6
+Step
+4
+5
+6
+5
+6
+Step Step
+Step
+... Layer
+Layer Layer
+5
+6
+5
+6
+5
+6
+Step
+4
+5
+6
+5
+4 Layer
+Step Layer
+Step Layer
+Step
+...
+4
+5
+4
+5
+4
+5
+...
+Step
+4
+5
+6
+4
+Step
+... Step
+... Step
+...
+4
+4
+4
+Service Provider fine- tunes model on
+Cloud, records and hashes boundary
+states, including activations, gradients,
+and weights.
+
+Client negotiates dataset,
+training settings, etc., with
+Service Provider
+
+Service Provider sends hash
+commitment to Client
+
+Service Provider stores
+boundary states on Cloud
+
+I nference Process
+... Layer Layer Layer
+Step
+4
+5
+6
+6
+Step Step Step
+6
+6
+6
+
+Client sends datasets to Service
+Provider
+
+Service Provider executes Fine-Tuned Model
+on Cloud, records and hashes boundary
+activations, sends result to Client
+
+Client sends query to
+Service Provider
+
+Ver ification
+
+Client remotely attests and
+controls TEE on Service
+Provider's side
+
+TEE
+
+Layer Layer
+5
+6
+Step Layer
+Step
+Layer
+4
+5
+4
+5
+5
+6
+Step
+... Step
+...
+4
+4
+Client selects block to verify,
+recomputes chosen block,
+and verifies hash and
+numerical consistency
+
+Figure 2: AFTUNE workflow overview. The system operates through setup and negotiation, fine-tuning, and inference phases.
+During execution, the provider commits boundary state hashes to the client and stores boundary states in cloud storage. Clients
+can verify training or inference computations on-demand through TEE-based selective recomputation of sampled regions.
+recomputation-based verification after execution completes.
+This design avoids the resource and performance constraints
+of full TEE encapsulation while still providing verifiability.
+Figure 2 illustrates AFTUNE’s workflow. During training
+and inference, AFTUNE records boundary states at strategic points and commits their hashes to the client, creating a
+cryptographic binding without requiring TEE involvement in
+the main computation path. The committed hashes may be
+signed by the service provider’s private key to prove authenticity. Verification occurs on-demand after execution completes.
+The client selects a target region (layer and step ranges for
+training, or layer ranges for inference) to verify, which we
+later refer to as a block. A TEE instance recomputes only the
+selected block, then validates the recorded states through hash
+matching and verifies computational correctness by comparing recomputed values against recorded states within floatingpoint tolerance. Because recomputation targets small regions
+rather than full execution traces, TEE resource constraints are
+satisfied.
+To balance verification granularity with storage and computational efficiency, AFTUNE organizes the training procedure
+into a two-dimensional grid of blocks, as shown in Figure 3.
+Specifically, AFTUNE groups consecutive layers into layer
+blocks and consecutive training steps into step blocks, creating a grid where each cell represents their intersection. Hashes
+and intermediate states are recorded only at block boundaries,
+significantly reducing hash computations and stored audit
+data compared to per-layer, per-step recording. Clients can
+verify any block independently, with recomputation cost scal-
+
+L ayer Wise
+Layer 7
+...
+
+Layer 8
+...
+
+Layer 9
+...
+
+...
+Step 6
+
+Layer 4 Layer 5 Layer 6 Layer 7
+Step 6 Step 6 Step 6 Step 6
+
+Layer 8
+Step 6
+
+Layer 9
+Step 6
+
+...
+Step 6
+
+...
+Step 5
+
+Layer 4 Layer 5 Layer 6 Layer 7
+Step 5 Step 5 Step 5 Step 5
+
+Layer 8
+Step 5
+
+Layer 9
+Step 5
+
+...
+Step 5
+
+...
+Step 4
+
+Layer 4 Layer 5 Layer 6
+Step 4 Step 4 Step 4
+
+Layer 7
+Step 4
+
+Layer 8
+Step 4
+
+Layer 9
+Step 4
+
+...
+Step 4
+
+...
+
+Layer 4 Layer 5 Layer 6
+...
+...
+...
+
+Layer 7
+...
+
+Layer 8
+...
+
+Layer 9
+...
+
+...
+
+...
+
+Layer 4
+...
+
+Layer 5 Layer 6
+...
+...
+
+Recor d Weights
+
+Recor d Activations
+
+Step Wise
+
+Recor d Gr adients w.r.t I nputs
+
+Figure 3: Two-dimensional block structure organizing the
+training procedure. The dashed border shows a single block
+spanning 4 layers and 3 steps. AFTUNE records only boundary states: activations and gradients at layer block edges, parameters and optimizer states at step block boundaries. Each
+block serves as an atomic, independently verifiable unit.
+
+of executing the entire training process inside a TEE, AFTUNE decouples training execution from verification. The
+key insight is that we do not need real-time protection of computations during training; instead, we generate cryptographic
+evidence during execution and verify correctness afterward.
+This allows the primary fine-tuning workload to run at full
+speed on standard accelerator infrastructure while recording
+cryptographic commitments, using TEEs only for lightweight
+4
+
+the forward pass through all L layers with parameters θ∗ on
+input x, and that no model substitution, output fabrication, or
+computation tampering occurred.
+
+ing proportionally to block size. Hash computation itself is
+parallelized through a map-reduce scheme that partitions each
+tensor into chunks, computes hashes in parallel on the accelerator, and aggregates them into a single commitment. Since
+each block’s commitment contains only hash values, the cost
+of transmitting and storing commitments is negligible.
+Together, these mechanisms enable AFTUNE to provide
+end-to-end auditability without the prohibitive costs of full
+TEE encapsulation, transforming opaque cloud services into
+transparent, accountable fine-tuning and inference platforms.
+While our design focuses on proprietary model fine-tuning,
+it also applies to open-source model scenarios where clients
+outsource training but may obtain final weights for offline verification and self-hosted inference. Access to weights makes
+verification strictly easier, so our framework naturally remains
+valid.
+
+5
+5.1
+
+5.2
+
+Two-Dimensional Block Structure
+
+A naive approach to verifiable training would record activations and gradients at every layer for every training step,
+incurring prohibitive storage costs that scale as O(L × T ) for a
+model with L layers trained for T steps. For large models and
+long training runs, this quickly becomes impractical. Moreover, computing cryptographic commitments requires L × T
+hash operations, introducing significant computational overhead. A similar problem exists for inference, where per-layer
+recording would scale linearly with model depth.
+The key observation is that not all intermediate states need
+explicit storage. Given activations at layer l and model parameters, activations at layer l + 1 can be deterministically
+recomputed via forward propagation. Similarly, given gradients at layer l + 1, gradients at layer l can be recomputed
+via backpropagation. This enables a selective recording strategy: save states only at strategic boundaries, and reconstruct
+missing states through recomputation during verification.
+AFTUNE organizes the training procedure into a twodimensional grid of blocks along the layer and step dimensions. Define the layer block size BL and step block size BS .
+The L layers are partitioned into ⌈L/BL ⌉ layer blocks:
+
+Design
+Notation and Problem Formulation
+
+We formalize the fine-tuning verification problem and establish notation used throughout this section. Consider a neural network model with L layers indexed by {l0 , l1 , . . . , lL−1 }.
+Training proceeds for T steps indexed by {t0 ,t1 , . . . ,tT −1 }.
+′
+For each layer l and step t, we denote xl,t ∈ Rdl and yl,t ∈ Rdl
+as the input and output activations, respectively. The corresponding gradients are denoted ∇xl,t ∈ Rdl (input gradient)
+′
+and ∇yl,t ∈ Rdl (output gradient). Each layer l has associated
+parameters θl,t ∈ R pl and optimizer state sl,t (e.g., momentum and variance for AdamW) at step t. The complete model
+parameters at step t are θt = {θl,t }L−1
+l=0 and optimizer states
+are st = {sl,t }L−1
+.
+l=0
+The forward pass at layer l and step t computes yl,t =
+∂Lt
+and
+fl (xl,t ; θl,t ). The backward pass computes ∇xl,t = ∂x
+
+LBi = {li·BL , li·BL +1 , . . . , lmin((i+1)·BL −1,L−1) }
+
+(1)
+
+for i = 0, 1, . . . , ⌈L/BL ⌉ − 1. Similarly, the T training steps are
+partitioned into ⌈T /BS ⌉ step blocks:
+SB j = {t j·BS ,t j·BS +1 , . . . ,tmin(( j+1)·BS −1,T −1) }
+
+(2)
+
+for j = 0, 1, . . . , ⌈T /BS ⌉ − 1. Each combination of a layer
+block and a step block defines a block cell:
+
+l,t
+
+∂Lt
+∇θl,t = ∂θ
+via backpropagation, where Lt is the loss at
+l,t
+step t. After each step, parameters are updated via an optimizer: θl,t+1 , sl,t+1 = Update(θl,t , sl,t , ∇θl,t , η) for each layer
+l, where η denotes hyperparameters such as learning rate.
+Training verification: Given an initial model with parameters θ0 whose cryptographic hash h0 = H(θ0 ) is known and
+trusted, a training dataset D = {(xi , yi )}Ni=1 , and a hyperparameter configuration H , the client verifies that the provider’s
+claimed checkpoint θT was produced by executing T training
+steps according to H on dataset D , starting from θ0 . Furthermore, the client verifies that intermediate training states
+(activations, gradients) were computed correctly at each layer
+and step, and that no data poisoning, training degradation, or
+parameter tampering occurred.
+Inference verification: Given a verified model with parameters θ∗ (whose hash has been established through commitment and verification), an input x, and the provider’s claimed
+output y, the client verifies that y was produced by computing
+
+Blocki, j = LBi × SB j .
+
+(3)
+
+For each Blocki, j , we record boundary activations xi·BL ,t
+(input to first layer) and y(i+1)·BL −1,t (output from last layer)
+for all steps t ∈ SB j . Similarly, we record the corresponding gradients ∇xi·BL ,t and ∇y(i+1)·BL −1,t for all t ∈ SB j . Additionally, parameters θl,t and optimizer states sl,t for layers
+l ∈ LBi are recorded at step block boundaries t = j · BS and
+t = ( j + 1) · BS .
+The correctness of this boundary-only recording strategy
+relies on the continuity property of neural network computation: the output of layer block LBi serves as the input to layer block LBi+1 , formally yllast(i) ,t = xlfirst(i+1) ,t for all
+steps t. Similarly, during backpropagation, the input gradient to block LBi+1 equals the output gradient of block LBi :
+∇xlfirst(i+1) ,t = ∇yllast(i) ,t . This continuity ensures that boundary
+states for adjacent blocks chain together, enabling complete
+verification of the forward and backward passes across all
+5
+
+layers for any training step by recomputing within each block
+and validating boundary consistency.
+Boundary continuity enables storage and computation
+deduplication. Since the output activation of block LBi is
+identical to the input activation of block LBi+1 , we need only
+store this tensor once and compute its cryptographic hash
+once, despite it serving as a boundary for two adjacent blocks.
+The same principle holds for gradients during backpropagation, as shown in Figure 3. As a result, instead of storing and
+hashing 2 × ⌈L/BL ⌉ boundary states per step (an input and
+output for each block), we only store and hash ⌈L/BL ⌉ + 1
+boundaries (one between each pair of adjacent blocks, plus the
+initial input and final output). Further optimization through
+sparse checkpointing is discussed in Section 5.6.
+
+This design parallelizes the hash computation across accelerators by flattening the tensor and distributing chunks to
+independent threads, avoiding sequential processing. The aggregate step ensures that the final hash depends on all chunks
+and their ordering, such that any modification to X will produce a different hash value, enabling tamper detection.
+Applying this hashing scheme to the boundary states defined in Section 5.2, for each Blocki, j , we compute and record:
+
+Ri, j = H(xi·BL ,t ), H(y(i+1)·BL −1,t ),
+H(∇xi·BL ,t ), H(∇y(i+1)·BL −1,t ) t∈SB
+j
+
+∪ H(θl, j·BS ), H(sl, j·BS ),
+H(θl,( j+1)·BS ), H(sl,( j+1)·BS ) l∈LB .
+i
+
+5.3
+
+These hashes form the tamper-evident audit trail that binds
+the recorded training execution to its commitments.
+
+Map-Reduce Hashing Scheme
+
+To bind recorded boundary states to tamper-evident commitments, we compute cryptographic hashes over boundary tensors during training. Any tampering with stored states will
+produce a hash mismatch during verification, ensuring that
+the recorded execution is cryptographically bound to its commitments.
+However, computing cryptographic hashes sequentially
+over large tensors (e.g., millions of elements) creates a performance bottleneck that would significantly degrade training
+throughput.
+To address this, AFTUNE employs a map-reduce hash
+design optimized for accelerator (e.g., GPU) parallelism. The
+key idea is to partition each tensor into fixed-size chunks,
+compute hashes for all chunks in parallel on the accelerators,
+and then aggregate the chunk hashes into a single final hash.
+For a tensor X ∈ Rd1 ×d2 ×···×dn with N = ∏ni=1 di elements,
+the hashing procedure operates as follows:
+
+5.4 Recomputation-Based Verification Protocol
+With the block structure and cryptographic hashes established,
+we now describe how clients verify training and inference
+integrity and correctness. The verification protocol employs
+recomputation: given model parameters and boundary states,
+the client re-executes the computation within the TEE and
+compares recomputed tensors against recorded hashes and
+values. Hash matching confirms data integrity; numerical
+matching within floating-point tolerance confirms computational correctness. Algorithm 1 in Appendix B presents the
+verification protocol for training block cell Blocki, j . For notation simplicity, we denote lin = li·BL and lout = l(i+1)·BL −1 as
+the block’s input and output layers.
+Hash matching confirms bitwise integrity: matching hashes
+indicate no tampering with recorded data. Numerical verification accounts for non-determinism in floating-point operations
+across hardware or software configurations. The relative L2
+error is compared against a threshold τ determined by the
+precision format (e.g., float32, bfloat16) and acceptable error
+bounds. This tolerance-based approach is essential for seamless integration: by accommodating legitimate floating-point
+variations, AFTUNE operates on standard infrastructure without requiring deterministic hardware, specialized frameworks,
+or modifications to existing ML pipelines. The effectiveness
+of verifying individual blocks may seem counterintuitive, especially considering that the hashes used for verification are
+computed by the service provider rather than the client. We
+provide a detailed explanation of why this approach is valid
+in Appendix C.
+Importantly, block verification is inherently parallelizable:
+each block cell can be verified independently since it only depends on its boundary states. When verifying multiple blocks,
+clients can distribute the workload across multiple TEE instances, enabling scalable verification that grows linearly with
+
+1. Flatten: Convert X to a one-dimensional array Xflat ∈
+RN .
+2. Partition: Divide Xflat into m = ⌈N/C⌉ fixed-size
+chunks, where C is the chunk size:
+Xflat = [chunk0 ∥chunk1 ∥ · · · ∥chunkm−1 ],
+
+(4)
+
+with chunkk ∈ RC for k = 0, . . . , m − 1.
+3. Parallel hash: Compute hashes for all chunks in parallel on accelerators, where each chunk is assigned to a
+separate thread:
+hk = H(chunkk ) for k = 0, 1, . . . , m − 1,
+
+(5)
+
+where H is a cryptographic hash function such as
+BLAKE3 or SHA-256.
+4. Aggregate: Compute the final hash on the CPU by hashing the concatenation of all chunk hashes:
+H(X) = H(h0 ∥h1 ∥ · · · ∥hm−1 ).
+
+(7)
+
+(6)
+6
+
+available TEE resources rather than requiring sequential processing of the entire training trace.
+
+5.5
+
+putes intervening steps to reconstruct the model state at the beginning of SB j . This recomputation executes forward passes,
+backward passes, and parameter updates for each intervening step. For the TEE to verify the reconstructed state via
+hash matching, recomputation must produce bitwise-identical
+results, requiring deterministic computation and consistent
+hardware/software configurations. The reconstructed state is
+then provided to the TEE for verification.
+Sparse checkpointing assumes deterministic computation,
+but certain layers may contain operations lacking deterministic implementations on some accelerators. AFTUNE
+addresses this through flexible layer block design: nondeterministic layers can be isolated into separate layer blocks
+with IC = 1, ensuring checkpoints are saved at every step
+boundary for these blocks. This selective strategy preserves
+verification correctness while enabling aggressive sparsity for
+deterministic layers.
+With sparse checkpointing, the total storage cost for training becomes:
+
+Inference Verification Protocol
+
+Inference verification applies to both fine-tuned models (after
+training) and base models (when clients rely on the provider
+solely for inference). AFTUNE extends the verification protocol to inference workloads to prevent model substitution or
+output fabrication.
+Inference verification follows the same block structure and
+verification strategy as training, with two differences. First,
+only forward passes are recorded and recomputed, as inference involves no backpropagation or parameter updates. Second, each inference request is treated as a single step (BS = 1).
+For each inference request with input x, the provider records
+boundary activations xi·BL and y(i+1)·BL −1 for each layer block
+LBi , along with their cryptographic hashes.
+The client verifies an inference request by loading the select
+block into TEE memory and recomputing the forward pass.
+The recomputed activations and their hashes are compared
+against the recorded values using the same hash matching and
+numerical verification procedures described in Section 5.4.
+Any attempt to substitute the model or fabricate outputs will
+produce mismatches in the intermediate or final prediction, enabling detection. This ensures end-to-end auditability: clients
+can verify not only that training was executed correctly, but
+also that inference outputs are genuine predictions from the
+contracted model.
+
+Storagetotal =
+
+(9)
+
+where |θ| and |s| denote the sizes of parameters and optimizer
+states, and |x| and |∇x| denote the sizes of activations and gradients. The first term represents checkpoint storage (reduced
+by factor IC ), and the second term represents activation and
+gradient storage at layer block boundaries.
+For inference verification, where model parameters remain
+fixed, an alternative optimization applies an activation interval
+IA along the layer dimension: boundary states for layer block
+LBi are saved only if i mod IA = 0. Missing activations are
+reconstructed by recomputing forward passes from adjacent
+recorded blocks.
+
+5.6 Storage Optimization via Sparse Checkpointing
+The design presented so far assumes that model parameters
+and optimizer states are saved at every step block boundary.
+While this provides direct verification, it may impose significant storage costs for long training runs.
+To address this, AFTUNE supports sparse checkpointing
+strategies that trade storage for verification-time recomputation. Missing checkpoints or activations can be reconstructed
+via recomputation from nearby stored states. This enables
+flexible storage-computation trade-offs tailored to different
+deployment scenarios.
+For training verification, we introduce the checkpoint interval IC to control the frequency of checkpointing along the
+step dimension. A checkpoint is saved at step block SB j if
+and only if j mod IC = 0. Each checkpoint comprises:
+Checkpointt = {θt , st },
+
+⌈T /BS ⌉
+· (|θ| + |s|)
+IC
++ (⌈L/BL ⌉ + 1) · T · (|x| + |∇x|),
+
+5.7 Sampling-Based Spot-Check and Strategies
+While clients can verify all blocks for maximum assurance,
+AFTUNE supports selective verification through sampling
+to reduce overhead while maintaining security guarantees.
+Sampling-based spot-checking has been successfully applied
+to verify the integrity of data stored on cloud [6, 35]. The key
+question is: how effective is probabilistic spot-checking for
+verifying computational processes?
+Let Nblocks = ⌈L/BL ⌉ × ⌈T /BS ⌉ denote the total number of
+block cells in the training or inference trace. If an adversary
+compromises k blocks and the client randomly verifies m
+blocks, the probability that the adversary evades detection is:
+
+(8)
+
+where t denotes the step at boundary j · BS . When IC > 1,
+checkpoints are saved only at sparse intervals.
+To verify a step block SB j where no checkpoint was saved,
+the system locates the nearest prior checkpoint and recom-
+
+Pevade =
+
+7
+
+Nblocks −k
+m−1
+Nblocks − k − i
+m
+=
+.
+
+Nblocks
+Nblocks − i
+i=0
+m
+
+∏
+
+(10)
+
+The detection probability Pdetect = 1 − Pevade can be approximated for small compromise ratios ρ = k/Nblocks as:
+Pdetect ≈ 1 − (1 − ρ)m ≈ 1 − e−ρm .
+
+Datasets. For LLM fine-tuning, we use MentalChat16K [44], a mental health conversational dataset.
+For vision models, we use ImageNet-1K [33] for image
+classification tasks.
+Baselines. We compare AFTUNE against three baselines:
+(1) Baseline: standard training without verification, representing the performance upper bound; (2) Full TEE: the entire
+training process executes within a TEE, providing strong
+security but incurring significant overhead; (3) Step TEE: verification executes in TEE but checks one complete training
+step at a time across all layers, lacking AFTUNE’s flexible
+block-based granularity control. Note that due to memory
+constraints, Full TEE and Step TEE are only feasible for ViTLarge among our evaluated models. For other models, we
+execute on CPUs solely for overhead comparison.
+Configurations. We vary block sizes BL and BS , hash functions, optimizers, and checkpoint intervals IC . Default configuration uses BL = 4, BS = 8, BLAKE3 hash function, SGD
+optimizer, batch size 16, bfloat16 precision, and IC = 8 unless
+otherwise stated. For hash computation, we use chunk size
+4096 for Llama, Qwen, and DINOv2, and chunk size 1024
+for ViT.
+Hardware and Environment. Experiments run on
+NVIDIA RTX PRO 6000 GPUs with 96GB GPU memory
+and Intel Xeon Gold 5520+ CPUs for TEE verification with
+Intel SGX and TDX support. We implement the TEE verification component using Gramine [7, 20], a library OS that
+supports both Intel SGX and Intel TDX for hardware-backed
+attestation and isolation. The TEE memory is configured to
+16GB, the maximum memory size supported by our platform.
+
+(11)
+
+Even modest verification efforts achieve substantial detection rates. For instance, if an adversary compromises 10% of
+blocks (k = 100) and the client verifies only 1% (m = 10) out
+of Nblocks = 1000 total blocks, detection probability reaches
+Pdetect ≈ 65%.
+In addition, the single-round probabilities still understate
+the true deterrent power of spot-checking. The critical insight is that the adversary must execute the attack without
+knowing which blocks or how many will later be verified.
+This uncertainty forces the adversary to either avoid tampering entirely or risk detection, as any tampered block may be
+selected for verification. A single detection permanently destroys trust, which creates a powerful deterrent effect. When
+clients perform multiple independent verifications over time,
+the adversary’s evasion challenge compounds rapidly, driving
+cumulative detection probability toward certainty.
+Unlike static data where all segments are homogeneous,
+computational processes exhibit distinct characteristics across
+different stages and components. Beyond uniform random
+sampling, clients can thus adapt strategies to their specific
+threat priorities. Most importantly, the attacker cannot know
+the client’s prioritiy and verification strategy at the time of the
+attack. For backdoor and poisoning attacks, the client need
+only verify the input block at each training step. For training
+degradation attacks such as epoch reduction or directly using
+the base model, the existence of commitments already proves
+that training occurred. Randomly verifying a small number of
+blocks is sufficient to detect such attacks. For model substitution attacks, selecting one block across the layer dimension
+at each training step is enough. These input blocks constitute
+only a small fraction of all blocks, yet provide near-certainty
+detection for most such attacks. This strategic flexibility enables clients to achieve high detection rates with minimal
+verification cost tailored to specific threat models.
+
+6
+6.1
+
+6.2
+
+System Overhead Analysis
+
+Table 1 presents overhead comparisons across different models, methods, and block configurations. We report training
+time, storage cost per 2048 samples, block preparation time
+for verification, and TEE verification time per block cell.
+Block preparation time refers to the time required to reconstruct model states for a target block from the nearest prior
+checkpoint via recomputation (Section 5.6), measured at the
+worst-case recomputation distance for sparse checkpointing
+with interval IC .
+Larger models incur lower relative training overhead, as
+hash computation cost becomes proportionally smaller with
+increasing model size. Full TEE training remains impractical
+even for small models due to substantial overhead, and memory constraints prevent larger LLMs from loading. In contrast,
+AFTUNE achieves practical overhead through strategic block
+partitioning.
+Block size configuration offers clear trade-offs between
+training overhead and storage cost: larger blocks reduce both
+metrics by decreasing the number of hash computations and
+boundary recordings. Compared to Step TEE verification,
+AFTUNE reduces storage costs by over half across all models.
+
+Evaluation
+Experimental Setup
+
+We evaluate AFTUNE across diverse model architectures
+to measure its overhead, storage efficiency, and verification
+accuracy. Some evaluations are available at Appendix D, E,
+F.
+Models. We evaluate AFTUNE on both language and vision models to demonstrate its generality: Llama-3.1-8B [15]
+and Qwen2.5-14B [46] for language tasks, and DINOv2Giant [29] and ViT-Large [42] for vision tasks. These models
+span different sizes, layer structures, and computational patterns.
+8
+
+Table 1: Comprehensive system overhead comparison per 2048 samples. Prep time is the time to prepare blocks for verification.
+Verify time is per block cell in TEE.
+Model
+Method
+Block Size
+Train Time Overhead Storage Prep Time Verify Time
+(s)
+(GB)
+(s)
+(s)
+Baseline
+114.1
+Step TEE
+199.2
+75%
+555.8
+157.0
+N/A1
+AFTUNE
+BL = 2, BS = 4
+150.1
+32%
+314.9
+13.0
+25.1
+Qwen2.5-14B
+AFTUNE
+BL = 4, BS = 8
+135.6
+19%
+213.5
+20.3
+58.0
+AFTUNE
+BL = 4, BS = 16
+129.8
+14%
+164.6
+35.1
+83.6
+Baseline
+62.8
+Step TEE
+114.8
+83%
+333.3
+78.0
+N/A1
+AFTUNE
+BL = 2, BS = 4
+85.7
+36%
+201.0
+7.3
+21.0
+Llama-3.1-8B
+AFTUNE
+BL = 4, BS = 8
+76.1
+21%
+146.2
+15.1
+48.2
+AFTUNE
+BL = 4, BS = 16
+74.0
+18%
+131.3
+24.5
+76.2
+Baseline
+24.1
+Step TEE2
+87.6
+263%
+272.3
+N/A1
+AFTUNE
+BL = 4, BS = 4
+44.1
+83%
+35.2
+4.5
+9.4
+DINOv2-Giant
+AFTUNE
+BL = 8, BS = 8
+34.8
+44%
+19.1
+10.4
+25.6
+AFTUNE
+BL = 16, BS = 16
+30.1
+25%
+9.8
+23.2
+74.1
+Baseline
+6.8
+Full TEE
+210.7
+3000%
+Step TEE
+18.2
+167%
+9.6
+3.1
+19.7
+AFTUNE
+BL = 8, BS = 4
+11.6
+71%
+6.5
+3.4
+8.7
+ViT-Large
+AFTUNE
+BL = 16, BS = 8
+8.9
+31%
+2.9
+4.6
+15.3
+AFTUNE
+BL = 16, BS = 16
+8.6
+26%
+2.3
+7.6
+21.7
+1 Step TEE verification cannot be performed in TEE due to excessive memory consumption. CPU verification times are
+
+331.3s (Qwen2.5-14B), 178.5s (Llama-3.1-8B), and 28.2s (DINOv2-Giant). TEE time is estimated at 1.5–2× CPU time.
+2 DINOv2-Giant contains modules with non-deterministic operations. AFTUNE isolates these layers into separate blocks with
+
+IC = 1, while Step TEE cannot handle layer-wise separation and thus cannot use checkpointing.
+
+Importantly, block verification can be performed in parallel
+without occupying GPU resources. The storage cost can be
+further managed, which we discuss in Section 8.1.
+Figure 4 presents training overhead composition across
+different models using the second configuration from Table 1.
+Pie charts visualize time overhead (hash computation, I/O,
+and other AFTUNE operations) and storage overhead (activations, gradients, and parameters). Hash computation typically
+accounts for the majority of time overhead, as it requires GPU
+resources and stalls training until completion. Storage overhead composition varies by model architecture: some models
+are parameter-dominant while others have larger activation
+and gradient storage.
+
+7
+
+and storage characteristics of LoRA fine-tuning with verification. We use rank r = 64, targeting query and value projection
+layers.
+LoRA fine-tuning stores only small adapter matrices instead of full model parameters, while frozen base parameters
+are stored once and reloaded during verification. Activation
+and gradient storage remains identical to full fine-tuning, as
+forward and backward passes involve the same tensors. The
+verification protocol follows the same process as full finetuning.
+Increasing IC provides minimal benefit for LoRA, as parameter checkpoints are already small compared to activations
+and gradients. Training overhead is lower than full fine-tuning
+primarily because LoRA eliminates the cost of hashing large
+parameter tensors at each checkpoint.
+
+LoRA Fine-tuning
+
+Low-Rank Adaptation (LoRA) [18] is a parameter-efficient
+fine-tuning method that freezes pre-trained weights and trains
+only low-rank adapter matrices. AFTUNE supports LoRA
+fine-tuning with the same verification guarantees as full finetuning.
+Performance and storage. Table 2 shows the performance
+
+7.1
+
+Inference Verification
+
+We measure inference latency overhead, storage cost, and
+verification time per inference request. Table 3 examines the
+impact of layer block size (BL ) with IA = 4.
+Inference recording imposes modest latency overhead,
+9
+
+Activation+Gradient Hash
+Parameter Hash
+I/O
+Other
+
+Activations
+Gradients
+Parameters
+
+Figure 4: Training overhead composition across different models with the second configuration from Table 1. Top row: Time
+overhead proportions for Qwen2.5-14B, Llama-3.1-8B, DINOv2-Giant, ViT-Large (left to right), followed by legend showing
+hash computation, I/O, and other AFTUNE operations. Bottom row: Storage proportions for the same models, followed by
+legend showing activations, gradients, and parameters.
+Table 2: LoRA fine-tuning with verification across 2048 samples. Rows with IC = “-” are baselines.
+Model
+IC Training Time (s) Overhead Storage (GB) Prep Time (s) Verify Time (s)
+45.1
+Llama-3.1-8B
+1
+52.8
+17%
+117.5
+34.2
+8
+52.5
+16%
+114.8
+14.2
+79.9
+Qwen-2.5-14B 1
+91.5
+15%
+160.0
+39.9
+8
+90.8
+14%
+158.6
+17.6
+
+achieving as low as 10% in optimal configurations. Storage requirements per inference request are highly practical, typically
+ranging from 1-5 MB depending on model size and block
+configuration. Verification time is also acceptable, ranging
+from 5-15 seconds depending on model complexity, allowing
+clients to audit inference outputs efficiently.
+
+7.2
+
+minimizing hash computation frequency but require longer
+recomputation chains that amplify numerical errors.
+Inference verification. Figure 6 shows the relative L2 error
+between recomputed and recorded activations for inference
+verification across different models and layer block sizes,
+comparing bfloat16, float32, and float64 precision.
+Similar to training verification, a larger BL leads to higher
+errors due to longer recomputation sequences. However,
+bfloat16 precision produces errors too large for meaningful
+verification guarantees, making them easily exploitable by
+attackers, as we demonstrate in Section 7.3.1. In contrast,
+float32 precision reduces these errors by 3-4 orders of magnitude, providing reliable verification guarantees that effectively
+detect malicious manipulations.
+
+Verification Correctness
+
+We examine whether recomputation-based verification produces numerically accurate results for both inference and
+training.
+Training verification. We measure the relative L2 error
+of recomputed parameters against expected values. Figure 5
+reports the maximum layer-level parameter error for different
+layer block sizes (BL ) and step block sizes (BS ) using bfloat16
+precision. These errors arise from floating-point computation
+differences between training and verification devices.
+Numerical errors remain small across all configurations,
+well within acceptable tolerance for verification. The results
+reveal a clear error propagation trend: larger BL and BS lead
+to higher errors, as longer recomputation sequences accumulate more floating-point discrepancies. This reflects the
+fundamental trade-off between training overhead and verification accuracy: larger blocks reduce training overhead by
+
+7.3 Security Against Numerical Tolerance Exploitation
+Both inference and training verification rely on numerical
+error thresholds to accommodate legitimate floating-point
+differences across devices. A security concern is whether adversaries could exploit these tolerances to inject malicious
+perturbations that remain below detection thresholds yet compromise model behavior. We evaluate this threat through two
+attack vectors: adversarial examples on activations (inference10
+
+Table 3: Impact of layer block size on inference verification overhead with IA = 4. Rows with BL = “-” are baselines.
+Model
+BL Infer Time (ms) Overhead Storage (MB) Verify Time (s)
+359
+1
+409
+14%
+5.87
+7.0
+Qwen2.5-14B
+2
+392
+9%
+3.16
+9.5
+4
+387
+8%
+1.36
+14.7
+341
+1
+389
+19%
+3.75
+6.3
+Llama-3.1-8B
+2
+372
+14%
+2.09
+8.3
+4
+355
+13%
+0.84
+12.5
+267
+1
+331
+24%
+8.60
+4.6
+DINOv2-Giant
+2
+303
+13%
+4.82
+4.9
+4
+296
+11%
+2.56
+5.3
+212
+1
+266
+25%
+3.00
+4.5
+ViT-Large
+2
+241
+14%
+1.84
+4.7
+4
+241
+14%
+1.06
+5.4
+
+level) and parameter poisoning (training-level).
+7.3.1
+
+as later layers require smaller perturbations due to shorter
+propagation paths to the output. As BL increases, maximum
+perturbations decrease because recorded activations shift to
+later layers, while minimum perturbations increase due to
+fewer boundaries to exploit.
+Comparing these perturbation magnitudes against numerical errors in Figure 6 reveals a critical vulnerability when
+using bfloat16 precision. In many configurations, adversarial perturbations fall within or near bfloat16’s recomputation
+error range, making it nearly impossible to establish an effective threshold that distinguishes malicious perturbations
+from legitimate numerical errors without triggering excessive
+false positives. This enables attacks that evade detection by
+exploiting the inherent numerical tolerance.
+In contrast, float32’s numerical errors remain orders of
+magnitude smaller than even the minimum adversarial perturbations across all configurations. This separation provides
+a clear security margin for detection. Furthermore, float64
+precision provides far more separation than necessary for
+verification, reducing numerical errors to negligible levels.
+Therefore, inference verification requires at least float32 precision. Importantly, both precision levels are supported by
+standard GPU hardware, preserving AFTUNE’s seamless integration with existing ML infrastructure.
+
+Adversarial Example Attacks on Activations
+
+As established in Section 7.1, AFTUNE prevents providers
+from fabricating outputs by verifying recorded activations.
+However, could adversaries inject adversarial perturbations
+into intermediate activations that evade detection?
+Attack formulation. We evaluate both untargeted and targeted attacks using Projected Gradient Descent (PGD) [25]
+with L2 norm constraints. In the untargeted setting, the adversary seeks to minimize the perturbation magnitude while
+flipping the model’s prediction:
+min ∥δ∥2
+
+s.t.
+
+δ
+
+arg max f (x + δ)i ̸= arg max f (x)i
+i
+
+i
+
+(12)
+
+In the targeted setting, the adversary forces the model to predict a specific target label t:
+min ∥δ∥2
+δ
+
+s.t.
+
+arg max f (x + δ)i = t
+i
+
+(13)
+
+To maximize attack strength, we consider adversaries
+that inject perturbations at every block boundary activation
+throughout the model. For a model with B blocks, the adversary optimizes perturbations {δb }Bb=1 at each block boundary
+to collectively minimize the L2 norm while achieving the
+attack objective.
+Evaluation. We evaluate the attack with varying layer
+block sizes to understand how block granularity affects the
+perturbation budget required for successful attacks. Figure 8
+summarizes the maximum and minimum L2 perturbation magnitudes across all blocks for both untargeted and targeted
+attacks.
+Maximum perturbations occur predominantly at early layers while minimum perturbations concentrate at later layers,
+
+7.3.2
+
+Parameter Poisoning Attacks on Model Weights
+
+Training verification records parameter hashes at block boundaries, subject to numerical recomputation errors. Could adversaries exploit these tolerances by injecting small parameter
+perturbations to compromise model behavior?
+Attack formulation. Unlike adversarial example attacks,
+where the attack surface depends on BL , parameter poisoning
+attacks can target any subset of model weights regardless of
+11
+
+2.0e-8
+
+2.7e-8
+
+3.6e-8
+
+5.0e-8
+
+9.4e-8
+
+BL=2
+
+2.0e-8
+
+2.7e-8
+
+8.2e-8
+
+1.3e-7
+
+1.5e-7
+
+BL=4
+
+2.6e-8
+
+3.4e-8
+
+8.7e-8
+
+1.4e-7
+
+1.8e-7
+
+Llama-3.1-8B BL =1
+
+2.3e-8
+
+4.1e-8
+
+8.8e-8
+
+9.0e-8
+
+1.7e-7
+
+BL=2
+
+4.5e-8
+
+6.6e-8
+
+1.0e-7
+
+1.4e-7
+
+2.1e-7
+
+BL=4
+
+5.8e-8
+
+7.6e-8
+
+1.4e-7
+
+2.0e-7
+
+3.1e-7
+
+DINOv2-Giant BL =1
+
+3.7e-9
+
+7.3e-8
+
+2.5e-8
+
+1.8e-7
+
+5.9e-8
+
+BL=2
+
+6.1e-9
+
+4.4e-7
+
+4.0e-8
+
+3.8e-8
+
+7.0e-8
+
+BL=4
+
+2.3e-8
+
+2.6e-7
+
+8.7e-8
+
+7.0e-7
+
+1.0e-7
+
+BL=8
+
+3.7e-8
+
+2.8e-8
+
+3.2e-8
+
+1.6e-7
+
+2.4e-6
+
+ViT-Large BL =1
+
+3.8e-8
+
+3.9e-8
+
+5.8e-8
+
+9.1e-8
+
+7.1e-7
+
+BL=2
+
+4.7e-8
+
+5.5e-8
+
+1.5e-7
+
+1.6e-7
+
+8.3e-7
+
+BL=4
+
+8.7e-8
+
+9.1e-8
+
+1.8e-7
+
+2.1e-7
+
+1.9e-6
+
+BL=8
+
+1.4e-7
+
+1.4e-7
+
+5.7e-7
+
+6.3e-7
+
+1.8e-5
+
+BL=16
+
+9.9e-7
+
+9.4e-6
+
+9.5e-6
+
+9.7e-6
+
+4.6e-5
+
+BS=1
+
+BS=2
+
+BS=4
+
+BS=8
+
+BS=16
+
+10−3
+10−4
+10−5
+10−6
+10−7
+10−8
+
+Relative L2 error (log scale)
+
+Qwen2.5-14B BL =1
+
+10−9
+
+Figure 5: Training verification accuracy: parameter relative L2 error across layer block sizes and step block sizes.
+
+Qwen2.5-14B BL =1
+
+4.1e-4
+
+5.7e-8
+
+BL=2
+
+5.8e-4
+
+6.4e-8
+
+BL=4
+
+8.6e-4
+
+8.1e-8
+
+BL=8
+
+1.2e-3
+
+1.1e-7
+
+Llama-3.1-8B BL =1
+
+3.0e-4
+
+4.0e-8
+
+BL=2
+
+4.8e-4
+
+5.8e-8
+
+BL=4
+
+8.2e-4
+
+8.7e-8
+
+BL=8
+
+1.7e-3
+
+1.7e-7
+
+DINOv2-Giant BL =1
+
+2.6e-3
+
+3.1e-7
+
+7.8e-16
+
+BL=2
+
+3.6e-3
+
+4.3e-7
+
+1.1e-15
+
+BL=4
+
+4.7e-3
+
+5.6e-7
+
+1.3e-15
+
+misclassification while preserving normal behavior:
+(
+fθ+∆θ (xtrigger ) = ytarget
+∀xtrigger
+min ∥∆θ∥2 s.t.
+∆θ
+L ( fθ+∆θ (xclean ), yclean ) ≈ 0 ∀xclean
+(14)
+where the first constraint ensures the backdoor activates on
+triggered inputs, and the second maintains performance on
+clean inputs.
+For targeted attacks, we flip specific samples to incorrect
+outputs:
+
+10−3
+
+10−5
+
+10−7
+
+10−9
+
+BL=8
+
+5.9e-3
+
+8.3e-7
+
+1.6e-15
+
+ViT-Large BL =1
+
+3.7e-4
+
+7.7e-8
+
+1.7e-16
+
+BL=2
+
+6.7e-4
+
+1.1e-7
+
+2.6e-16
+
+BL=4
+
+1.1e-3
+
+1.6e-7
+
+3.6e-16
+
+BL=8
+
+1.9e-3
+
+2.4e-7
+
+5.1e-16
+
+BF16
+
+FP32
+
+FP64
+
+min ∥∆θ∥2
+∆θ
+
+10−14
+
+s.t.
+
+wrong
+
+fθ+∆θ (xi ) = yi
+
+∀i ∈ T
+
+(15)
+
+where T is the set of target samples.
+We solve these optimization problems using SGD with
+gradient-based loss functions that maximize target label probabilities while minimizing perturbation magnitude via L2 regularization. To establish the lower bound on required perturbations, we optimize each attack on a single sample. In practice, attacks typically need to compromise multiple samples,
+which requires larger perturbations than the single-sample
+lower bound reported here.
+Evaluation. We measure the minimum and maximum relative L2 parameter perturbations required for successful attacks
+using bfloat16 precision. Figure 7 summarizes the perturbation magnitudes for both backdoor and targeted attacks across
+different models.
+Successful parameter poisoning requires perturbations orders of magnitude larger than numerical recomputation errors
+shown in Figure 5. Combined with activation-level results,
+this confirms that with proper precision choices, AFTUNE’s
+numerical tolerances cannot be exploited to inject stealthy
+attacks at either inference or training level. The substantial
+
+10−16
+
+Figure 6: Inference verification accuracy: activation relative
+L2 error across layer block sizes and precision levels.
+
+block structure. To maximize attack strength, we perturb all
+model parameters simultaneously, formulated as a constrained
+optimization that minimizes the L2 norm of perturbations ∆θ
+while achieving attack objectives.
+For backdoor injection, we inject a trigger (a trigger word
+for LLMs or a trigger pattern for vision models) that causes
+12
+
+blocks for verification. The provider then deletes all nontarget states before TEE provisioning, retaining only data for
+requested blocks. This optional strategy enables proactive
+storage reclamation during training rather than requiring full
+retention until verification completes.
+For extreme storage constraints, AFTUNE supports a zerostorage strategy (IC = ∞, IA = ∞) where only cryptographic
+hashes are recorded and transmitted during training, and the
+size of these commitments is negligible. Upon receiving the
+client’s verification request, the provider reruns the entire
+training from the initial checkpoint, recording states only for
+the requested blocks. This trades 100% additional training
+overhead (one full retraining pass) to eliminate temporary
+storage during initial training. Providers can adapt the system
+across a spectrum: from dense recording with minimal verification overhead to zero-storage with doubled training cost,
+matching their specific resource constraints, which demonstrates AFTUNE’s flexibility in balancing storage and computation costs.
+
+Targeted
+
+Backdoor
+Qwen2.5-14B
+
+5.3e-5
+
+6.3e-5
+
+7.3e-5
+
+7.9e-5
+
+10−3
+
+Llama-3.1-8B
+
+1.4e-4
+
+2.6e-4
+
+1.4e-4
+
+2.1e-4
+
+10−5
+
+DINOv2-Giant
+
+3.9e-4
+
+2.3e-3
+
+6.3e-5
+
+3.3e-4
+
+10−7
+
+ViT-Large
+
+1.1e-3
+
+1.6e-3
+
+7.5e-4
+
+1.1e-3
+
+10−9
+
+Min
+
+Max
+
+Min
+
+Max
+
+Figure 7: Parameter poisoning attacks: parameter perturbation relative L2 norm across models.
+separation between numerical errors and attack perturbations
+enables effective detection of meaningful tampering while accommodating legitimate floating-point variations across ML
+accelerators and TEE hardware.
+Untargeted
+
+Targeted
+
+Qwen2.5-14B BL =1
+
+1.5e-6
+
+1.0e-3
+
+5.1e-5
+
+3.5e-2
+
+BL=2
+
+5.4e-5
+
+2.2e-3
+
+7.5e-5
+
+3.1e-3
+
+BL=4
+
+1.0e-4
+
+3.3e-3
+
+1.4e-4
+
+4.3e-3
+
+BL=8
+
+2.4e-4
+
+3.1e-4
+
+3.8e-4
+
+4.2e-4
+
+Llama-3.1-8B BL =1
+
+2.8e-5
+
+6.6e-3
+
+5.0e-5
+
+1.2e-2
+
+BL=2
+
+5.2e-5
+
+2.2e-3
+
+7.3e-5
+
+3.1e-3
+
+BL=4
+
+1.1e-4
+
+1.2e-4
+
+1.5e-4
+
+1.5e-4
+
+BL=8
+
+2.6e-4
+
+2.8e-4
+
+3.2e-4
+
+3.4e-4
+
+DINOv2-Giant BL =1
+
+3.5e-6
+
+1.3e-4
+
+5.1e-5
+
+1.8e-3
+
+BL=2
+
+5.2e-6
+
+1.8e-4
+
+9.7e-5
+
+3.5e-3
+
+BL=4
+
+7.8e-6
+
+2.8e-4
+
+1.9e-4
+
+6.9e-3
+
+8.2
+10
+
+−3
+
+Our work relies on TEEs as the root of trust for verification.
+Like all TEE-based approaches, if the TEE itself is compromised, the security guarantees of our framework will be undermined. In addition, when clients choose to verify only a
+subset of blocks, the framework provides probabilistic detection guarantees rather than deterministic assurance. Although
+clients can employ verification strategies to defend against
+specific attacks with near-certain probability, malicious behavior may still have a chance of evading detection.
+
+10−4
+
+10−5
+
+10−6
+
+BL=8
+
+1.5e-5
+
+5.3e-4
+
+4.3e-4
+
+1.5e-2
+
+ViT-Large BL =1
+
+4.2e-5
+
+2.8e-4
+
+1.2e-4
+
+8.0e-4
+
+BL=2
+
+8.7e-5
+
+5.6e-4
+
+2.2e-4
+
+1.4e-3
+
+BL=4
+
+1.9e-4
+
+1.2e-3
+
+4.1e-4
+
+2.6e-3
+
+BL=8
+
+4.8e-4
+
+5.2e-4
+
+8.3e-4
+
+8.9e-4
+
+Min
+
+Max
+
+Min
+
+Max
+
+10−7
+
+9
+
+10−8
+
+8.1
+
+Conclusion
+
+Cloud-based fine-tuning and inference create a fundamental trust gap. Clients cannot verify whether providers execute computations as contracted, and existing verification
+approaches fail to scale to modern LLMs due to either prohibitive overhead (ZKP-based methods) or full model encapsulation requirements (TEE-based methods). AFTUNE addresses this through block decomposition with compositional
+verification. By recording commitments over boundary states
+and enabling selective TEE-based recomputation, AFTUNE
+provides strong auditability while keeping primary workloads
+on standard accelerators with near-baseline performance.
+Our evaluation demonstrates that the two-dimensional
+block structure offers flexibility to balance overhead, storage,
+and verification granularity, while map-reduce style hashing
+minimizes commitment costs. The sampling-based verification strategy provides probabilistic detection guarantees that
+compound over repeated audits. By decoupling execution
+from verification, AFTUNE transforms opaque AI services
+into accountable platforms where trust is established through
+verifiable evidence rather than provider claims.
+
+10−9
+
+Figure 8: Adversarial example attacks: activation perturbation relative L2 norm across models and layer block sizes.
+
+8
+
+Limitations
+
+Discussion
+Storage Management
+
+AFTUNE’s verification storage is temporary: recorded states
+exist solely for audit and can be released immediately after
+verification completes. To further reduce storage burden, the
+provider can optionally adopt an incremental commit-andprune strategy: periodically transmit hash records {Ri, j } for
+completed training stages to the client, who specifies target
+13
+
+Ethical Considerations
+
+[4] A LVES , T., AND F ELTON , D. Trustzone: Integrated hardware and
+software security. ARM White Paper (2004).
+
+We structure the ethical considerations by linking our stakeholder analysis to the impacts generated during the research
+process and publication of results.
+Stakeholder Analysis. AFTUNE involves four primary
+stakeholder groups. (1) Cloud Service Providers: Companies
+offering AI fine-tuning and inference services. (2) Clients:
+Organizations outsourcing model fine-tuning and inference to
+cloud providers. (3) End Users: Individuals who interact with
+AI systems built on cloud-fine-tuned models. (4) Research
+Community: ML and security researchers who may build upon
+our framework.
+Positive Impacts. (1) Enhancing Trust in Cloud AI (Impact
+on Clients & End Users): AFTUNE provides clients with verifiable guarantees that contracted computations were executed
+faithfully, reducing the risk of silent service degradation or
+fraud. This indirectly benefits end users who rely on properly trained models. (2) Promoting Accountability (Impact on
+Providers & Society): By enabling auditability, our framework
+incentivizes honest behavior among cloud providers, fostering
+a more trustworthy AI service ecosystem. (3) Reproducibility and Open Science (Impact on Research Community): We
+open-source our implementation to enable the community to
+assess, audit, and improve upon our methods.
+Negative Impacts. We are not aware of any potential harms
+or negative societal impacts arising from this work. Our framework is purely defensive in nature, designed to detect misbehavior rather than enable it.
+Decision to Conduct and Publish. We initiated this research to address a practical trust problem in cloud AI services. Our work focuses on defense rather than offense. We
+believe sharing these results benefits the broader ecosystem
+by enabling clients to hold providers accountable.
+
+[5] A NTHROPIC. Fine-tune claude 3 haiku in amazon bedrock, July 2024.
+[6] ATENIESE , G., B URNS , R., C URTMOLA , R., H ERRING , J., K ISS NER , L., P ETERSON , Z., AND S ONG , D. Provable data possession
+at untrusted stores. In Proceedings of the 14th ACM Conference on
+Computer and Communications Security (New York, NY, USA, 2007),
+CCS ’07, Association for Computing Machinery, p. 598–609.
+[7] CHE T SAI , C., P ORTER , D. E., AND V IJ , M. Graphene-SGX: A
+practical library OS for unmodified applications on SGX. In 2017
+USENIX Annual Technical Conference (USENIX ATC 17) (Santa Clara,
+CA, July 2017), USENIX Association, pp. 645–658.
+[8] C HEN , H., F U , C., ROUHANI , B. D., Z HAO , J., AND KOUSHANFAR ,
+F. Deepattest: An end-to-end attestation framework for deep neural
+networks. In Proceedings of the 46th International Symposium on
+Computer Architecture (2019), pp. 487–498.
+[9] C LOUD , G. Tune gemini models by using supervised fine-tuning,
+2025.
+[10] C ORPORATION , M. Azure openai in azure ai foundry models, 2025.
+[11] C ORPORATION , O. Host llms with nvidia gpus on oci, 2025.
+[12] C OSTAN , V., AND D EVADAS , S. Intel sgx explained. In IACR Cryptology ePrint Archive (2016), vol. 2016, p. 086.
+[13] D HAR , A., T HORENS , C., L AZIER , L., AND C AVIGELLI , L. Guardain:
+Protecting emerging generative ai workloads on heterogeneous npu.
+pp. 4155–4172.
+[14] E MANI , M., F OREMAN , S., S ASTRY, V., X IE , Z., R ASKAR , S.,
+A RNOLD , W., T HAKUR , R., V ISHWANATH , V., AND PAPKA , M. E.
+A comprehensive performance study of large language models on novel
+ai accelerators, 2023.
+[15] ET AL ., A. G. The llama 3 herd of models.
+arXiv:2407.21783 (2024).
+
+arXiv preprint,
+
+[16] F EFFER , M., S INHA , A., D ENG , W. H., L IPTON , Z. C., AND H EI DARI , H. Red-teaming for generative ai: Silver bullet or security
+theater? In Proceedings of the AAAI/ACM Conference on AI, Ethics,
+and Society (2024), vol. 7, pp. 421–437.
+[17] H AO , M., C HEN , H., L I , H., W ENG , C., Z HANG , Y., YANG , H., AND
+Z HANG , T. Scalable zero-knowledge proofs for non-linear functions
+in machine learning. In 33rd USENIX Security Symposium (USENIX
+Security 24) (2024), pp. 3819–3836.
+
+Open Science
+
+[18] H U , E. J., S HEN , Y., WALLIS , P., A LLEN -Z HU , Z., L I , Y., WANG , S.,
+AND C HEN , W. Lora: Low-rank adaptation of large language models.
+arXiv preprint, arXiv:2106.09685 (2021).
+
+All code and artifacts used for the experiments in this paper are available at https://github.com/hengvt/AFTUNE,
+with detailed instructions for using the framework and reproducing the experiments.
+
+[19] K ACHRIS , C. A survey on hardware accelerators for large language
+models. Applied Sciences 15, 2 (Jan. 2025), 586.
+[20] K UVAISKII , D., S TAVRAKAKIS , D., Q IN , K., X ING , C., B HATOTIA ,
+P., AND V IJ , M. Gramine-tdx: A lightweight os kernel for confidential
+vms. In Proceedings of the 2024 on ACM SIGSAC Conference on
+Computer and Communications Security (New York, NY, USA, 2024),
+CCS ’24, Association for Computing Machinery, p. 4598–4612.
+
+References
+[1] How Confidential Computing lays the foundation for
+trusted AI | Google Cloud Blog — cloud.google.com.
+https://cloud.google.com/blog/products/identity-security/howconfidential-computing-lays-the-foundation-for-trusted-ai.
+
+[21] L EE , D., K WON , M., JANG , J., AUMASSON , J.-P., BAEK , K.-H.,
+C HOI , S., ROGERS , J., ROUSSEV, R., AND S ONG , D. Keystone: An
+open framework for architecting trusted execution environments. In
+Proceedings of the 25th ACM International Conference on Architectural Support for Programming Languages and Operating Systems
+(ASPLOS) (2020), p. 1191–1206.
+
+[2] Large language model inference over confidential data using AWS
+Nitro Enclaves. https://aws.amazon.com/blogs/machine-learning/largelanguage-model-inference-over-confidential-data-using-aws-nitroenclaves/.
+
+[22] L EE , J., WANG , Y., R AJAT, R., AND A NNAVARAM , M. Characterization of gpu tee overheads in distributed data parallel ml training,
+2025.
+
+[3] A BBASZADEH , K., PAPPAS , C., K ATZ , J., AND PAPADOPOULOS ,
+D. Zero-knowledge proofs of training for deep neural networks. In
+Proceedings of the 2024 on ACM SIGSAC Conference on Computer
+and Communications Security (2024), pp. 4316–4330.
+
+[23] L IAO , G., WANG , T., Z HANG , S., Z HANG , J., L ONG , S., AND TAO ,
+D. Verilora: Fine-tuning large language models with verifiable security
+via zero-knowledge proofs, 2025.
+
+14
+
+[24] L IN , L., M U , H., Z HAI , Z., WANG , M., WANG , Y., WANG , R., G AO ,
+J., Z HANG , Y., C HE , W., BALDWIN , T., ET AL . Against the achilles’
+heel: A survey on red teaming for generative models. Journal of
+Artificial Intelligence Research 82 (2025), 687–775.
+
+[40] TAN , Y., TAN , C., M I , Z., AND C HEN , H. Pipellm: Fast and confidential large language model services with speculative pipelined encryption.
+In Proceedings of the 30th ACM International Conference on Architectural Support for Programming Languages and Operating Systems,
+Volume 1 (New York, NY, USA, 2025), ASPLOS ’25, Association for
+Computing Machinery, p. 843–857.
+
+[25] M ADRY, A., M AKELOV, A., S CHMIDT, L., T SIPRAS , D., AND
+V LADU , A. Towards deep learning models resistant to adversarial
+attacks, 2019.
+
+[41] TANG , D., Z HOU , J., H U , J., L I , S., Z HENG , H., P EI , Z., WANG ,
+H., AND Z HANG , X. H2:towards efficient large-scale llm training on
+hyper-heterogeneous cluster over 1,000 chips, 2025.
+
+[26] M O , F., H ADDADI , H., K ATEVAS , K., M ARIN , E., P ERINO , D., AND
+KOURTELLIS , N. Ppfl: Privacy-preserving federated learning with
+trusted execution environments. In Proceedings of the 19th annual
+international conference on mobile systems, applications, and services
+(2021), pp. 94–108.
+
+[42] W U , B., X U , C., DAI , X., WAN , A., Z HANG , P., YAN , Z., T OMIZUKA ,
+M., G ONZALEZ , J., K EUTZER , K., AND VAJDA , P. Visual transformers: Token-based image representation and processing for computer
+vision, 2020.
+
+[27] O PENAI. Introducing improvements to the fine-tuning api and expanding our custom models program. https://openai.com/index/introducingimprovements-to-the-fine-tuning-api-and-expanding-our-custommodels-program/, Apr. 2024.
+
+[43] X IE , T., L U , T., FANG , Z., WANG , S., Z HANG , Z., J IA , Y., S ONG ,
+D., AND Z HANG , J. zkpytorch: A hierarchical optimized compiler for
+zero-knowledge machine learning. Cryptology ePrint Archive (2025).
+[44] X U , J., W EI , T., H OU , B., O RZECHOWSKI , P., YANG , S., J IN , R.,
+PAULBECK , R., WAGENAAR , J., D EMIRIS , G., AND S HEN , L. Mentalchat16k: A benchmark dataset for conversational mental health assistance. arXiv preprint arXiv:2503.13509 (2025).
+
+[28] O PENAI. Model optimization — openai api guides, 2025.
+[29] O QUAB , M., DARCET, T., M OUTAKANNI , T., VO , H., S ZAFRANIEC ,
+M., K HALIDOV, V., F ERNANDEZ , P., H AZIZA , D., M ASSA , F., E L N OUBY, A., A SSRAN , M., BALLAS , N., G ALUBA , W., H OWES , R.,
+H UANG , P.-Y., L I , S.-W., M ISRA , I., R ABBAT, M., S HARMA , V.,
+S YNNAEVE , G., X U , H., J EGOU , H., M AIRAL , J., L ABATUT, P.,
+J OULIN , A., AND B OJANOWSKI , P. Dinov2: Learning robust visual
+features without supervision, 2024.
+
+[45] YAN , R., J IANG , Y., N IE , X., F U , F., C UI , B., AND Y UAN , B. Hexiscale: Accommodating large language model training over heterogeneous environment, 2025.
+[46] YANG , A., YANG , B., Z HANG , B., H UI , B., Z HENG , B., Y U , B., L I ,
+C., L IU , D., H UANG , F., W EI , H., L IN , H., YANG , J., T U , J., Z HANG ,
+J., YANG , J., YANG , J., Z HOU , J., L IN , J., DANG , K., L U , K., BAO ,
+K., YANG , K., Y U , L., L I , M., X UE , M., Z HANG , P., Z HU , Q., M EN ,
+R., L IN , R., L I , T., TANG , T., X IA , T., R EN , X., R EN , X., FAN , Y.,
+S U , Y., Z HANG , Y., WAN , Y., L IU , Y., C UI , Z., Z HANG , Z., AND
+Q IU , Z. Qwen2.5 technical report. arXiv preprint, arXiv:2412.15115
+(2025).
+
+[30] Q U , W., S UN , Y., L IU , X., L U , T., G UO , Y., C HEN , K., AND Z HANG ,
+J. zkgpt: An efficient non-interactive zero-knowledge proof framework
+for llm inference. In 34st USENIX Security Symposium (USENIX
+Security 25) (2025).
+[31] Q UOC , D. L., G REGOR , F., A RNAUTOV, S., K UNKEL , R., B HATOTIA ,
+P., AND F ETZER , C. securetf: A secure tensorflow framework. In
+Proceedings of the 21st International Middleware Conference (New
+York, NY, USA, 2020), Middleware ’20, Association for Computing
+Machinery, p. 44–59.
+
+[47] Z HANG , E., PAL , A., P OTTI , A., AND G OLDBLUM , M. vtune: Verifiable fine-tuning for llms through backdooring. arXiv preprint
+arXiv:2411.06611 (2024).
+
+[32] R IASI , A., WANG , H., B EHNIA , R., VO , V., AND H OANG , T. Zeroknowledge ai inference with high precision. ACM CCS (2025).
+
+[48] Z HANG , X., L I , F., Z HANG , Z., L I , Q., WANG , C., AND W U , J. Enabling execution assurance of federated learning at untrusted participants. In IEEE INFOCOM 2020-IEEE Conference on Computer
+Communications (2020), IEEE, pp. 1877–1886.
+
+[33] RUSSAKOVSKY, O., D ENG , J., S U , H., K RAUSE , J., S ATHEESH , S.,
+M A , S., H UANG , Z., K ARPATHY, A., K HOSLA , A., B ERNSTEIN , M.,
+B ERG , A. C., AND F EI -F EI , L. ImageNet Large Scale Visual Recognition Challenge. International Journal of Computer Vision (IJCV) 115,
+3 (2015), 211–252.
+
+[49] Z HAO , L., J IANG , J., F ENG , B., WANG , Q., S HEN , C., AND L I , Q.
+Sear: Secure and efficient aggregation for byzantine-robust federated
+learning. IEEE Transactions on Dependable and Secure Computing
+19, 5 (2021), 3329–3342.
+
+[34] S ERVICES , A. W. Amazon bedrock — build generative ai applications
+with foundation models, 2025.
+[35] S HACHAM , H., AND WATERS , B. Compact proofs of retrievability. J.
+Cryptol. 26, 3 (July 2013), 442–483.
+[36] S ILVANO , C., I ELMINI , D., F ERRANDI , F., F IORIN , L., C URZEL , S.,
+B ENINI , L., C ONTI , F., G AROFALO , A., Z AMBELLI , C., C ALORE ,
+E., S CHIFANO , S., PALESI , M., A SCIA , G., PATTI , D., P ETRA , N.,
+D E C ARO , D., L AVAGNO , L., U RSO , T., C ARDELLINI , V., C ARDAR ILLI , G. C., B IRKE , R., AND P ERRI , S. A survey on deep learning
+hardware accelerators for heterogeneous hpc platforms. ACM Comput.
+Surv. 57, 11 (June 2025).
+[37] S TEIAKAKIS , N.-A., AND VASILIADIS , G. Trusted yet flexible: Highlevel runtimes for secure ml inference in tees. Journal of Cybersecurity
+and Privacy 6, 1 (2026).
+[38] S UN , H., L I , J., AND Z HANG , H. zkllm: Zero knowledge proofs
+for large language models. In Proceedings of the 2024 on ACM
+SIGSAC Conference on Computer and Communications Security
+(2024), pp. 4405–4419.
+[39] S UN , Y., L I , Y., Z HANG , Y., J IN , Y., AND Z HANG , H. Svip: Towards
+verifiable inference of open-source large language models. arXiv
+preprint arXiv:2410.22307 (2025).
+
+15
+
+A
+
+Possible Attacks
+
+A.2.2
+
+Fabricated or manipulated responses
+
+Below we outline several classes of provider misbehavior
+that the visibility gap makes possible. In all these cases, the
+attacks can be profitable for the provider, hard to catch with
+final accuracy or black-box testing alone, and leave the client
+with no verifiable record of what actually happened during
+training or inference.
+
+The provider might skip running the model altogether for
+some requests: return cached or templated responses for repeated or similar queries to save compute. A malicious or compromised provider may also directly manipulate returned results, for example, deliberately altering or injecting responses
+to steer the client’s downstream decisions, spread misinformation, or exfiltrate or poison data.
+
+A.1
+
+Attacks in Training
+
+B
+
+A.1.1
+
+Under-training
+Algorithm 1 Verify Block Cell
+Require: Layer block index i, step block index j, recorded
+hash set Ri, j , parameters {θl, j·BS }l∈LBi , optimizer states
+{sl, j·BS }l∈LBi , boundary states, and numerical tolerance τ
+Ensure: Verification result: PASS or FAIL
+1: Step 1: Load model state in TEE
+2: Load parameters and optimizer states for layers in LBi at
+step j · BS into TEE memory
+3: Step 2: Verify target block cell
+4: for each step t ∈ SB j do
+5:
+Forward pass:
+6:
+x̂lin ,t , ŷlout ,t ← ForwardBlock(LBi , xlin −1,t )
+7:
+Hash verification (integrity):
+8:
+if H(x̂lin ,t ) ̸= H(xlin ,t ) ∈ Ri, j then
+9:
+return FAIL
+10:
+end if
+11:
+if H(ŷlout ,t ) ̸= H(ylout ,t ) ∈ Ri, j then
+12:
+return FAIL
+13:
+end if
+14:
+Numerical verification:
+15:
+if ∥ŷlout ,t − ylout ,t ∥/∥ylout ,t ∥ > τ then
+16:
+return FAIL
+17:
+end if
+18:
+Backward pass and gradient verification:
+ˆ l ,t , ∇y
+ˆ l ,t ← BackwardBlock(LBi , ∇yl +1,t )
+19:
+∇x
+out
+out
+in
+Verify hashes and numerical correctness for gradients
+20:
+(similar to forward pass)
+21:
+Parameter update and verification:
+ˆ t)
+22:
+θ̂t+1 , ŝt+1 ← OptimizerStep(θ̂t , ŝt , ∇θ
+23:
+Verify hashes and numerical correctness for updated
+parameters and optimizer states
+24: end for
+25: return PASS
+
+An untrusted provider may try to cut training cost while still
+charging for the full job. The provider might silently reduce
+epochs, truncate batches, skip parts of the dataset, or drift
+from the agreed hyperparameter schedule, then bill as if the
+contracted training had been run in full. For example, a client
+who paid for 3 epochs over 100K samples might receive a
+model trained for 1 epoch on 50K samples, good enough to
+pass rough checks but weaker on held-out or long-tail data.
+A.1.2
+
+Model substitution
+
+Instead of the contracted base model, the provider may use a
+weaker checkpoint from the start or switch to a cheaper model
+(e.g., a smaller or distilled one) partway through training. The
+client pays for fine-tuning from a strong base but has no way
+to verify that the delivered model was actually trained from
+that base.
+A.1.3
+
+Backdoors and poisoning
+
+A compromised or malicious provider could inject backdoors
+or other latent behaviors during training. These pass normal
+quality checks but trigger on specific inputs (e.g., certain
+phrases or embedded triggers), so the model misbehaves only
+when those conditions are met. For example, a malicious
+employee at the provider could add a backdoor to the training
+set to steer the LLM’s behavior, then remove that backdoor
+from the training set after training is done. As long as the
+trigger remains unknown, this behavior cannot be detected or
+verified by the client.
+
+A.2
+
+Attacks in Inference
+
+A.2.1
+
+Serving the wrong model
+
+Algorithm to Verify One Training Block
+
+C
+
+At serving time, the provider might run a cheaper model than
+the one the client believes is deployed. For instance, serving
+the base model or a distilled copy instead of the client’s finetuned model, while claiming to serve the latter.
+
+Verification Chain and Trust Anchors
+
+A key question emerges: as described in Section 5.4, verification inside the TEE depends on hash matching, but the hashes
+themselves are computed by the service provider during train16
+
+ing. If the provider is untrusted, how can its hashes serve as a
+basis for trust?
+In traditional data storage auditing, hashes are computed by
+the client before uploading data, so the client can directly trust
+the hash values. In our framework, however, hashes are computed by the cloud provider during training. The correctness
+of these hashes is instead guaranteed through a verification
+chain formed by neighboring blocks.
+Specifically, for any block Bi, j , the hash values used for
+verification derive their correctness from adjacent blocks:
+Bi−1, j provides the correctness guarantee of inputs, Bi+1, j
+provides the correctness guarantee of gradients, and Bi, j−1
+provides the correctness guarantee of parameters, following
+the model computation procedure. The correctness of these
+neighboring blocks can be similarly traced back to their own
+neighbors. Ultimately, all blocks form a verification chain,
+where each block serves to validate its adjacent blocks, and
+the entire chain is anchored to trusted roots: the initial model
+weights, and the client-provided inputs and labels. Figure 9
+illustrates this trust propagation.
+
+...
+
+Block i- 1,j
+
+Block i,j
+
+Block i+1,j
+
+...
+
+...
+
+Block i- 1,j- 1
+
+Block i,j- 1
+
+Block i+1,j- 1
+
+...
+
+...
+
+...
+
+...
+
+compromises a block that happens not to be verified, as discussed in Section 5.7? If such a block escapes verification, the
+damage to that specific block has already occurred. However,
+since this block also submits its hash commitments, which remain immutable once submitted, these commitments become
+new trust anchors for verifying neighboring blocks, and any
+new attack on other blocks would still be detected. Consequently, the verification of other blocks remains unaffected.
+Therefore, our framework provides the same security guarantees as traditional data storage auditing for the overall training
+process.
+
+D
+
+Sparse Checkpointing Trade-offs
+
+Table 4 shows how different checkpoint interval configurations affect training overhead, storage cost, and verification
+time. We fix BL = 4, BS = 8 and vary IC .
+Table 4: Trade-offs of different checkpoint intervals on Llama3.1-8B. Baseline is IC = 1.
+IC Train Time Prep Time Storage Storage
+(s)
+(s)
+(GB)
+Ratio
+1
+82.9
+355.6
+1.00×
+2
+79.4
+7.3
+235.9
+0.66×
+4
+77.2
+9.4
+176.1
+0.50×
+8
+76.1
+15.1
+146.2
+0.41×
+16
+75.6
+29.8
+131.2
+0.37×
+Increasing checkpoint intervals reduces both training overhead (fewer checkpoint saves) and storage requirements, but
+increases preparation time due to longer recomputation distances. Beyond IC = 8, further increases yield diminishing
+returns in training time reduction while preparation time continues to grow significantly.
+When IC is sufficiently large, storage is dominated by activations and gradients rather than checkpoints. One might
+consider applying IA > 1 (sparse layer-wise boundary recording) to further reduce storage. However, this is more costly for
+training block verification due to bidirectional dependency:
+verifying any block requires both its input activation (from
+forward) and output gradient (from backward), necessitating
+full recomputation of 2 × IA + 1 consecutive blocks including
+forward, backward, and parameter updates. This substantially
+increases preparation time as IA grows. Therefore, we fix
+IA = 1 for training verification.
+
+Anchor: Hash of the Base Model
+
+Figure 9: Trust propagation to block Bi, j : correctness is derived from the anchor through neighboring blocks. Outgoing
+trust flows are omitted for clarity. Note that commitments of
+all blocks within each row must be submitted together, establishing mutual dependencies among them.
+We require the cloud provider to publicly release the hash
+commitment of the base model before any fine-tuning contract is established. This serves as the parameter anchor without revealing actual model weights. At this point, since no
+specific fine-tuning agreement exists, the provider cannot preemptively attack the base model for a particular client. The
+inputs and labels are provided by the client, who can compute their hashes independently. Thus, for any block, its hash
+correctness is ultimately linked through other blocks and anchored to these established trust roots. We recap that for each
+block, at the time when an attack could be performed, the
+attacker cannot know whether this block will later be selected
+for verification.
+One might ask: what happens if an attacker successfully
+
+E
+
+Optimizer Comparison
+
+Table 5 compares AdamW and SGD optimizers across different models using the second configuration from Table 1. We
+measure storage cost, training time, training overhead, block
+preparation time, and TEE verification time per 2048 samples.
+17
+
+Qwen2.5-14B cannot be trained with AdamW due to GPU
+memory constraints.
+
+18
+
+Hash Time (s)
+
+16
+
+Table 5: Optimizer comparison: storage, training time, overhead, and verification metrics per 2048 samples.
+Model
+Metric
+SGD AdamW
+Train Time (s)
+76.1
+114.5
+Overhead
+21%
+33%
+Llama-3.1-8B
+Storage (GB)
+146.2
+206.6
+Prep Time (s)
+15.1
+22.4
+Verify Time (s) 48.2
+83.0
+Train Time (s)
+34.8
+48.5
+Overhead
+44%
+81%
+DINOv2-Giant Storage (GB)
+19.1
+27.7
+Prep Time (s)
+10.4
+14.5
+Verify Time (s) 25.6
+32.1
+Train Time (s)
+8.9
+12.1
+Overhead
+31%
+66%
+Storage (GB)
+2.9
+5.2
+ViT-Large
+Prep Time (s)
+4.6
+7.1
+Verify Time (s) 15.3
+20.8
+
+BLAKE3 Train
+BLAKE3 Verify
+SHA-256 Train
+SHA-256 Verify
+
+12
+10
+8
+6
+
+0
+24
+10
+
+16
+
+92
+
+92
+
+Chunk Size (elements)
+
+81
+
+68
+71
+
+44
+61
+
+20
+51
+
+96
+40
+
+72
+30
+
+48
+20
+
+10
+
+24
+
+4
+
+Figure 10: Impact of chunk size on hash computation time for
+Llama-3.1-8B. Different optimal chunk sizes emerge for GPUbased training hashing vs. CPU-based verification hashing.
+The results reveal distinct performance patterns for GPU
+and CPU hashing. For GPU-based training hashing on Llama3.1-8B, an optimal chunk size around 3072 elements balances
+parallelism against per-thread computation overhead. Both
+BLAKE3 and SHA-256 achieve minimal latency at this point,
+with performance degrading for larger chunks due to insufficient parallelism. In contrast, CPU-based verification hashing shows monotonically improving performance with larger
+chunk sizes, as the limited parallelism benefits from reduced
+per-chunk overhead.
+Hash function choice also exhibits platform-dependent behavior. On the GPU, BLAKE3 outperforms SHA-256 for
+chunk sizes below 8192 elements, but performance converges
+for larger chunks. This behavior stems from BLAKE3’s treebased internal structure: our implementation assigns each
+chunk to a separate GPU thread, and BLAKE3’s tree construction performs multiple memory copy operations to manage intermediate hash states within each chunk. As chunk
+size increases, the number of internal memory operations
+within each chunk grows proportionally, amplifying the memory latency overhead. GPU memory latency is significantly
+higher than CPU cache latency, making BLAKE3’s memoryintensive tree construction increasingly expensive for larger
+chunks. On the CPU, BLAKE3 consistently outperforms
+SHA-256 across all chunk sizes, as the CPU’s cache hierarchy effectively hides memory latency.
+
+The results reveal systematic differences between optimizers across all metrics. AdamW’s optimizer state requires twice
+the parameter size (storing both momentum and variance
+terms). Training overhead with AdamW is 10-35 percentage
+points higher than SGD due to additional time required to
+save and hash larger optimizer states at step block boundaries. Preparation and verification times are also higher for
+AdamW due to increased recomputation and verification costs
+for optimizer state updates.
+
+F
+
+14
+
+Chunk Size and Hash Function Analysis
+
+We evaluate the impact of chunk size and hash function choice
+on hash computation time, as described in Section 5.3. The
+chunk size affects both training-time hash computation (during forward/backward passes) and verification-time hash computation (during TEE recomputation).
+Figure 10 shows the relationship between chunk size and
+hash computation time for Llama-3.1-8B. We vary chunk size
+from 1024 to 10240 elements and measure both training hash
+time and verification hash time per block cell. We compare
+BLAKE3 and SHA-256 hash functions to demonstrate their
+performance characteristics.
+18
+
+
