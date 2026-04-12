@@ -4,10 +4,13 @@
 # Log files
 *.log
 
-# Session directories with no papers
+# Session directories - dynamically updated
 2026-0*/
 2026-1*/
 2026-2*/
 2026-3*/
 2026-4*/
 2026-5*/
+
+# Allow new sessions
+!.gitignore
