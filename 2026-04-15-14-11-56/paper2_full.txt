@@ -1,0 +1,2108 @@
+CCxTrust: Confidential Computing Platform Based on TEE and TPM
+Collaborative Trust
+
+arXiv:2412.03842v3 [cs.CR] 12 Dec 2024
+
+Ketong Shang, Jiangnan Lin, Yu Qin*, Muyan Shen, Hongzhan Ma, Wei Feng, and Dengguo Feng
+Institute of Software Chinese Academy of Sciences
+
+1
+
+Abstract
+Confidential Computing has emerged to address data security challenges in cloud-centric deployments by protecting
+data in use through hardware-level isolation. This paradigm is
+particularly beneficial for multi-party collaborative data protection. However, reliance on a single hardware root of trust
+(RoT) limits user confidence in cloud platforms, especially for
+high-performance AI services, where end-to-end protection
+of sensitive models and data is critical. Furthermore, the lack
+of interoperability and a unified trust model in multi-cloud
+environments prevents the establishment of a cross-platform,
+cross-cloud chain of trust, creating a significant trust gap for
+users with high privacy requirements.
+To address the challenges mentioned above, this paper proposes CCxTrust (Confidential Computing with Trust), a confidential computing platform leveraging collaborative roots of
+trust from TEE and TPM. CCxTrust combines the black-box
+RoT embedded in the CPU-TEE with the flexible white-box
+RoT of TPM to establish a collaborative trust framework. The
+platform implements independent Roots of Trust for Measurement (RTM) for TEE and TPM, and a collaborative Root of
+Trust for Report (RTR) for composite attestation. The Root of
+Trust for Storage (RTS) is solely supported by TPM. We also
+present the design and implementation of a confidential TPM
+supporting multiple modes for secure use within confidential
+virtual machines. Additionally, we propose a composite attestation protocol integrating TEE and TPM to enhance security
+and attestation efficiency, which is proven secure under the
+PCL protocol security model.
+We implemented a prototype of CCxTrust on a confidential computing server with AMD SEV-SNP and TPM chips,
+requiring minimal modifications to the TPM and guest Linux
+kernel. The composite attestation efficiency improved by 24%
+without significant overhead, while Confidential TPM performance showed a 16.47% reduction compared to standard
+TPM. The system exhibited low latency and high throughput
+in large-scale node concurrent attestations.
+Keywords: TEE, TEE, Confidential Computing, Root of
+Trust, Collaborative Trust, Composite Attestation.
+
+Introduction
+
+With the rapid development of cloud-based services, public clouds have become an indispensable building block for
+nearly all modern applications. However, the shift to cloud
+computing introduces unique security challenges, leading to
+widespread concerns about the security and privacy of data in
+use on the cloud. To address these issues, various confidential computing solutions have been proposed to protect data
+from unauthorized parties [15]. Among these, confidential virtual machine (CVM) solutions such as AMD SEV-SNP, Intel
+TDX, and ARM CCA are technologies based on Trusted Execution Environments (TEE) [1,3,4,17,24,25,27,42] designed
+to enhance the security of data and workloads in virtualized
+environments [6, 13]. Their primary goal is to provide higher
+levels of privacy and confidentiality during data processing
+and storage through a combination of software and hardware,
+preventing unauthorized access, including potential threats
+from cloud service providers or other third parties.
+Unfortunately, existing CVM solutions often limit the ability to enhance the security of data in use, as they focus on minimizing the attack surface to provide a more secure isolation
+environment. As the world transitions into an era of heterogeneous computing driven by data collection and exchange,
+ensuring control over data has become critically important.
+This heightened demand for data privacy and security has
+created a trust gap between the system and users. Currently,
+different CVM solutions, such as AMD SEV-SNP [1], Intel
+TDX [27], ARM CCA [4], and NVIDIA GPU-TEE [38], implement their respective trust models based on their unique
+architectures and hardware. However, due to inconsistencies
+in standards and mechanisms, users and developers face challenges in achieving unified trust assurance when deploying
+workloads in multi-cloud environments. The diverse roots of
+trust (RoT) in these solutions hinder the establishment of a
+unified trust chain across heterogeneous, cross-platform, and
+cross-cloud systems. If users wish to seamlessly migrate or
+deploy applications across various cloud services, they must
+re-establish trust and policies for each platform. This process
+1
+
+increases complexity and introduces potential security risks.
+In existing CVM solutions, trust models predominantly rely
+on the RoT provided by cloud service providers or hardware
+manufacturers. While cloud platforms use TEEs and hardware
+isolation to offer protection, users are not directly involved
+in establishing or verifying the trust system. This means that
+users must entirely depend on the security assurances and
+verification mechanisms provided by the platform, resulting
+in limited control over the security of their data in the cloud.
+For scenarios with high privacy and security requirements,
+this asymmetric trust relationship may fail to meet user expectations. This leads to a noticeable trust gap: while users
+can leverage the confidential computing technologies offered
+by cloud platforms, they cannot fully control or verify operations occurring within the cloud, particularly when critical
+data processing is involved. Although cloud service providers
+ensure data protection through TEEs and hardware isolation,
+the existing trust models lack the transparency and autonomy
+required by organizations that aim to establish their own trust
+systems.
+To address the aforementioned issues, this paper proposes
+CCxTrust, a confidential computing platform based on collaborative trust between TEE and TPM. Recognizing that
+confidential computing platforms often involve multiple independent hardware RoT (or secure coprocessors) such as
+CPU-TEE, GPU-TEE, and TPM, CCxTrust introduces and
+establishes a collaborative root of trust system leveraging
+TEE and TPM. In this system, the storage root of trust (RTS)
+for the confidential computing platform is managed by TPM,
+providing secure protection for keys used by TEE. The measurement root of trust (RTM) for TEE and TPM are independently generated, ensuring the integrity and trustworthiness
+of the system. Additionally, the reports trust root (RTR) of
+TEE and TPM collaboratively generate composite attestation
+reports, which serve as a unified entity for remote attestation
+of the confidential computing platform, effectively addressing the trust gap in confidential virtual machines. To enable
+the collaboration between TEE and TPM while ensuring the
+confidentiality of TPM operations, we further designed and
+implemented a Confidential TPM (CTPM), providing secure
+and efficient runtime protection for TPM in cloud environments. To support large-scale confidential computing clusters,
+we also designed a composite attestation protocol combining
+TEE and TPM. This protocol integrates static and dynamic
+trust chains, offering a collaborative attestation method for
+confidential computing environments based on TEE and TPM.
+It establishes a trust foundation for secure data sharing and
+circulation within the cluster.
+Overall, our work has made the following contributions:
+
+achieves collaborative trust between TEE and TPM. This
+approach enhances the trustworthiness and security resilience of TEE.
+2. We designed and implemented a composite attestation
+protocol for confidential computing platforms based on
+TEE and TPM, enhancing the security and efficiency of
+remote attestation.
+3. The TEE and TPM composite attestation protocols satisfy correctness, completeness, and authentication of protocol execution and are inferentially provably secure
+under the PCL.
+4. We implemented a CCxTrust prototype system on an
+AMD-SNP and TPM. The results demonstrate the feasibility, high performance, and scalability of CCxTrust.
+The efficiency of composite attestation improves by 24%,
+while the performance of CTPM shows a 16.47% decrease compared to standard TPM.
+
+2
+2.1
+
+Background
+Confidential Virtual Machines(CVMs)
+
+Confidential Virtual Machines (CVMs) provide a confidential computing abstraction at the virtual machine level [20].
+They are an innovative solution leveraging Trusted Execution
+Environment (TEE) technology to enhance the security of
+data and workloads in virtualized environments. The core
+principle of CVMs is to combine hardware isolation from
+virtualization technology with encryption techniques to create a trusted execution environment at the virtual machine
+level, protecting sensitive data and the code execution environment within the VM. For example, solutions such as
+AMD’s SEV-SNP, Intel TDX, and ARM CCA achieve this
+goal by providing virtual machines (VMs) in cloud computing
+environments with independent, encrypted memory spaces.
+This ensures that only the VM itself can access its data, while
+external entities (such as the host OS, hypervisor, or malicious
+attackers) are unable to spy on or tamper with the contents
+inside the VM.
+AMD SEV-SNP is an advanced technology built on the
+previous generation SEV, enhancing virtual machine isolation
+through Secure Nested Paging (SNP) to prevent host memory
+access or tampering. It also introduces a verification mechanism to ensure the integrity of the VM environment. Intel
+TDX focuses on providing a trusted domain (TD) for virtual
+machines, using hardware-supported encryption to isolate the
+VM from the hypervisor and host system, with remote attestation allowing third-party verification of the VM’s security
+state [36]. However, TDX is still in an early development
+stage with limited ecosystem support. ARM CCA provides
+a separate "Realm" for VM isolation, ensuring secure separation from other system environments. It is particularly
+suited for ARM-based embedded and mobile devices, offering efficient confidential computing in resource-constrained
+
+1. This paper introduces CCxTrust, a novel TEE and TPM
+collaborative trust root construction scheme for generalpurpose confidential computing platforms. By adopting independent RTM for TEE and TPM, composite
+attestation for RTR, and TPM-based RTS, CCxTrust
+2
+
+environments. However, its application in cloud computing is
+still in the early stages compared to SEV-SNP and TDX.
+
+2.2
+
+implementations. For SGX, there are two remote attestation
+schemes: EPID [28] and DCAP [43]. Privacy protection research based on remote attestation schemes is represented
+by Opera [10], where researchers proposed an open remote
+attestation platform based on SGX, which can serve as an
+alternative to Intel attestation service, reducing Intel’s original capabilities. Mage [9] introduced an identity derivation
+mechanism that establishes trust between two TEEs without
+relying on a trusted third party, to some extent eliminating the
+limitations of hardware roots of trust.
+In the SGX remote attestation process [17], the signing key
+is protected by hardware but can still be exposed through sidechannel attacks, allowing attackers to forge attestation reports
+and compromise trust in the TEE. MATEE [21] introduces a
+remote attestation mechanism that binds the attestation to a
+separate trust root, immune to side-channel attacks, and creates a TPM-based second chain for diversification. However,
+remote attestation is vulnerable to denial-of-service (DoS)
+attacks. RAS2P [41] proposes a self-measuring attestation
+system, leveraging blockchain for identity authentication and
+sharing session keys. This allows periodic self-measurement
+by the prover and enables the verifier to track multiple reports,
+effectively detecting malicious software and mitigating DoS
+attacks.
+In the SEV remote attestation process, [8] highlights that
+attackers can exploit outdated firmware or design flaws to bypass attestation, threatening the integrity and privacy of virtual
+machines. SEV-SNP [1] addresses this by preventing malicious cloud providers with physical access from installing
+harmful firmware and accessing protected systems. As an
+extension of SNP, SVSM [37] introduces a solution for remote attestation of confidential VMs using temporary vTPMs.
+This method generates short-lived, non-persistent vTPM instances as the cryptographic trust root, ensuring VM security
+and privacy during attestation, while simplifying TPM key
+management and enhancing dynamic security, especially in
+multi-tenant cloud environments.
+
+TPM
+
+The Trusted Platform Module (TPM), as a cryptographic
+coprocessor, provides a hardware-based standard security solution [22, 23, 29, 30]. It serves as a foundational security
+architecture to support the establishment of new security technologies, fundamentally protecting the integrity and confidentiality of computing platforms [19].
+The fTPM [32] does not rely on a physical hardware module but instead provides TPM functionality directly through
+firmware within the processor, aiming to offer security features similar to a hardware TPM for devices and VMs. However, since it is implemented in firmware, it is more vulnerable
+than hardware TPMs when facing certain physical attacks
+or firmware vulnerabilities. AMD processors implement an
+fTPM to provide secure key storage and cryptographic operations. However, researchers have successfully used physical
+attack methods (such as voltage fault injection) to interfere
+with the fTPM’s computation process [31], causing errors,
+and ultimately extracting protected keys and other security
+information.
+CoCoTPM [40] proposes a solution for designing and implementing TPM in confidential computing environments for
+virtual machines. It uses virtualization technology to configure an independent virtual TPM (vTPM) instance for each
+VM, supporting the confidentiality and integrity protection
+of data and providing remote attestation to verify integrity
+and identity. It supports all TPM use cases, including measured boot, disk encryption, and key sealing. This solution
+has already been implemented on AMD SEV and SEV-SNP.
+The eTPM [44] leverages SGX to provide secure TPM
+functionality for VMs or applications, encapsulating the key
+security features of TPM within secure enclave. This ensures
+that key management, cryptographic operations, and remote
+attestation run in an isolated environment, preventing unauthorized access or tampering, and effectively addressing potential
+threats in multi-tenant cloud environments. SvTPM [45], also
+based on SGX, offers an SGX-based vTPM solution. By providing hardware isolation, it offers each virtual machine an
+independent trusted execution environment, thus virtualizing
+TPM functionality while ensuring efficient operation.
+
+2.3
+
+3
+
+System overview
+
+3.1
+
+Design Goals
+
+The primary goal of CCxTrust is to build a collaborative
+trust-based confidential computing platform based on TEE
+and TPM, decoupling the single trust relationship of platform vendors, unifying the root of trust, and establishing a
+trust system protected by TPM and controlled by the user.
+Additionally, the design of CCxTrust should be sufficiently
+versatile to be easily applied to CVM solutions on various
+platforms, such as x86, ARM, and RISC-V, and support different host and client operating systems, including Linux and
+Windows. Furthermore, CCxTrust is required to avoid invasive modifications to the existing software stack and remain
+transparent to user-space applications in the CVM, enabling
+
+Remote attestation
+
+The fundamental purpose of attestation is to extend the trust
+chain of the confidential computing platform to the verifier,
+allowing the verifier to assess the security of the platform and
+the current hardware.
+A typical remote attestation scheme is the IETF Remote
+Attestation Protocol (RATS) [7, 16], which serves as a reference specification for many open-source remote attestation
+3
+
+users to easily and seamlessly use the system while providing
+security features.
+
+3.2
+
+attacker may compromise the software inside the CVM, targeting workloads or exploiting guest kernel vulnerabilities. A
+normal VM could attack hierarchical data of the confidential
+TPM. During attestation, the attacker might impersonate components or concatenate fabricated reports to bypass security
+verification and gain unauthorized access. Denial-of-Service
+(DoS) attacks and side-channel attacks on the TEE are outside
+the scope,as such attacks can be defended against through
+other works [11, 34, 46] orthogonal to this one.
+
+Challenge
+
+To achieve the unified trust root in the CCxTrust, the following key issues need to be addressed.
+Q1: How to build a trust system controlled by the user?
+Current TEE systems rely on the device manufacturer’s
+root CA, making the user’s trust indirect and dependent on
+the manufacturer’s security. This model poses risks, as users
+cannot actively manage or verify their trust foundation. Therefore, there is a need to establish a user-controlled trust system,
+repositioning the trust anchor to enhance the protection of the
+computing environment and data.
+Q2: How to bridge the technical gap between TEE and
+TPM?
+To enable collaboration between TEE and TPM, the technical gap between their differing security roles must be addressed. TEE provides a high-security isolated environment,
+limiting the use of functions like IOMMU, which complicates
+integrating hardware TPMs in confidential VMs. Additionally,
+the isolated runtime environment of TEE requires solutions
+for persistent data storage. While key exchange schemes enable encrypted storage, establishing a secure trust chain and
+ensuring safe key sharing, free from man-in-the-middle attacks, presents significant challenges.
+Q3: How to ensure the security of sensitive data used
+by the confidential virtual machine?
+In confidential computing, the primary task of a confidential virtual machine is processing sensitive data, which can
+be threatened by various factors. While TEE ensures data
+security through memory encryption, its isolation techniques
+are insufficient for protecting workloads. To maintain the confidentiality and integrity of the virtual machine’s workloads,
+dynamic integrity measurement and remote attestation are
+essential. However, ensuring the authenticity of the reports
+generated by these two components is a critical challenge.
+
+3.3
+
+4
+
+Architecture
+
+In this paper, we propose a collaborative trust-based confidential computing platform that leverages TEE and TPM for
+secure operations across massive heterogeneous nodes. The
+system’s physical connection architecture, shown in Figure
+1a, features direct connections between the CPU TEE and
+GPU TEE via a Memory Controller Hub (MCH), while the
+TPM chip is linked to the Platform Controller Hub (PCH)
+through a bus. Memory regions are partitioned into several
+areas, including the private memory of the protected CVM
+(Pages (1 of n)) and the memory area shared with the confidential GPU, all protected by the TEE mechanism. A secure
+communication path is established between the CPU TEE,
+GPU TEE, and TPM chip through a trusted I/O mechanism,
+ensuring the confidentiality and integrity of data exchanges.
+The overall architecture of the CCxTrust platform is depicted
+in Figure 1b. The system incorporates multiple heterogeneous
+trust roots, such as CPU TEE, GPU TEE, and TPM modules,
+interconnected by encrypted PCIe channels. The system kernel and hypervisor are considered untrusted components. At
+the user layer, the confidential TPM operates at the highest
+privilege level within the CVM, offering TPM functionality
+services through both hardware TPM and vTPM.
+For standard confidential virtual machines, their operational
+states are encrypted and protected by the underlying CPUTEE and GPU-TEE, leveraging the security features of the
+hardware. While the internal workload state remains hidden
+from external users or platform administrators, it is still considered untrusted. These CVMs can either utilize services
+provided by the confidential TPM or directly interact with
+the underlying hardware TPM. To ensure secure communication between multiple confidential virtual machines, each
+machine’s operational environment must be verified through
+a attestation mechanism before establishing a communication
+channel, thereby ensuring confidentiality and integrity. This
+design integrates the trust roots of the CPU-TEE, GPU-TEE,
+and TPM in a coordinated manner, providing an efficient,
+secure, and scalable solution for confidential computing interconnection, capable of meeting data security requirements in
+multi-node, heterogeneous environments.
+To address Q1, CCxTrust introduces S1: Collaborative
+Trust Root (detailed in Section 5.1). By establishing a collaborative trust root based on TEE and TPM, the system creates
+
+Threat Model
+
+Similar to the threat model of traditional CVMs, the Trusted
+Computing Base (TCB) consists only of the virtual machine
+protected by the TEE, hardware devices within the SoC, and
+the TPM chip, and it assumes that the confidential TPM is
+secure. It also assumes that the CVMs will not intentionally
+leak sensitive data.
+We assume that an attacker has physical access to the server,
+enabling direct access to host memory, peripherals, or buses,
+and privileged control over the entire software stack. This
+allows attacks on the virtualization layer, OS, VM images,
+firmware, and the CVM. Malicious management software
+could also eavesdrop on, tamper with, or block communication between the TPM/vTPM and the confidential TPM. The
+4
+
+(a) Physical Access Method
+
+(b) System Architecture
+
+Figure 1: Overall System Architecture
+a user-controlled trust framework. Specifically, the Certificate
+Authority (CA) for the confidential computing cluster nodes
+functions as both the OCA (Owner Certificate Authority) for
+TEE and the Privacy CA for TPM. During the registration,
+platform identity authentication is conducted, and the secure
+management of confidential computing nodes validates TEE
+signatures directly, bypassing the need to verify the TEE
+certificate chain. In this collaborative architecture, the RTM
+independently measures the system’s critical components, ensuring the process remains unaffected by other components.
+The RTS is jointly managed by TEE and TPM, integrating
+attestation reports through composite attestation to ensure
+the integrity and confidentiality of the reports. The RTS is
+managed by TPM, which securely stores keys and sensitive
+data. TPM provides secure storage and encryption services
+to TEE, ensuring that data remains hardware-protected even
+after leaving the TEE, preventing leakage or tampering.
+To address Q2, we propose S2: Confidential TPM (CTPM)
+(detailed in Section 5.2). By offering multiple modes of operation, CTPM provides a robust trust foundation for upperlayer CVMs. Specifically, it supports both hardware TPM
+passthrough mode and vTPM mode, offering flexible security guarantees tailored to different application scenarios.In
+passthrough mode, key negotiation enables outputs to be directly stored from the kernel TLS layer to shared memory
+without duplicating any payloads. In vTPM mode, critical
+vTPM data is persistently stored by mounting an encrypted
+file system to the CTPM. Additionally, the CTPM includes a
+random number manager capable of generating and configuring high-quality seed keys.
+To address Q3, we propose S3: Composite Attestation (detailed in Section 5.3). By combining static and dynamic trust
+chains and leveraging the strengths of TPM and TEE, we
+establish a robust trust system. This system is anchored in
+the trust root provided by the Owner CA, ensuring security
+throughout the device’s lifecycle, from boot to application
+runtime. The TPM establishes initial trust using its Endorse-
+
+ment Key (EK), while the TEE performs trust initialization
+through the Platform Security Processor (PSP). In the static
+trust chain phase, the TEE measures the integrity of the underlying environment and passes the results to the TPM. In the
+dynamic trust chain phase, the TPM provides real-time measurements to ensure the ongoing trustworthiness of the computing environment. The evidence from both phases is then
+combined and signed as a unified attestation report, which
+is presented externally. This process integrates the reports
+from both components, preventing tampering or malicious
+splicing during attestation, thereby ensuring the security of
+the runtime environment.
+
+5
+
+System Design
+
+5.1
+
+Collaborative Roots of Trust
+
+5.1.1
+
+Multi-root trust system
+
+In modern cloud and confidential computing environments,
+security and privacy are paramount. CVMs maintain confidentiality and integrity through hardware memory encryption and
+integrity checks, while leveraging peripherals like confidential GPUs and TPM chips to bolster system security. However,
+different hardware platforms typically rely on their respective
+root CAs, requiring users to trust multiple root CAs. Moreover, CVMs lack a comprehensive key management system
+to protect keys within the virtual machine. To address these
+challenges, we propose an integrated multi-root trust system,
+which unifies disparate root CAs into a cohesive framework.
+TPM serves as a user-accessible trust root, providing comprehensive security protection mechanisms [5, 12, 14, 35]. In
+contrast, the TEE trust root is established through the CPU,
+creating a trusted isolated environment exclusively for the system’s lower layers (firmware, hypervisor, and kernel), without
+direct user access. Due to insufficient authentication and security for TEE APIs, critical security-related APIs of the TEE
+5
+
+remain inaccessible to users. The CPU-TEE trust root operates under the black-box trust root assumption, limiting its
+use to the system’s internal layers. In contrast, TPM offers a
+broader range of security features, supporting user-facing security scenarios and compensating for the lack of user-facing
+capabilities in the TEE trust root. Thus, TPM functions as
+a white-box trust root, while CPU-TEE acts as a black-box
+trust root. Each serves distinct security layers, with the whitebox trust root supporting both system and user security, while
+the black-box trust root ensures transparency and integration
+within the system’s lower layers, remaining inaccessible to
+users.
+In the confidential computing cluster, we propose a unified
+trust framework for managing confidential computing nodes,
+which is governed by the Owner Certificate Authority (OCA).
+This framework establishes a TPM-protected, scalable TEE
+key derivation system, providing the cryptographic foundation for secure interconnection among heterogeneous TEEs.
+The node’s OCA functions as both the TEE’s OCA and the
+TPM’s Privacy CA. During the registration, platform identity
+authentication is conducted, enabling the secure management
+of confidential computing nodes. This approach allows direct
+verification of TEE signatures without the need to validate
+the entire TEE certificate chain.
+Taking AMD SEV as an example, the AMD Root Key
+(ARK) serves as the root of trust, ensuring platform authenticity. Both application providers and end users rely on the
+cloud infrastructure, which handles security-sensitive data.
+However, trust is ultimately dependent on the device manufacturer, AMD. This model has vulnerabilities: (1) Manufacturer
+Dependency: Users must trust the manufacturer, making security and privacy vulnerable if the manufacturer has issues
+or malicious intent. The centralized trust mechanism lacks
+transparency, preventing independent verification of security
+guarantees. (2) Complexity in Multi-Tenant Clouds: Multitenant environments present significant challenges due to their
+complex virtualization and memory management stacks. Unfortunately, vulnerabilities in critical cloud software and infrastructure are inevitable, further exacerbating the risks in
+this trust model.
+To integrate composite nodes with multiple roots of trust
+while ensuring user-controlled trust, we propose a multi-root
+trust system. In a confidential computing cluster, the OCA
+serves as the core root of trust for platform ownership, managing trust for both the TEE and TPM. This dual role as both
+the OCA for TEE and Privacy CA for TPM ensures consistent
+trust across multiple security components, safeguarding the
+overall integrity of the computing environment.
+When a new node joins the cluster, it submits essential
+information to the OCA, including TEE measurements, runtime details, and identity credentials. The OCA validates the
+node’s trustworthiness by comparing its TEE report with the
+platform trust baseline. Upon successful validation, the OCA
+generates the following credentials for the node:
+
+Figure 2: Collaborative Roots of Trust
+• Identity Authentication Certificate: Uniquely identifies
+the node within the cluster.
+• MasterSecret: The core trust seed used for secure communication and data encryption.
+After authentication, the OCA then securely distributes
+these credentials, with the MasterSecret stored in the TPM’s
+protected storage and sealed for additional security. The MasterSecret is subsequently used for key derivation, ensuring
+secure inter-node communication and data protection across
+the cluster.
+During the operation of the confidential computing cluster,
+the OCA is responsible for maintaining the cluster’s trusted
+state through several mechanisms. After initial node authentication, identity verification is simplified by validating the
+TEE signature, avoiding complex certificate chain validation.
+The OCA also conducts periodic trust audits of all nodes,
+comparing runtime environment measurements with expected
+values and checking certificate validity. If a trust risk is identified, the OCA can revoke the certificate and alert the cluster
+management system. To address long-term security, the OCA
+regularly updates certificates and redistributes master keys.
+This dynamic management ensures that nodes remain trusted
+throughout their operation, safeguarding system integrity.
+5.1.2
+
+Collaborative roots of trust
+
+In virtualized environments, trust management for CVMs
+is a key challenge. Traditional architectures rely on a single RTR, typically provided by hardware vendors like AMD,
+which only covers hardware and firmware, leaving the CVM’s
+runtime environment unprotected. Although integrating TPM
+can address some concerns, risks such as forged attestation or
+report concatenation remain. This paper proposes a collaborative roots of trust (CRT) mechanism based on TPM and TEE.
+The RTM is independently handled, while the RTR is jointly
+managed by TPM and TEE, ensuring a "dual insurance"
+model for both boot and runtime security. This collaborative
+approach addresses the trust gap in CVMs.Additionally, the
+6
+
+RTS is provided by TPM-based secure storage, safeguarding
+system and application keys. A TPM-backed cryptographic
+file system (Cryptofs) further ensures persistent data protection. This multi-layered framework enhances the trust and
+security of CVMs in virtualized environments.
+
+the system monitors the integrity of the confidential workloads to prevent any potential tampering. This stage focuses
+on the sensitive applications and data running inside the CVM,
+including processes, configuration files, and any related confidential data in the execution environment. The system uses
+TEE to perform integrity checks on these workloads, ensuring
+they are not modified during runtime. If abnormalities are
+detected, the system can quickly respond by comparing the
+measurement values, thus preventing sensitive information
+leaks.
+In this overall process, TEE ensures the memory integrity
+and confidentiality of the CVM, while TPM ensures the integrity of the CVM’s pre-Boot, workload, and runtime components. The CVM assumes that the hypervisor is untrusted,
+and TPM measures the host machine by measuring the hypervisor and cloud-native components for enhanced security.
+The CVM only measures the TEE TCB, while TPM performs
+static measurements of the guest OS and workloads, thereby
+extending the trust chain within the TEE environment.
+• RTR: TEE & TPM Composite Attestation
+For the RTR, TPM and TEE collaborate to ensure accurate verification of the system’s trusted state. TEE is responsible for reporting the integrity of its runtime environment,
+including the security status of its execution. In contrast, TPM
+provides trust measurements during the CVM’s boot process
+and continues to offer trusted information throughout runtime.
+This collaborative approach leverages both static and dynamic
+trust chains, ensuring full lifecycle security assurance from
+device boot to application runtime. The detailed collaborative
+mechanism is described in Section 5.3.
+Based on the RTR, both local and remote attestation mechanisms are employed to ensure the integrity and trustworthiness
+of the confidential computing environment. Local attestation
+verifies the trustworthiness of different trust zones within the
+same physical host. In this mode, TEE and TPM collaborate
+to perform integrity checks on the local host. TEE measures
+and reports the trusted state of its runtime environment, which
+is then transmitted to TPM via a secure channel. TPM integrates these measurements with trust data from the CVM
+launch to generate a trusted local attestation, ensuring mutual
+trust between local trust zones. Remote attestation provides
+attestation of the system’s trustworthiness to external entities,
+such as cloud service users or third-party verifiers. In this
+process, TEE forwards its runtime measurements to TPM,
+which combines this data with trust measurements from the
+CVM’s launch. TPM then generates a comprehensive report
+containing integrity and trust measurements, which external
+verifiers use to verify the system’s trust state. The digital signature and measurement values in the report serve as evidence
+that the CVM and its applications are operating in a secure
+environment.
+• RTS: TEE relies on TPM trusted storage
+Currently, CVMs do not provide storage protection for
+internal workload keys in the TEE. As a cryptographic co-
+
+• RTM: TEE & TPM Parallel Independence
+The RTM is independently handled by the TEE and TPM,
+ensuring the integrity and trustworthiness of the system.
+TEE is responsible for measuring the underlying hardware,
+firmware, and runtime environment, focusing on the system’s
+boot process and security components loaded during the CVM
+boot. This ensures that the CVM boots and runs securely, free
+from interference. TPM, on the other hand, measures the
+CVM’s boot- and run-time workloads, capturing critical information during the CVM’s boot phase and performing dynamic
+measurements throughout its operation. This division of measurement tasks allows TEE and TPM to address distinct trust
+domains, reducing potential dependencies or vulnerabilities.
+By independently performing these measurements, the system
+establishes a comprehensive and secure trust root, reinforcing
+its resilience against tampering and attacks, while ensuring
+the integrity of the entire virtualization environment.
+For the RTM, we have designed and extended the CVM
+trust chain architecture based on TPM, proposing a threestage collaborative measurement method for CVMs based on
+TEE and TPM.
+The collaborative mechanism between TEE and TPM is
+divided into three stages to ensure the entire trust chain of
+the CVM from startup to runtime, and to prevent tampering
+with key components and workloads. Each stage performs
+different levels of measurement and verification of system
+components to ensure the security of the CVM. Stage 1:
+Static Measurement of Host System Component. Before
+the CVM launch, the system measures the host’s native components that the CVM depends on to ensure they have not
+been tampered with. This stage focuses on the key components of the host system, such as the hypervisor, host kernel,
+and virtualization-related services. Static measurements of
+these components are performed using TPM, which calculates and stores their measurement values and verifies them
+before startup to ensure the host environment is in a trusted
+state. Stage 2: CVM Boot Measurement. During the CVM
+launch process, the system further verifies the key elements of
+the virtual machine to ensure the expected CVM is correctly
+started. This includes the boot measurement of the CVM’s
+firmware, kernel, kernel parameters, root filesystem, and images. Particularly, the system checks the integrity and origin
+of the images by verifying their digital signatures to ensure
+they are from a trusted release. Ultimately, the CVM’s Launch
+Measurement is generated and recorded for remote attestation
+to ensure the basic components of the CVM have not been
+tampered with. Stage 3: Runtime Measurement of Confidential Workloads. After the CVM boots and enters runtime,
+7
+
+Figure 4: Key Derivation and Usage
+SRK from the MasterSecret, using the Owner’s SRK for protection. While this method preserves compatibility with the
+existing TPM storage system, it introduces challenges in key
+system deactivation. Since the CVM’s SRK is created under
+the TPM Owner’s key and protected by the Owner’s SRK,
+deactivating the CVM’s key system requires careful handling
+of the dependency between the CVM SRK and the Owner’s
+SRK. Deleting the CVM’s SRK directly could disrupt the
+TPM Owner-level key structure, while retaining it may pose
+security risks, such as residual key data. Additionally, as the
+CVM’s MasterSecret is not stored in NV storage, restoring the
+key after deactivation becomes more complex, complicating
+lifecycle management and key recovery processes.
+The second method, as shown in Figure 3b, introduces a
+new hierarchical structure within the TPM, termed the Confidential Computing Hierarchy (CC Hierarchy), specifically
+designed for confidential TPM in Confidential Computing
+(CC) mode. This hierarchy establishes a separate storage key
+tree for the CVM, with all platform keys protected by a registered PrimaryMasterSecret, which serves as the primary seed.
+Upon the platform’s first power-up, the PrimaryMasterSecret
+is generated and persistently stored in NV memory. It is then
+used to protect the keys for all CVMs on the platform. A
+new TPM interface, TPM2_CreateCVMKey, derives the MasterSecret for each CVM. This approach creates a dedicated
+TPM CVM storage key system, with both the CC SRK and
+the CVM MasterSecret stored in NV memory, while leaf node
+keys for the CVM are not stored in NV. The PrimaryMasterSecret acts as the root key, generating and protecting all child
+keys, ensuring independent and secure key management for
+each CVM instance. By introducing a new hierarchical structure, this method is incompatible with the original TPM key
+creation system and requires new interfaces for key derivation. However, it ensures that each CVM’s keys are isolated,
+preventing interference and potential data leakage between
+virtual machines. Furthermore, deactivating the CVM’s key
+system is simplified compared to the previous approach, as it
+avoids direct dependencies on the TPM Owner’s key hierarchy.
+Regardless of which type of key tree system is used, there
+are a variety of keys that can be derived for different purposes
+based on RTS.
+In the key derivation and usage process, illustrated in Figure 4, the CVM employs a secure key exchange mechanism
+
+(a) Leverage existing storage structures
+
+(b) Introducing a new storage hierarchy
+
+Figure 3: TPM storage key protection structure
+processor, TPM complements this gap by offering hardwarebased key storage protection for CVM applications. Therefore, for the RTS, it is entirely managed by the TPM, and
+we provide two methods. The first method is hardware-based
+TPM key storage protection for CVMs, providing hardwarelevel security protection. However, due to the limited TPM
+RAM storage space, it cannot support large-scale CVM usage.
+Therefore, we reuse the existing TPM 2.0 key storage tree
+structure to derive and protect each VM’s root key. The second
+method is based on TPM device-mapped confidential TPM
+virtual machines. Since confidential TPMs provide custom,
+dynamically adjustable storage space, they can generate independent new hierarchical structures to construct a new key
+tree system. This allows each CVM to have an independent
+key tree structure, ensuring that CVMs are not interconnected.
+The following section provides a detailed explanation of these
+two modes.
+The first method, depicted in Figure 3a, leverages the existing TPM 2.0 Owner’s key storage hierarchy, with the CVM
+SRK created at the second-level node. Other keys are generated within the CVM SRK in accordance with TPM 2.0 protocols. This approach enables the reuse of the existing TPM key
+storage tree, ensuring compatibility with TPM while avoiding the need to store the CVM’s MasterSecret in NV storage.
+However, it modifies the original key derivation structure,
+where child keys, originally protected by the Owner’s SRK,
+are now used as the parent key for the CVM’s application
+keys. To mitigate this, we propose a new CVM SRK key interface, TPM2_CreateCVMRootKey, which derives the CVM’s
+8
+
+leveraging TEE and TPM. Initially, TEE and TPM establish a
+trusted communication channel, utilizing their respective ECC
+Identity Keys to perform an ECDH key exchange. This protocol facilitates mutual authentication and generates a shared
+symmetric key, which is subsequently used to encrypt data
+transmission and key management operations. This ensures
+secure communication, protecting against man-in-the-middle
+attacks and safeguarding the integrity of key distribution and
+management.
+Once the trusted channel is established, TPM supports the
+CVM by generating and deriving necessary cryptographic
+keys, including AES, HMAC, and ECDH keys, based on configuration parameters. These keys are derived according to
+the TPM 2.0 key hierarchy and securely transmitted to TEE
+via the trusted channel, where they are made available for
+CVM applications. The key generation process adheres to
+TPM 2.0 specifications, ensuring proper isolation between
+keys at different levels to mitigate the risk of key leakage.
+TPM also handles the encapsulation and secure storage of
+CVM keys. After key generation, TPM binds the keys to a
+specific state defined by the CVM and stores them persistently.
+When the CVM requires key access, TPM verifies the CVM’s
+evidence and unseals the corresponding key, ensuring that
+only the authorized CVM in the correct state can access the
+key, thus preventing unauthorized use or leakage.
+For external storage, CVM keys are encrypted by TPM,
+ensuring protection during storage on ordinary disks. Additionally, a TPM-based encrypted file system is used to store
+CVM encryption keys, safeguarding the data while providing
+flexibility for various storage media.
+
+5.2
+
+Figure 5: Confidential TPM Architecture
+I/O overhead in CVMs consists of three main components:
+1) VMExit overhead, 2) Bounce buffer overhead, and 3) Network packet processing. The first is related to virtualization,
+where I/O device access triggers VMExit, causing context
+switching to the hypervisor, leading to significant overhead.
+The second is specific to the TEE, where hardware-encrypted
+memory pages prevent untrusted entities, such as the host OS,
+from accessing CVM data. To transfer data between the CVM
+and the host OS, a bounce buffer mechanism is employed, introducing data copying overhead. The third overhead pertains
+to network I/O devices and their specific processing, which is
+typically outside the scope of CTPM concerns.
+VM Exit Overhead: As noted in [33], the introduction of
+posted interrupt technology in next-generation hardware significantly reduces VM Exit overhead, achieving an order-ofmagnitude improvement compared to standard CVMs. However, this overhead remains approximately double that of traditional VMs. To mitigate this, the VirtIO framework, combined
+with shared memory, is employed to optimize I/O performance by minimizing hypervisor involvement. We reduce the
+involvement of the hypervisor by leveraging a lightweight interface using the VirtIO mechanism, thereby lowering contextswitching costs and decreasing the frequency of VM Exits.
+Within CVMs, the VirtIO driver operates directly in the guest
+environment, with I/O operations initiated by signals or notifications prompting the hypervisor to process requests. Memory
+access restrictions enforced via the RMP table ensure that the
+hypervisor cannot tamper with I/O data, maintaining data integrity and confidentiality. Data exchange between the CVM
+and the hypervisor is facilitated through a circular buffer implemented in shared memory, which is protected by the RMP
+table and hardware-based memory encryption. The circular
+buffer’s design ensures that while the hypervisor may access
+specific fields, such as those related to interrupt notifications,
+it is unable to read or modify the actual data content. To optimize performance, the circular buffer aligns with page boundaries, minimizing cross-page access overhead. The VirtIO
+circular buffer mechanism supports lock-free communication
+via shared memory, with strict access controls enforced by
+encrypted page table mechanisms. Memory mapping adopts
+a segmented design, where each segment corresponds to an
+
+Confidential TPM
+
+The Confidential TPM (CTPM) provides secure and efficient runtime protection for TPM usage in cloud environments. Even in the event of hypervisor compromise, when
+properly configured, the CTPM ensures that sensitive data
+managed by the TPM remains confined within the secure
+enclave, never leaving its protected domain. CTPM supports various TPM configurations, including physical TPM
+passthrough and vTPM, ensuring security for different deployment models.
+(1) TPM Access
+As shown in Figure 5, in TPM passthrough mode, the hardware TPM is exposed to the virtual machine as a vTPM instance. All operations of the vTPM instance are forwarded
+to the underlying hardware TPM, which performs all computational and storage tasks. In vTPM mode, a software implementation of TPM is provided within the CVM, separate
+from the physical TPM. This implementation, supported by
+an external software stack, delivers the same functionality as
+a physical TPM.
+In passthrough mode, a critical consideration is the efficient
+use of I/O devices within the CVM. As discussed in [33], the
+9
+
+independent I/O queue, reducing contention and enhancing
+data transfer efficiency.
+Bounce Buffer Overhead: Memory encryption overhead
+cannot be fully mitigated through software optimizations
+alone. Therefore, a trusted channel is established to enable
+secure encrypted data transmission, thereby reducing the overhead associated with secondary encryption in the bounce
+buffer. During initialization, the hardware TPM generates the
+seed for the CC hierarchy. Upon the start of the CVM, device
+authentication is performed using the Secure Platform Device
+Management (SPDM) protocol, followed by key negotiation
+between the TPM-generated seed and the CVM kernel. Once
+the trusted channel is established, end-to-end encrypted data
+transmission is facilitated through the TLS layer within the
+kernel, ensuring secure communication. In terms of shared
+memory, VirtIO is used to allocate a segment of memory that
+is shared between the CVM and the host. This shared memory
+space enables direct read/write access for both the CVM and
+the host, optimizing data exchange. To further enhance memory resource utilization, dynamic memory management for
+VirtIO devices is implemented, allowing the host to adjust the
+size of shared memory regions based on the CVM’s varying
+memory demands.
+In vTPM mode, ensuring secure persistent storage is
+paramount for the integrity and confidentiality of the vTPM.
+The NVRAM file serves as a trusted component that stores
+critical data such as keys, PCR values, seeds, and other sensitive information. As the foundational data of vTPM is stored
+within the NVRAM file, safeguarding its confidentiality and
+integrity is essential for the overall security of vTPM. Each
+time a vTPM command is executed, the corresponding state
+information is updated in the NVRAM, necessitating secure
+storage and protection mechanisms.
+To secure the NVRAM file in the absence of built-in secure
+storage mechanisms within the CVM, an encrypted file system can be employed. Specifically, the entire virtual machine
+disk can be encrypted using dm-crypt and LUKS during VM
+launch. To facilitate this, dm-crypt support is integrated into
+the QEMU, ensuring the encrypted dm-crypt file system is
+created and mounted upon boot. The dm-crypt encryption
+keys are derived and protected by the hardware TPM, and
+the keys are unsealed during the VM boot process based on a
+launch measurement. This mechanism ensures that the keys
+are only accessible within the context of the specific VM.
+In this solution, the encrypted file system enforces access control through encryption keys, securely generated and
+stored by the hardware TPM, with no direct access by the
+hypervisor. Upon VM boot, the decryption key is retrieved
+via TPM unsealing and injected into the dm-crypt module to
+unlock the file system. This binding of the key to the VM’s
+launch measurements ensures that only VMs meeting the
+specified criteria can access the file system, providing robust
+confidentiality for persistent NVRAM.
+For the integrity of NVRAM, only specific confidential
+
+virtual machines are allowed to modify the NVRAM stored in
+the encrypted file system. However, attacks such as physical
+disk replacement are not considered within the scope of this
+solution.
+(2) Storage Protection
+After solving the issue of integrating the CTPM, the next
+consideration is what content to save to NVRAM for persistent storage.
+The TPM key storage protection system uses a digital envelope to ensure the confidentiality, integrity, and correspondence of keys. The primary key protects subordinate keys
+with a symmetric key, and an HMAC key ensures integrity.
+However, this approach lacks protection for third-level keys,
+as subordinate keys are only secured in relation to their parent
+key. When the seed is changed, the second- and third-level
+keys derived from the original seed remain valid, posing a
+potential security risk.
+To enable user control over the trust system and enhance
+random number seed quality, a random number manager is
+integrated within the cTPM. This manager generates highquality seeds using a hardware noise source and user-defined
+parameters, ensuring seed randomness and unpredictability.
+Additionally, it supports dynamic adjustment of the random
+number generation strategy across key levels, addressing the
+key management requirements of different CVMs while providing robust security guarantees.
+During TPM initialization, seed values for the four platforms (Confidential, Endorsement, Storage, and Platform Hierarchical) are generated and stored in NV with an associated
+version number or timestamp. Whenever the seed is updated,
+the version number is incremented or the timestamp is updated to ensure that each key chain can recognize the seed
+update. Each derived key blob needs to store an associated
+version number or timestamp. The validity of a key object
+depends not only on the parent key but also on comparing it
+with the current seed version. If the key blob’s version number
+does not match the current seed version, the system will reject
+access to that key.
+In the CC hierarchical, the seed value and timestamp are
+used by the random number manager to derive child key
+seeds, which are stored in NV. Critical key contexts, metadata
+(e.g., usage permissions, expiration), and sensitive information, such as user-defined policies, authorization data, and
+key usage counters, must also be saved to NVRAM. Policies
+govern key usage frequency and permissions, while authorization data controls access to keys, preventing misuse. The key
+usage counter helps track usage, mitigating risks of leakage or
+reuse. Additionally, system state and fault recovery information, including access control policies and the health status of
+key components, must be saved to ensure quick recovery from
+system abnormalities. These measures enhance key security,
+fine-grained control, and system recoverability, bolstering the
+overall TPM system’s reliability and security.
+(3) Key Provisioning
+10
+
+attestations.
+The composite attestation method combines the advantages
+of TEE and TPM, creating a composite trust system that integrates both static and dynamic trust chains, as shown in Figure
+7. The RoT of TEE and TPM are provided by the Owner CA,
+with TEE initialized using the PEK, while TPM establishes
+initial trust through the AIK and EK. Ultimately, a composite
+attestation report is generated by combining the measurement
+values of both TEE and TPM. The diagram summarizes the
+process of our composite attestation protocol, which consists
+of two stages: Initialization and Attestation.
+(1) Initialization phase
+The TEE generates a unique VCEK during initialization,
+derived from the ASP and microcode version. The VCEK is
+signed by the ASK, which is in turn signed by the AMD ARK,
+forming the root of the certificate chain. The OCA verifies
+the certificate chain’s legitimacy and generates the CertVCEK ,
+which is securely sent to the TEE.
+Similarly, during TPM initialization, the seed key EPSeed
+is generated, and the TPM_Manufacture(EPSeed) function is
+executed locally to initialize the EK. The EK is then used to securely generate the attestation key AIK. The RegistrarAIK
+function interacts with the OCA to securely obtain the AIK
+certificate CertAIK . The AIK public key (AIK pub ) and the AIK
+certificate (CertAIK ) are then sent to the verifier, who can
+verify the authenticity of the AIK using the certificate.
+The RegistrarAIK process is as follows:
+TPM first sends AIK pub , EK pub , and EKcert to the
+OCA. After verifying the authenticity of EK pub ,
+OCA randomly generates a nonce n and executes
+MakeCredential(n, H(AIK pub ), EK pub ), to create a challenge that can only be unsealed when both AIK and
+EK are present in the TPM, then sends the challenge m to the TPM. In response, TPM executes
+ActivateCredential(m, H(AIK pub ), EK), to
+unseal the
+challenge, obtaining n′ , and sends it back to the OCA. OCA
+then verifies whether n matches n′ , and if they are equal,
+signs AIK pub and sends the signed certificate CertAIK to the
+TPM. Finally, TEE signs the PEK, and sends the certificate
+CertT EE and the public key PEK pub to the verifier.
+(2) Attestation phase
+Attestation provides two optional protocols: Attestationtee-tpm demonstrates the process of embedding the SEV report into the TPM Quote, while Attestation-tpm-tee illustrates
+the process of embedding the TPM Quote into the SEV report.
+Attestation-TEE-TPM Protocol
+1. The verifier initiates the attestation process by sending an
+AttestationRequest to the TPM. This request include optional parameters such as selected PCR values, which specify
+the state of the system components to be attested.
+2. Upon receiving the request, the TPM sends a
+GuestReportRequest to the TEE, which responds with a
+measurement report (TEE_Report) containing the TEE’s
+launch measurement. This report is signed using the VCEK,
+
+Figure 6: TEE and TPM Independent Attestation of Existence
+Attacks
+Once configured, the cTPM provides key provisioning for
+the CVM through an encrypted session, establishing a trusted
+channel for secure key transmission. Access to the keys is
+strictly controlled, ensuring only authorized CVMs can use
+them, thereby protecting data confidentiality and integrity.
+When a CVM uses an peripherals GPU, the cTPM generates an attestation report containing measurements of the
+GPU’s hardware, driver version, and software integrity. The
+cTPM records these measurements in its PCR to prevent tampering. The attestation report is signed by the cTPM to ensure
+its integrity and authenticity. The CVM verifies the report
+by validating the signature and confirming its trusted source.
+If the verification is successful, the CVM can securely utilize the external GPU, ensuring a trusted and secure runtime
+environment for confidential computing.
+
+5.3
+
+Composite Attestation
+
+To unify multiple different RoT, we have built a collaborative attestation service framework combining TEE and TPM.
+This framework provides unified attestation services and verification by offering a unified trusted attestation token and
+protected platform secret information. It addresses the challenge of unified attestation and verification for heterogeneous
+TEE platforms, TPM nodes, and composite nodes such as
+SGX+TPM/SEV+TPM. This framework lays the trust foundation for confidential interconnection between large-scale
+confidential computing cluster nodes and facilitates the secure
+sharing of confidential data.
+For the collaboration between TEE and TPM, we propose a
+composite attestation protocol between TEE and TPM. When
+TEE and TPM provide independent attestations for the same
+node, attackers may spoof the ID of the CVM to launch attacks or perform report concatenation attacks, as shown in
+Figure 6. Additionally, independent attestations require two
+separate data copies, context switches, kernel calls, signatures,
+and report returns, which means two interactions between the
+agent and the hardware. In contrast, with the composite attestation, only one agent call is needed, with the kernel completing
+the composite and returning a unified attestation report, resulting in much higher efficiency compared to independent
+11
+
+Figure 7: Composite Attestation Protocol
+ensuring the authenticity of the report.
+3. The TPM then performs a TPM_Quote, which measures
+the current runtime environment, including the state of the
+TPM itself and the platform configuration. The TPM_Report
+is generated and includes the TEE_Report as part of the measurement to provide an integrated view of both the TPM and
+TEE states.
+4. The verifier, acting as the Attestation Service (AS), receives the TPM_Report and validates its authenticity. The
+AS verifies the integrity of the TPM_Report using the TPM’s
+public keys and checks that the TEE_Report is signed by the
+VCEK. Once validated, the AS generates a validation token,
+confirming the trustworthiness of the reported environment.
+Attestation-TEE-TPM Protocol
+1. The verifier initiates the attestation process by sending an
+AttestationRequest to the TEE. This request may include
+optional parameters such as selected PCR values, allowing
+the verifier to request specific platform measurements.
+2. In response, the TEE forwards a TPMQuoteRequest to
+the TPM. This request may include PCR selection values
+that determine which measurements should be included in
+the quote. The TPM generates a Quote, which includes a
+measurement of the TPM’s state and the current platform
+configuration.
+3. The TEE measures the current runtime environment,
+which includes both the TEE state and any other relevant
+system components. It then composite the TPM’s Quote into
+the generated TEE_Report, ensuring that both the TEE and
+TPM measurements are presented together.
+4. The AS validates the TEE_Report by checking the au-
+
+Figure 8: Token Example
+thenticity and integrity of the report. This includes verifying
+the signature and ensuring that the Quote was issued by a
+TPM. Once validated, the AS generates a validation token
+that confirms the trustworthiness of the platform and its associated components.
+Upon successful attestation, the AS issues a unified attestation token in JWT format, as illustrated in Figure 8. The
+token comprises three parts. token_header: Encodes metadata
+such as validity period, certificate details, and token format
+to prevent reuse of expired tokens. token_payload: Contains
+a detailed attestation report, compositing the results of both
+TEE and TPM attestations, along with essential platform information. token_signature: Signed by the AS to ensure token
+integrity, serving as a credential for trusted nodes to authenticate and authorize subsequent requests. The token binds the
+composite attestation report with contextual data, including
+timestamps and attestation type, effectively mitigating risks
+of forgery and concatenation attacks in composite attestation
+scenarios.
+12
+
+For the CTPM, in passthrough mode, the hardware TPM
+generates the CC hierarchy seed during initialization. When
+the CVM starts, the SPDM protocol facilitates device authentication and key negotiation to establish a trusted channel.
+This ensures encrypted data transmission over the bus, utilizing the kernel TLS layer to guard against eavesdropping and
+tampering. SPDM employs mutual authentication, message
+integrity checks, random numbers, and counters to prevent
+man-in-the-middle and replay attacks. These mechanisms
+ensure only legitimate hosts and virtual machines communicate securely, safeguarding data integrity and confidentiality
+during transmission.
+Shared memory in the CVM is dynamically managed via
+virtIO devices to meet varying memory demands. Physicallayer encryption and integrity protection secure shared memory, preventing unauthorized access and tampering even in the
+event of bus attacks. Dynamic memory resizing minimizes the
+exposed memory range, reducing the attack surface. Furthermore, encrypting memory during allocation and deallocation
+ensures data remains secure when transferred between devices, strengthening defenses against bus-level attacks.
+As a result, in our system, attempts by attackers to perform
+tampering or man-in-the-middle attacks via the bus will not
+lead to the leakage of the system’s confidential information.
+(2) Privilege-level attacks:
+When attackers gain administrator privileges, they can access system resources with high-level permissions, posing a
+severe threat to confidential virtual machines.
+Attackers may replace CVMs images with backdoored
+versions or roll back firmware to exploit vulnerabilities. To
+mitigate these threats, our system employs a three-phase measurement process that includes comprehensive launch measurements, such as image hashes and firmware versions. During image loading and updates, public key-based signature
+verification ensures only trusted images are executed, thwarting backdoor attacks. Unsigned or tampered images fail verification, and rollback detection mechanisms trigger alerts,
+preventing the CVM from running in an unsafe environment.
+Encryption keys are securely generated and managed by the
+cTPM, ensuring that even if the image is replaced, attackers
+cannot access critical data. If tampering is detected, session
+keys are discarded, and new ones are generated, nullifying
+potential misuse of stolen keys.
+In pass-through mode, the CTPM establishes an end-to-end
+encrypted connection with the physical TPM, ensuring that
+even host-level attackers cannot access or compromise the
+encryption channel. Secure key storage within the physical
+TPM prevents decryption of transmitted data. In vTPM mode,
+sensitive data is stored in an encrypted file system, with keys
+exclusively managed within the cTPM. This design prevents
+attackers with administrative privileges from accessing or
+decrypting confidential data, even if they gain file system
+access. The cTPM’s isolated key management mechanism
+ensures keys remain inaccessible to the hypervisor and other
+
+Figure 9: Modifications to the TPM2 structure to support
+composite attestation
+5.3.1
+
+Interface design
+
+In order to implement the composite attestation protocol
+described in the previous section, we need to modify the
+relevant structures of the TPM and TEE, shown as in Figure
+9.
+Taking TPM as the Master Report Root as an example,
+we extended the TPMS_QUOTE_INFO interface and defined it as TPMS_CCQUOTE_INFO. On top of the original
+TPM2_Quote command, we defined an extended command
+called TPM2_CCQuote.
+To integrate the TEE report into the TPM, we added
+a new parameter teeReport to the TPMS_QUOTE_INFO
+structure, as illustrated. Its structure is defined as
+TPM2B_TEE_REPORT, which, like other TPM2B structures, is a variable-length array with a maximum size of
+MAX_TEE_REPORT_SIZE. When the size field is set to
+0, it indicates that the quote does not include the TEE report.
+The new interface, TPM2_CCQuote, is used to initiate composite attestation, taking the TEE attestation report as UserData(TPM2B_DATA) input. Through this new
+TPM2_CCQuote interface, the attestation response package
+generates a final composite report, as represented below:
+Totalreport =T PM2_CCQuote<AIK> (PCRSel,
+nonce, T EE_Report)
+
+(1)
+
+To integrate the TPM report into the TEE report, corresponding support from the TEE module is required. For instance, in AMD SEV, the TPM quote report can be incorporated into the SEV report by using it as guest-provided data
+or storing it in the Reserved section.
+
+6
+
+Security Analysis
+
+Conventional physical TPMs operate independently of the
+CPU, executing security tasks in isolation. Our approach enhances security by integrating TEE and TPM into a collaborative trust system. In this section, we will analyze the security
+of our solution. Our solution does not consider side channel attacks against the platform. Based on the threat model,
+attacker behavior is classified into four categories.
+(1) Physical attacks on the bus
+CVM employs memory encryption technology to protect
+memory contents at the hardware level. An independent security processor manages encryption, ensuring that even if
+attackers gain direct access to the memory bus, they cannot
+decrypt the data.
+13
+
+VMs, effectively mitigating risks of key leaks from privilege
+escalation.
+Strict isolation between the CVM hosting the cTPM and
+the host machine prevents privileged operations from accessing or tampering with the cTPM’s data and functionality. This
+virtualization-based isolation mitigates privileged attacks, ensuring that even host-level attackers cannot compromise the
+cTPM.
+By combining virtualization isolation, secure key management, and end-to-end encryption, the system safeguards internal data and encryption keys. These measures effectively
+prevent attackers with elevated privileges from stealing or
+tampering with confidential information, ensuring robust protection against privilege escalation attacks.
+(3) Workload-based attacks
+Attackers may exploit software vulnerabilities within a
+CVM to control workloads or target the guest kernel, attempting to access cTPM data. To counter such threats, the CVM
+utilizes the third phase of the three-phase measurement process, enabling dual attestation of workloads. This mechanism
+promptly detects anomalies in guest kernels or applications,
+triggering isolation or key resets to safeguard sensitive data.
+The cTPM employs a hierarchical key management mechanism with logically separated key structures. Each CVM
+maintains an independent RTS, ensuring that keys from one
+CVM cannot be accessed by another. Even if attackers control
+a workload, the isolated key hierarchy prevents escalation to
+root keys, maintaining the security of other layers and CVMs.
+Through dual attestation and isolated key management, the
+system ensures that attackers controlling specific workloads
+cannot compromise overall CVM security or propagate key
+leaks across hierarchical layers.
+(4) Attacks on the composite attestation protocol
+The composite attestation framework leverages the RoT
+of TEE and TPM to ensure hardware-level integrity and authenticity, effectively mitigating attacks such as CVM impersonation and report splicing. Certification chains for PEK
+and AIK are validated via the Owner CA, establishing trust
+and ensuring the correlation and uniqueness of trust roots.
+Attestation reports combine measurements from TEE and
+TPM, preventing forgery or substitution of individual reports,
+thereby ensuring a malicious VM cannot falsify a trusted
+environment. In addition, the TEE and TPM report are compounded, so reports from both components can be obtained
+in one execution, thus avoiding malicious splicing by attackers. A JWT-format attestation token, signed by the attestation
+service, binds details such as validity period, certificate information, and hardware version. This ensures token validity
+and tamper resistance, preventing the reuse of expired tokens.
+These mechanisms collectively defend against forgery and
+splicing attacks, maintaining the authenticity of attestation
+results in confidential computing environments.
+Regarding the attacks against the protocol, we discuss the
+proof of Confidential Computing Composite Attestation Pro-
+
+tocol using the Protocol Composition Logic (PCL) [18]. We
+first model the Initialization and Attestation of the two subprotocols of the protocol, and analyze the invariants and security properties of the two sub-protocols, and finally prove the
+security properties.
+1. Protocol modeling
+Within the overall scheme, there exist four participating
+entities, namely Owner CA, TEE, TPM, and Verifier, denoted
+as Ĉ, Ê, P̂, and V̂ respectively. The modeling details of the
+two sub-protocols are presented in Appendix A.
+2. Invariants and security properties
+• Protocol invariants
+The invariant Γinit describes that if the entity X̂ is capable
+of decrypting an encrypted message, then the entity must
+possess the corresponding decryption key.
+Γinit ≡ Honest(X̂) ∧ Decrypt(X, ENCK (m))
+
+(2)
+⊃ Has(X̂, K −1 )
+Analogous to Γinit , the invariant Γattest,1 stipulates that in
+the event that the entity X̂ is competent in decrypting an
+encrypted message, it necessarily holds the corresponding
+decryption key.
+Γattest,1 ≡ Honest(X̂) ∧ Decrypt(X, ENCK (msg))
+
+(3)
+⊃ Has(X̂, K −1 )
+The invariant Γattest,2 postulates that in the circumstance
+where the entity X̂ engenders the Total_Report, it implies
+that the entity has received the attestation request antecedent
+to the generation of the report.
+Γattest,2 ≡ Honest(X̂)
+∧ Sign(X, SIGK −1 (Total_Report))
+X
+
+⊃ Receive(X, request)
+
+(4)
+
+> Sign(X, SIGK −1 (Total_Report))
+X
+
+• Protocol security properties
+In the initialization protocol, the outcome of the protocol
+is the generation of certificates for TEE and TPM. The security objective of the initialization protocol is formalized in
+the form of the correctness of certificate issuance. The subsequent part presents the assurance provided by Owner CA
+with respect to the correctness of certificate issuance.
+Theorem 1 Correctness of certificate issuance. Under the
+assumption of the Owner CA identity, the initialization protocol ensures the accuracy of the issuance of platform identity
+certificates, formally, init ⊢ [TEEinit ]C φinit,correct .
+φinit,correct ≡ Honest(X̂) ∧ Has(X̂, certC )
+−1
+⊃ Has(X̂, KEK
+) ∧ Send(Ĉ, msg)
+
+(5)
+
+∧ Contains(msg, cert)
+Theorem 1 reveals that following the execution of the initialization protocol, provided that an honest entity acquires
+an identity certificate, it implies that the certificate is issued
+by Owner CA and the entity is in possession of a legitimate
+14
+
+EK. In the theorem, KEK is a generalized term, which can be
+either the EK of TPM or the VCEK of TEE.
+Theorem 2 Correctness of token issuance. In the case
+of assuming the identity of Verifier, Attestation protocol
+guarantees the correctness of token issuance upon the successful completion of remote attestation, formally, attest ⊢
+[Verifierattest ]V φattest,correct .
+φattest,correct ≡ Honest(X̂) ∧ Has(X̂,token)
+⊃ Has(X̂, KXV ) ∧ Send(V̂ , msg)
+
+(6)
+
+∧ Contains(msg,token)
+Theorem 2 indicates that after the completion of the Attestation protocol, if the verified entity holds a token, it implies
+that the token is issued by the Verifier and the entity is in
+possession of a legitimate symmetric encryption key KXV for
+the secure channel with the Verifier.
+Theorem 3 Integrity of token content. In the role of Verifier, Attestation protocol secures the integrity of issued token content upon successful remote attestation, formally,
+attest ⊢ [Verifierattest ]V φattest,integrality .
+
+(a) Basic Cryptographic
+
+φattest,integrality ≡ Honest(X̂)
+∧ Sign(X, SIGK −1 (Total_Report))
+X
+
+∧ Has(X̂,token)
+⊃ (Send(V, V̂ , X̂, request)
+
+(7)
+
+> Sign(X, SIGAIK −1 (Total_Report)
+
+(b) Comparison of TPM
+
+∧ Sign(V, SIGK −1 (token))
+
+Figure 10: Basic Cryptographic Performance
+Core(TM) i9-9980HK 2.40GHz processor, 32GB of memory, and a 2TB hard disk, with the host kernel being version
+5.15.0-105-generic.
+We implemented the Confidential TPM and the composite
+attestation between TEE and TPM based on the Microsoft
+TPM simulator ms-tpm-20-ref. To implement the encrypted
+file system and the corresponding key derivation functionality,
+we deleted 10 lines of code and introduced 107 lines of new
+code. To integrate the TEE report into the TPM attestation,
+we added 271 lines of Rust code and 61 lines of C code.
+
+V
+
+Theorem 3 posits that upon the completion of the Attestation protocol, if the verified entity X generates a attestation
+report, it implies that X has received an attestation request
+from Verifier before generating the report, and the final token
+is signed and issued by the Verifier.
+The proof of the theorem is presented in detail in Appendix
+A. Given the similarity in the proof procedures of Theorem
+1 and Theorem 2, we primarily focus on demonstrating the
+security properties of the Attestation protocol. The proof
+procedures of Theorem 2 and Theorem 3 are illustrated in
+Appendix A, and the proof of Theorem 1 can be accomplished
+by referring to that of Theorem 2. The proof in Appendix A is
+based on the example of Attestation-tpm-tee, with Attestationtee-tpm being analogous.
+
+7
+
+7.1
+
+Basic Cryptographic Performance
+
+We first tested our cryptographic library and compared the
+key derivation performance between our developed library
+(kms_crypto), and OpenSSL, using version 1.1.1f. Each result
+was averaged over 10 executions. The results, as shown in
+the Figure 10a below, indicate that our cryptographic library,
+kms_crypto, outperforms OpenSSL in all tested items. Specifically, our library has effectively optimized the key derivation
+algorithm, making key generation 58.2% faster than OpenSSL.
+Through these improvements, kms_crypto provides faster performance in key generation operations, better meeting the
+demands for high performance and high security.
+We tested the performance of various TPMs, including
+simulators, USB, and PCIe physical chips, as well as CTPM.
+
+Implementation and Evaluation
+
+In this section, we focus on the main overheads of CCxTrust in various scenarios. Our experimental setup consists
+of an SNP-enabled server, a TPM chip, and a mobile workstation. The SNP server is equipped with an AMD EPYC
+7763 64-core processor, 128GB of memory, and 4TB of disk
+storage. The host kernel uses version 6.12.0-rc4-snp-host5a170ce1a082, while the guest kernel is the same as the
+host kernel. The TPM 2.0 chip used is the GuoMin Technology Z32H330TC. The mobile workstation uses an Intel(R)
+15
+
+Table 1: Average Attestation Operation Latency (ms).
+
+Attestation
+Verification
+
+TEE
+10
+7
+
+TPM
+15
+11
+
+TEE+TPM
+19
+16
+(b) Handling concurrent requests
+(a) Concurrency performance
+
+from different nodes
+
+Figure 12: Attested concurrency capability: Among them, the
+"concurrent attestation time" refers to the total time from the
+initiation of the challenge to the completion of the attestation and the receipt of the validation success message; the
+"concurrent attestation processing time" refers to the time the
+attestation server takes to process the attestation evidence and
+generate the token; the "Token issuance time" refers to the
+time required for the attestation server to issue the token.
+attestation reports were collected on a unified system using a
+standard kernel. As expected, the composite attestation protocol time is 24% faster than the total time of individual
+attestations, demonstrating much higher attestation efficiency
+compared to separate TEE and TPM independent attestations.
+To test the concurrency capability of the attestation server,
+we simulated concurrent tests with different numbers of TPM
+nodes to evaluate and verify the server’s performance and
+stability in a concurrent environment. Each test group was
+executed 10 times, and the average time was taken to ensure
+the reliability of the results. The test results are shown in the
+Figure 12a below. The results show that the attestation server
+supports concurrent attestations for confidential computing
+clusters with over 10,000 nodes, with a concurrent attestation
+performance of no more than 1.2 seconds per request, token
+generation time of no more than 100 microseconds, and an
+average verification time of less than 0.3 milliseconds.
+We evaluated the performance of concurrent requests from
+TPM and SEV nodes, focusing on attestation processing time
+and concurrent attestation time. Attestation processing time
+refers to the time taken by the server to process attestation
+evidence, verify its validity, and generate the attestation report.
+Concurrent attestation time represents the total time from the
+initiation of the attestation challenge to receiving the response.
+To improve clarity, we logarithmically transformed the concurrent attestation time, i.e., LOG(time/ms). Results indicated
+that the attestation report verification for SEV nodes took
+longer than for TPM nodes, with SEV processing around 1
+ms and TPM around 300 ms. For concurrent attestation time,
+TPM showed a one-order-of-magnitude longer processing
+time compared to SEV, due to TPM evidence generation by a
+physical chip and SEV by the CPU processor. Despite these
+differences, both TPM and SEV nodes’ processing times remained within acceptable limits. As the number of nodes
+increased, the performance of the attestation server remained
+stable, effectively supporting concurrent attestation in largescale cluster environments.
+
+Figure 11: Hash value of the file during the three-stage measurement
+The Microsoft Reference Implementation for TPM 2.0 was
+used for the simulator, with TSS based on Intel tpm2-tss 3.2.0.
+Asymmetric cryptography (ECC) and SHA256 hash were
+employed, using a 32-byte file size as the baseline. For better
+visualization, we logarithmically processed the TPM processing times (i.e., LOG(time/ms)). Results showed that generating AIK and importing AK for nodes took considerable
+time, while signature and quote operations were within an
+acceptable range, and verification and unsealing times were
+relatively quick. The simulator, operating at the software level
+without hardware restrictions, exhibited better performance
+with shorter operation times. USB-based TPMs performed
+worse due to bandwidth limitations and higher communication latency. In contrast, PCIe-based TPMs outperformed
+USB chips due to PCIe’s higher bandwidth and lower latency,
+making them more suitable for high-performance computing.
+CVM showed a 10-20% performance decrease due to memory
+encryption overhead. The CTPM solution, when integrated
+with the hardware TPM chip, incurs a performance overhead
+of 16.47% compared to the fully virtualized vTPM, which is
+within an acceptable range.
+
+7.2
+
+Attestation Performance
+
+We establish a baseline for the attestation operation performance using AMD SEV-SNP and vTPM. We compare it with
+the attestation time of the composite protocol, as shown in
+the table 1. Based on the RTM, we implement a three-stage
+measurement for the confidential computing platform, and the
+measurement results are shown in the Figure 11. Additionally,
+16
+
+(a) Key negotiation performance
+
+(b) Transfer data performance
+
+Figure 14: TEE&TPM Key Negotiation Performance
+increases linearly with the size of the data file. In terms of performance for operating on a 10MB data file, AES 128 CBC
+encryption and decryption have relatively low throughput, at
+13.11 MBps, especially during the encryption process. In contrast, HMAC operations have an extremely high throughput
+of 615.81 MBps for the same data size.
+
+Figure 13: TEE&TPM Building Secure Channel Performance
+
+7.3
+
+Application Performance
+
+Next, we studied the latency when the TPM chip establishes a connection with the confidential TPM. As shown
+in the Figure 13, we first compared the time differences between the native SPDM protocol in the SNP, based on several average results. We then compared the modified SPDM
+and the native SPDM by modifying the GET_CERTIFICATE
+to retrieve the full certificate chain, GET_MEASUREMENT to
+obtain the attestation report, using the certificate chain to
+validate the attestation report, and checking whether the measurement values in the attestation report are as expected. The
+experimental results show that the time for the modified stage
+increased, but the overall connection establishment time increased by 12.7%. By enhancing the GET_CERTIFICATE and
+GET_MEASUREMENT processes, the security of the authentication process was significantly improved. Although the time
+for certain stages slightly increased, the overall performance
+remains at an acceptable level, ensuring a balance between security and efficiency when establishing connections between
+devices.
+Next, we establish a trusted channel between the TEE and
+TPM for data transmission through key negotiation. In the
+key negotiation process, both parties (TEE and TPM) use
+two pairs of static keys and two pairs of ephemeral keys
+for the key exchange. This protocol can be completed using the command TPM2_ZGen_2Phase(), in conjunction with
+the command TPM2_EC_Ephemeral(). TPM uses the command TPM2_EC_Ephemeral() to generate ephemeral Key
+and stores them in TPM memory, returning a counter value
+c to the caller. In subsequent uses, the caller inputs c, and
+TPM can recalculate the corresponding key. After averaging
+the time for the above process, the test results are shown in
+the Figure 14a below. The total time for key negotiation is
+less than 1.2 ms, with the two-phase key negotiation taking
+the longest time, accounting for 41% of the total time. The
+performance of data file encryption and transmission after
+establishing the trusted channel is shown in the following Figure 14b. As can be seen, the encrypted data transmission time
+
+8
+
+Related work
+
+Secure Virtualization Systems. To build secure virtualization systems, many research efforts and commercial products have been proposed. For example, AMD SEV [1], Intel
+TDX [27], and ARM CCA [4] have all implemented the CVM
+abstraction through hardware extensions. The design of CCxTrust is highly versatile, supporting not only AMD SEV-SNP
+but also extending to other CVM systems.
+Confidential TPM. TPM is used in TEE for security
+enhancement, and various methods have been proposed in
+academia. CoCoTPM [40] introduces a unified architecture
+for authenticating confidential virtual machines, where the
+hypervisor starts a confidential virtual machine that acts as
+a vTPM manager and handles all vTPM instances. SvTPM
+relies on the isolation environment of SGX to run vTPM
+and uses KVM to provide protection for NVRAM. The Confidential TPM in CCxTrust offers unified management of
+TPMs. Unlike CoCoTPM, which manages vTPM instances, it
+manages the usage and state of TPMs. Additionally, our confidential virtual machine not only supports vTPM instances
+but also provides trusted access to physical TPMs, offering
+stronger security features. To extend trust to devices and eliminate the overhead of bounce buffers, both academia and industry are working on enabling direct device assignment for
+CVMs on top of the PCI-SIG specified TDISP [39]. Intel [26]
+and AMD [2] have proposed solutions to support trusted I/O,
+which can also be applied to confidential TPMs in the future
+using trusted I/O methods.
+Remote attestation. SVSM, in order to remove the cloud
+provider from the trust domain, achieves remote attestation
+of the confidential virtual machine using TEE hardware and
+a temporary vTPM, allowing cloud users or third parties to
+verify the state of the confidential virtual machine. However,
+this approach only addresses part of the trust and application
+requirements. First, at its core, it still validates the integrity
+and confidentiality of the workload step by step. The TEE
+17
+
+References
+
+hardware platform ensures that the SVSM-vTPM has not
+been tampered with, and then the vTPM ensures the integrity
+and confidentiality of the data and applications running in the
+confidential virtual machine. This method is vulnerable to the
+concatenation attack mentioned earlier. In contrast, we solve
+this issue by using composite attestation, where the two attestations are combined from the bottom up, and TEE and TPM
+are proven as a unified whole. Second, the SVSM-vTPM does
+not establish a new trust system. The trust of the vTPM is still
+tightly bound to the TEE hardware vendor, and the user can
+only verify the running environment. We have built a trust
+system that is controlled by the user, completely decoupling
+the single trust system and fundamentally addressing the trust
+challenge between cloud providers and users in multi-tenant
+environments. Third, SVSM-vTPM uses a simple, temporary
+vTPM without addressing the persistence issue. Since it relies
+on volatile storage, there is no need to consider secret leakage
+attacks. However, this approach burdens the verifier, as they
+must update the validity of the verification keys each time. In
+our solution, by using a confidential TPM, we support various forms of TPM functionality, addressing communication
+between the confidential virtual machine and the confidential
+TPM, as well as TPM state management, ensuring the security
+of the TPM throughout its entire lifecycle.
+
+9
+
+[1] AMD. Amd sev-snp: Strengthening vm isolation with
+integrity protection and more. https://www.amd.com/
+en/developer/sev.html, 1 2020.
+[2] AMD. Sev-tio: Trusted i/o for secure encrypted virtualization. https://www.amd.com/system/files/
+documents/sev-tio-whitepaper.pdf, 3 2023.
+[3] ARM. Learn the architecture - trustzone for aarch64.
+Online: ARM Documentation, 2021.
+[4] ARM.
+Arm confidential compute architecture
+(cca).
+https://www.arm.
+com/architecture/security-features/
+arm-confidential-compute-architecture,
+6
+2023.
+[5] AWS. Aws nitro system. https://aws.amazon.com/
+ec2/nitro/, 2 2024.
+[6] Azure.
+Azure
+confidential
+vms.
+https://learn.microsoft.com/en-us/
+azure/confidential-computing/
+confidential-vm-overview, 10 2024.
+Online;
+accessed Nov 29, 2024.
+Birkholz, D.
+Thaler, M.
+Richardson,
+[7] H.
+N. Smith, and W. Pan.
+Remote attestation
+procedures architecture.
+Available online at
+https://datatracker.ietf.org/doc/pdf/
+draft-ietf-rats-architecture-22,
+September 2022.
+
+Conclusion
+
+To address the challenges of data security and trust gaps
+in cloud environments, this paper proposes CCxTrust, a confidential computing platform based on a collaborative trust
+root of TEE and TPM. CCxTrust constructs a collaborative
+trust system between TEE and TPM, independently measuring trust roots, coordinating report trust roots, and providing
+storage trust roots via TPM, thereby achieving mutual authentication, trusted channels, and key provisioning mechanisms
+between hardware trust roots. Additionally, by supporting
+multi-mode confidential TPMs and an efficient composite
+attestation protocol, CCxTrust enhances security while improving attestation efficiency. Prototype implementation results on AMD SEV-SNP show that CCxTrust significantly
+strengthens cloud data security with minimal performance
+overhead, eliminates trust gaps, and provides a more reliable
+trust foundation for confidential data sharing and multi-party
+collaboration. While our work is specific to AMD, similar
+methods can be used to build collaborative trust roots on other
+confidential virtual machines.
+
+[8] Robert Buhren, Christian Werling, and Jean-Pierre
+Seifert. Insecure until proven updated: analyzing amd
+sev’s remote attestation. In Proceedings of the 2019
+ACM SIGSAC Conference on Computer and Communications Security, pages 1087–1099, 2019.
+[9] Guoxing Chen and Yinqian Zhang. Mage: Mutual attestation for a group of enclaves without trusted third
+parties. In 31st USENIX Security Symposium (USENIX
+Security 22), pages 4095–4110. USENIX Association,
+2022.
+[10] Guoxing Chen, Yinqian Zhang, and Ten-Hwang Lai.
+Opera: Open remote attestation for intel’s secure enclaves. In Proceedings of the 2019 ACM SIGSAC Conference on Computer and Communications Security,
+pages 2317–2331. ACM SIGSAC, 2019.
+[11] Sanchuan Chen, Fangfei Liu, Zeyu Mi, Yinqian Zhang,
+Ruby B Lee, Haibo Chen, and XiaoFeng Wang. Leveraging hardware transactional memory for cache sidechannel defenses. In Proceedings of the 2018 on Asia
+Conference on Computer and Communications Security,
+pages 601–608, 2018.
+
+Acknowledgements
+Supported by National Key R&D Program of China
+(2022YFB4501500, 2022YFB4501501).
+18
+
+[12] Alibaba Cloud. Alibaba cloud security white paper.
+https://alicloud-common.oss-ap-southeast-1.
+aliyuncs.com/2021/Whitepaper/Alibaba%
+20Cloud%20Security%20Whitepaper%20-%
+20International%20Edition%20V2.1%20%282021%
+29.pdf, 2 2021.
+
+[23] Information security technology—functionality and interface specification of cryptographic support platform
+for trusted computing. Standard, Standardization Administration of the People’s Republic of China, China,
+April 2022.
+[24] Guerney DH Hunt, Ramachandra Pai, Michael V Le,
+Hani Jamjoom, Sukadev Bhattiprolu, Rick Boivie, Laurent Dufour, Brad Frey, Mohit Kapur, Kenneth A Goldman, et al. Confidential computing for openpower. In
+Proceedings of the Sixteenth European Conference on
+Computer Systems, pages 294–310, 2021.
+
+[13] Google
+Cloud.
+Confidential computing
+overview.
+https://cloud.google.
+com/confidential-computing/docs/
+confidential-computing-overview, 2024. Online;
+accessed Nov 29, 2024.
+[14] Google Cloud. Validating instances using cloud
+monitoring. https://cloud.google.com/compute/
+confidential-vm/docs/monitoring, 2024. Online;
+accessed Nov 29, 2024.
+[15] Confidential Computing Consortium.
+A technical analysis of confidential computing. Available
+online
+at
+https://confidentialcomputing.
+io/wp-content/uploads/sites/85/2021/03/
+CCC-Tech-Analysis-Confidential-Computing-V1.
+pdf, January 2021. v1.1.
+[16] Inclavare Containers. Rats-tls. Available online at
+https://github.com/inclavare-containers/
+rats-tls, 2021.
+
+[25] IBM.
+Ibm documentation – introducing
+ibm secure execution for linux.
+https:
+//www.ibm.com/docs/en/linux-on-systems?
+topic=virtualization-secure-execution,
+4
+2024.
+[26] Intel.
+Intel® tdx connect architecture specification.
+https://www.intel.com/content/
+www/us/en/content-details/773614/
+intel-tdx-connect-architecture-specification.
+html, 2023.
+[27] Intel.
+Intel® Trust Domain Extensions (Intel
+TDX).
+https://www.intel.com/content/
+www/us/en/developer/articles/technical/
+intel-trust-domain-extensions.html, 2 2023.
+
+[17] Victor Costan and Srinivas Devadas. Intel sgx explained.
+Cryptology ePrint Archive, 2016.
+
+[28] Intel. Intel enhanced privacy id (epid) security technology, n.d.
+
+[18] Anupam Datta, Ante Derek, John C Mitchell, and Arnab
+Roy. Protocol composition logic (pcl). Electronic Notes
+in Theoretical Computer Science, 172:311–358, 2007.
+
+[29] ISO/IEC 11889-1:2009 information technology-trusted
+platform module-part 1: Overview. Standard, Trusted
+Computing Group, May 2009.
+
+[19] FENG Dengguo, LIU Jingbin, QIN Yu, and FENG Wei.
+Trusted computing theory and technology in innovationdriven development. SCIENTIA SINICA Informationis,
+50(8):1127–1147, 2020.
+
+[30] ISO/IEC 11889-1:2015 information technology-trusted
+platform module-part 1: Architecture. Standard, Trusted
+Computing Group, March 2014.
+
+[20] Dengguo Feng, Yu Qin, Wei Feng, Wei Li, Ketong
+Shang, and Hongzhan Ma. Survey of research on confidential computing. IET Communications, 18(9):535–
+556, 2024.
+
+[31] Hans Niklas Jacob, Christian Werling, Robert Buhren,
+and Jean-Pierre Seifert. faultpm: Exposing amd ftpms’
+deepest secrets. In 2023 IEEE 8th European Symposium
+on Security and Privacy (EuroS&P), pages 1128–1142.
+IEEE, 2023.
+
+[21] Anna Galanou, Franz Gregor, Rüdiger Kapitza, and
+Christof Fetzer. Matee: Multimodal attestation for
+trusted execution environments. In Proceedings of the
+23rd ACM/IFIP International Middleware Conference,
+pages 121–134, 2022.
+
+[32] Liqun Chen Jose Moreira, Thanassis Giannetsos.
+Futuretpm reference architecture.
+Available online at https://cordis.europa.eu/project/id/
+779391/results, January 2018.
+
+[22] Information security technology—functionality and interface specification of cryptographic support platform
+for trusted computing. Standard, Standardization Administration of the People’s Republic of China, China,
+2013.
+
+[33] Dingji Li, Zeyu Mi, Chenhui Ji, Yifan Tan, Binyu Zang,
+Haibing Guan, and Haibo Chen. Bifrost: Analysis and
+optimization of network {I/O} tax in confidential virtual
+machines. In 2023 USENIX Annual Technical Conference (USENIX ATC 23), pages 1–15, 2023.
+19
+
+[34] Mengyuan Li, Luca Wilke, Jan Wichelmann, Thomas
+Eisenbarth, Radu Teodorescu, and Yinqian Zhang. A
+systematic look at ciphertext side channels on amd sevsnp. In 2022 IEEE Symposium on Security and Privacy
+(SP), pages 337–351. IEEE, 2022.
+
+[44] Haonan Sun, Rongyu He, Yong Zhang, Ruiyun Wang,
+Wai Hung Ip, and Kai Leung Yung. etpm: A trusted
+cloud platform enclave tpm scheme based on intel sgx
+technology. Sensors, 18(11):3807, 2018.
+[45] Juan Wang, Jie Wang, Chengyang Fan, Fei Yan, Yueqiang Cheng, Yinqian Zhang, Wenhui Zhang, Mengda
+Yang, and Hongxin Hu. Svtpm: Sgx-based virtual
+trusted platform modules for cloud computing. IEEE
+Transactions on Cloud Computing, 11(3):2936–2953,
+2023.
+
+[35] Microsoft.
+Microsoft azure attestation.
+https://learn.microsoft.com/en-us/azure/
+attestation/overview, 8 2024. Online; accessed
+Nov 29, 2024.
+[36] Masanori Misono, Dimitrios Stavrakakis, Nuno Santos,
+and Pramod Bhatotia. Confidential vms explained: An
+empirical analysis of amd sev-snp and intel tdx. Proc.
+ACM Meas. Anal. Comput. Syst., 8(3):42, dec 2024.
+
+[46] Wubing Wang, Mengyuan Li, Yinqian Zhang, and
+Zhiqiang Lin. Pwrleak: Exploiting power reporting
+interface for side-channel attacks on amd sev. In International Conference on Detection of Intrusions and
+Malware, and Vulnerability Assessment, pages 46–66.
+Springer, 2023.
+
+[37] Vikram Narayanan, Claudio Carvalho, Angelo Ruocco,
+Gheorghe Almási, James Bottomley, Mengmei Ye,
+Tobin Feldman-Fitzthum, Daniele Buono, Hubertus
+Franke, and Anton Burtsev. Remote attestation of confidential vms using ephemeral vtpms. In Proceedings of
+the 39th Annual Computer Security Applications Conference, pages 732–743, 2023.
+[38] NVIDIA.
+Nvidia confidential computing.
+Available online at https://www.
+nvidia.com/en-us/data-center/solutions/
+confidential-computing/, 2023.
+[39] PCI-SIG.
+Tee device interface security protocol (tdisp) specification.
+https://pcisig.com/
+tee-device-interface-security-protocol-tdisp,
+7 2022.
+[40] Joana Pecholt and Sascha Wessel. Cocotpm: Trusted
+platform modules for virtual machines in confidential
+computing environments. In Proceedings of the 38th Annual Computer Security Applications Conference, pages
+989–998, 2022.
+[41] Zhengwei Ren, Xueting Li, Li Deng, Yan Tong, Shiwei
+Xu, and Jinshan Tang. Ras2p: Remote attestation via
+self-measurement for sgx-based platforms. In 2022
+IEEE International Conference on Systems, Man, and
+Cybernetics (SMC), pages 2085–2092. IEEE, 2022.
+[42] Ravi Sahita, Vedvyas Shanbhogue, Andrew Bresticker,
+Atul Khare, Atish Patra, Samuel Ortiz, Dylan Reid, and
+Rajnesh Kanwal. Cove: Towards confidential computing on risc-v platforms. In Proceedings of the 20th
+ACM International Conference on Computing Frontiers,
+pages 315–321, 2023.
+[43] Vinnie Scarlata, Simon Johnson, James Beaney, and Piotr Zmijewski. Supporting third party attestation for
+intel® sgx with intel® data center attestation primitives.
+White paper, page 12, 2018.
+20
+
+A
+
+Appendix
+Owner CAinit ≡(Ê, P̂, V̂ , KEC , KPC , KCV , OCA)[
+
+Appendix A Supplementary Content for the Formal Analysis of the Confidential Computing Composite Attestation
+Protocol Based on PCL. The overall analysis process is detailed in the security analysis in the main text. Throughout the
+protocol, we assume that each participating entity has completed key negotiation pairwise, thereby obtaining a secure
+channel based on symmetric encryption.
+
+receive VCEKIn f o;
+VCEK pub := symdec VCEKIn f o, KEC ;
+certVCEK := sign VCEK pub , OCA;
+certVCEKIn f o := symenc certVCEK , KEC ;
+send Ĉ, Ê, certVCEKIn f o;
+certT EEIn f o :=
+
+In the Initialization protocol, with the initialization operation of the TEE as the starting point of the protocol, the
+four participating entities in the Initialization protocol are
+modeled one by one according to the protocol. Based on the
+PCL system, the modeling of the Initialization protocol is as
+follows:
+
+symenc (certVCEK ,VCEK pub ), KCV ;
+send Ĉ, V̂ , certT EEIn f o;
+receive P̂, Ĉ, keyIn f o;
+AIK pub , EK pub , certEK := symdec keyIn f o, KPC ;
+new nonce;
+challenge :=
+
+TEEinit ≡(Ĉ, KEC )[
+
+symenc (nonce, hash(AIK pub ), EK pub ), KPC ;
+
+new VCEK;
+
+send Ĉ, P̂, challenge;
+
+VCEKIn f o := symenc VCEK pub , KEC ;
+send Ê, Ĉ,VCEKIn f o;
+
+receive P̂, Ĉ, nonceIn f o;
+nonce′ := symdec nonceIn f o, KPC ;
+
+receive Ĉ, Ê, certVCEKIn f o;
+
+match nonce/nonce′ ;
+
+certVCEK := symdec certVCEKIn f o, KEC ;
+
+certAIK := sign AIK pub , OCA;
+
+]E (V ECK, certVCEK )
+
+certAIKIn f o := symenc certAIK , KPC ;
+send Ĉ, P̂, certAIKIn f o;
+]C ()
+
+TPMinit ≡(Ĉ, V̂ , KPC , KPV , certEK )[
+Verifierinit ≡(KCV , KPV )[
+
+new EPSeed;
+new EK, AIK;
+
+receive Ĉ, V̂ , certT EEIn f o;
+
+keyIn f o := symenc (AIK pub , EK pub , certEK ), KPC ;
+
+certVCEK ,VCEK pub := symdec certT EEIn f o, KCV ;
+
+send P̂, Ĉ, keyIn f o;
+
+verify certVCEK ,VCEK pub ;
+
+receive Ĉ, P̂, challenge;
+
+receive P̂, V̂ , keyCertIn f o;
+
+′
+
+AIK pub , certAIK := symdeckeyCertIn f o, KPV ;
+
+nonce := symdec challenge, KPC ;
+′
+
+nonceIn f o := symenc nonce , KPC ;
+
+verify certAIK , AIK pub ;
+
+send P̂, Ĉ, nonceIn f o;
+
+]V (VCEK pub , certVCEK , AIK pub , certAIK )
+
+receive Ĉ, P̂, certAIKIn f o;
+In the Attestation protocol, it is divided into two options according to the aggregation method of the totalReport. Therefore, we model the protocol flows of both aggregation methods. In the Attestation protocol, there are only three participating entities. The specific formal modeling is as follows:
+
+certAIK := symdec certAIKIn f o, KPC ;
+keyCertIn f o := symenc (AIK pub , certAIK ), KPV ;
+send P̂, V̂ , keyCertIn f o;
+]P (EK, AIK, certAIK )
+21
+
+Verifiertee−t pm ≡(Ê, KEV , KV )[
+
+Verifiert pm−tee ≡(P̂, KPV , KV )[
+new nonce, PCRsel ;
+
+new nonce, PCRsel ;
+
+request := symenc (nonce, PCEsel ), KPV ;
+
+request := symenc (nonce, PCRsel ), KEV ;
+
+send V̂ , P̂, request;
+
+send V̂ , Ê, request;
+
+receive P̂, V̂ ,totalEncReport;
+
+receive Ê, V̂ ,totalEncReport;
+
+totalReport := symdec totalEncReport, KPV ;
+
+totalReport := symdec totalEncReport, KEV ;
+
+verify totalReport, AIK pub ;
+
+verify totalReport,VCEK pub ;
+
+token := sign
+
+token := sign
+(type,totalReport, expireTime, policy), KV−1 ;
+
+(type,totalReport, expireTime, policy), KV−1 ;
+
+tokenIn f o := symenc token, KEV ;
+
+tokenIn f o := symenc token, KPV ;
+send V̂ , P̂,tokenIn f o;
+
+send V̂ , Ê,tokenIn f o;
+
+]V ()
+
+]V ()
+
+TEEtee−t pm ≡(V̂ , P̂, KPV , KEV )[
+
+TPMt pm−tee ≡(Ê, V̂ , KPV , KPE )[
+
+receive V̂ , Ê, request;
+
+receive V̂ , P̂, request;
+
+nonce, PCRsel := symdec request, KEV ;
+
+nonce, PCRsel := symdec request, KPV ;
+
+quoteRequest := symenc (nonce, PCRsel ), KPE ;
+
+reportRequest := symenc nonce, KPE ;
+
+send Ê, P̂, quoteRequest;
+
+send P̂, Ê, reportRequest;
+
+receive P̂, Ê, T PMEncReport;
+
+receive Ê, P̂, T EEEncReport;
+
+T PMReport := symdec T PMEncReport, KPE ;
+
+T EEReport := symdec T EEEncReport, KPE ;
+
+T EETCB := (OV MF,
+
+totalReport :=
+sign (PCRsel , nonce, T EEReport), AIK −1 ;
+
+GuestKernel, GuestInitrd, KernelCmdline);
+totalReport :=
+
+totalEncReport := symenc totalReport, KPV ;
+
+sign (T EETCB, T PMReport, nonce),VCEK −1 ;
+
+send P̂, V̂ ,totalEncReport;
+
+totalEncReport := symenc totalReport, KEV ;
+send Ê, V̂ ,totalEncReport;
+
+receive V̂ , P̂,tokenIn f o;
+token := symdec tokenIn f o, KPV ;
+
+receive V̂ , Ê,tokenIn f o;
+
+]P (token)
+
+token := symdec tokeIn f o, KEV ;
+]E (token)
+
+TEEt pm−tee ≡(P̂, KPE )[
+TPMtee−t pm ≡(Ê, KPE )[
+
+receive P̂, Ê, reportRequest;
+T EETCB := (OV MF,
+
+receive Ê, P̂, quoteRequest;
+
+GuestKernel, GuestInitrd, KernelCmdline);
+T EEReport := sign T EETCB,V ECK
+
+−1
+
+nonce, PCRsel := symdec quoteRequest, KPE ;
+T PMReport := sign PCRs, AIK −1 ;
+
+;
+
+T EEEncReport := symenc T EEReport, KPE ;
+
+T PMEncReport := symenc T PMReport, KPE ;
+
+send Ê, P̂, T EEEncReport;
+
+send P̂, Ê, T PMEncReport;
+
+]E ()
+
+]P ()
+22
+
+(1) AA1, P1
+
+⊤[Verifierattest ]V Send(V, V̂ , P̂,tokenIn f o)
+
+(2) (1), AR1
+
+⊤[tokenIn f o := symenc token, KPV ;token
+:= sign (type,totalReport, expireTime,
+policy), KV−1 ; ]Send(V, V̂ , P̂, ENCKPV (
+SIGK −1 (type,totalReport, expireTime,
+V
+
+policy)))
+(3) (2), P1
+
+fact that P̂ is able to decrypt the message encrypted by V̂ ,
+then from (9), it can be inferred that P̂ holds the symmetric
+encryption key. 5) Synthesizing the above inferences, it can
+be concluded in (10) that if P̂ holds the token, then P̂ holds
+the encryption key of the secure channel with V̂ , and the token
+is issued by being signed by V̂ .
+The proof procedure of Theorem 3 is not expounded upon
+redundantly. The detailed proof process is hereby provided as
+follows:
+
+⊤[Verifierattest ]V Send(V, V̂ , P̂, ENCKPV (
+(1) AA1, P1
+
+SIGK −1 (type,totalReport, expireTime,
+V
+
+totalEncReport)
+
+policy)))
+(4) (2)
+
+(2) (1), AR1
+
+⊤[Verifierattest ]V Has(P̂,token) ⊃ Has(P̂,
+
+T EEReport), AIK −1 ; ]Receive(V, P̂, V̂ ,
+
+V
+
+policy))
+
+ENCKPV (SIGAIK −1 (PCRsel , nonce,
+
+⊤[Verifierattest ]V Has(P̂, SIGK −1 (type,
+
+T EEReport)))
+
+V
+
+totalReport, expireTime, policy)) ⊃
+
+(3) (2), AR1
+
+]V Receive(V, P̂, V̂ , ENCKPV (SIGAIK −1 (
+
+type,totalReport, expireTime, policy))
+
+Decrypt(P, ENCKPV (request)),
+T EEReport)))
+
+⊤[Verifierattest ]V Has(P̂,token) ⊃ Send(V,
+(4) (3), P1
+
+msg) ∧ Contains(msg,token)
+(7) (2)
+
+T EEReport)))
+(5) (4)
+
+X̂ = P̂ ∨ X̂ = V̂
+
+⊤[Verifierattest ]V Has(P̂, request) ⊃ ∃X.Send(
+X, X̂, P̂, request) ⊃ X̂ = P̂ ∨ X̂ = V̂
+
+(8) (7), AA1, P1 ⊤[Verifierattest ]V ⌝Decrypt(V, ENCKPV (
+(6) (5), AA1, P1
+
+token)) ⊃ X̂ ̸= V̂
+
+(10) (9), Γattest,1
+
+⊤[Verifierattest ]V Receive(V, P̂, V̂ , ENCKPV (
+SIGAIK −1 (Decrypt(P, ENCKPV (request)),
+
+⊤[Verifierattest ]V Has(P̂,token) ⊃
+X, ∃X.Decrypt(ENCKPV (token)) ⊃
+
+(9) (7), (8)
+
+⊤[request := symenc (nonce, PCEsel ), KPV ;
+
+Send(V, msg) ∧ Contains(msg, SIGK −1 (
+V
+
+(6) (2), (4), (5)
+
+⊤[totalEncReport := symenc totalReport,
+KPV ;totalReport := sign (PCRsel , nonce,
+
+SIGK −1 (type,totalReport, expireTime,
+(5) (4), VER
+
+⊤[Verifierattest ]V Receive(V, P̂, V̂ ,
+
+⊤[Verifierattest ]V ⌝Encrypt(P, ENCKPV (nonce,
+
+⊤[Verifierattest ]V Has(P̂,token) ⊃
+
+PCRsel )) ⊃ X̂ ̸= P̂
+
+Decrypt(P, ENCKPV (token))
+
+(7) (5), (6), Γattest,2 ⊤[Verifierattest ]V Receive(P, V̂ , P̂, request) >
+Sign(P, SIGAIK −1 (totalReport)) >
+
+⊤[Verifierattest ]V Honest(P̂) ∧ Has(P̂,
+
+Receive(V, P̂, V̂ ,totalEncReport)
+
+token) ⊃ Has(P̂, KPV )
+(11) (6), (9), (10) ⊤[Verifierattest ]V Honest(P̂) ∧ Has(P̂,
+token) ⊃ Has(P̂, KPV ) ∧ Send(V, msg)
+
+(8) AA1, P1
+
+⊤[Verifierattest ]V Send(V, V̂ , P̂,tokenIn f o)
+
+(9) (8)
+
+⊤[tokenIn f o := symenc token, KPV ;token
+:= sign (type,totalReport, expireTime,
+
+∧ Contains(msg,token)
+
+policy), KV−1 ; ]V Send(V, V̂ , P̂, ENCKPV (
+
+During the execution of the Attestation protocol, the Verifier conducts reasoning according to the steps described above:
+1) Via (1) - (3), in light of the actions it has executed, V̂ is capable of deducing that the dispatched message encompasses a
+token encrypted with KPV , and this token is generated through
+being signed by its own private key. 2) In the range of (4) (6), considering that P̂ possesses the token, and the held token
+is produced after being signed by V̂ , and V̂ has transmitted
+the message containing the token. 3) (7) - (9) imply that given
+the circumstance that V̂ itself has not carried out decryption,
+then in accordance with symmetric encryption, it can be ascertained that the decrypting entity is P̂. 4) Grounded on the
+
+SIGK −1 (type,totalReport, expireTime,
+V
+
+policy)))
+(10) (9)
+
+⊤[Verifierattest ]V Sign(V, SIGK −1 (token))
+
+(11) (7), (10)
+
+⊤[Verifierattest ]V Honest(P̂) ∧ Sign(P,
+
+V
+
+SIGAIK −1 (totalReport)) ∧ Has(P̂,token)
+⊃ (Send(V, V̂ , P̂, request) > Sign(P,
+SIGAIK −1 (totalReport)))∧
+Sign(V, SIGK −1 (token))
+V
+
+23
+
+

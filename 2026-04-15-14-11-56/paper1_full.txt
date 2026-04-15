@@ -1,0 +1,2488 @@
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+1
+
+Teamwork Makes TEE Work: Open and Resilient
+Remote Attestation on Decentralized Trust
+
+arXiv:2402.08908v2 [cs.CR] 9 Aug 2024
+
+Xiaolin Zhang, Kailun Qin, Shipei Qu, Tengfei Wang, Chi Zhang, Dawu Gu
+
+Abstract—Remote Attestation (RA) enables the integrity and
+authenticity of applications in Trusted Execution Environment
+(TEE) to be verified. Existing TEE RA designs employ a
+centralized trust model where they rely on a single provisioned
+secret key and a centralized verifier to establish trust for remote
+parties. This model is however brittle and can be untrusted under
+advanced attacks nowadays. Besides, most designs only have
+fixed procedures once deployed, making them hard to adapt to
+different emerging situations and provide resilient functionalities.
+Therefore, we propose JANUS, an open and resilient TEE
+RA scheme. To decentralize trust, we, on one hand, introduce
+Physically Unclonable Function (PUF) as an intrinsic root of trust
+(RoT) in TEE to directly provide physical trusted measurements.
+On the other hand, we design novel decentralized verification
+functions on smart contract with result audits and RA session
+snapshot. Furthermore, we design an automated switch mechanism that allows JANUS to remain resilient and offer flexible
+RA services under various situations. We provide a UC-based
+security proof and demonstrate the scalability and generality of
+JANUS by implementing an complete prototype.
+Index Terms—Trusted execution environment, Remote attestation, Physically unclonable function, Blockchain, Smart contract.
+
+I. I NTRODUCTION
+
+T
+
+RUSTED Execution Environment (TEE) has emerged
+as a cornerstone of protecting sensitive applications by
+offering isolated areas (e.g., enclaves). Remote Attestation
+(RA) is an essential component to ensure the integrity and
+authenticity of TEEs, particularly in scenarios where trust must
+be established between remote parties. In the standard RA
+workflow [1], a verifier Vrf checks whether the application
+(the attester Att) in a remote TEE device is authentic. Vrf
+verifies Att’s measurement, which is signed by an attestation
+key derived from a provisioned root key. Through RA, various
+stakeholders, such as cloud service providers, data owners, and
+developers, can use TEEs assuredly in hostile environments.
+RA is necessary for modern TEE platforms. It helps establish trust relationships and secure channels, serving as a preliminary step before launching actual computing tasks within
+the TEE. Therefore, nearly all cloud vendors and modern
+TEEs, such as Azure [2], AWS [3], and SGX [4], Sanctum [5],
+Xiaolin Zhang, Kailun Qin, Shipei Qu, Tengfei Wang, Chi Zhang and Dawu
+Gu are with School of Electronic Information and Electrical Engineering,
+Shanghai Jiao Tong University (SJTU), Shanghai 200240, China (email:
+xiaolinzhang@sjtu.edu.cn; kailun.qin@sjtu.edu.cn; shipeiqu@sjtu.edu.cn;
+tengfei2019@sjtu.edu.cn; zcsjtu@sjtu.edu.cn; dwgu@sjtu.edu.cn).
+Corresponding Author: Chi Zhang, Dawu Gu
+Manuscript received XXX, XXX; revised XXX, XXX.
+
+Keystone [6], provide RA functions. However, we notice that
+current designs exhibit three significant limitations in practice.
+• Untrusted TEE Platforms: Current TEE RA designs rely
+on a centralized and manufacturer-dominated root of trust
+(RoT), i.e., the hardware root key provisioned by the TEE
+manufacturer. Users have to trust the manufacturers to trust
+the keys. However, in recent years, side-channel attacks [7]–
+[10], fault injection attacks [11]–[14], and other real-world
+exploits [15]–[17] have proven that protecting this centralized
+and digitally provisioned RoT is quite challenging against
+advanced attackers. Once the key is leaked, attackers can
+generate fake RA reports at will [18] to cover up that the
+TEE platform has been completely compromised.
+• Untrusted Verifier: The verification procedure in RA
+is conducted by a centralized verifier [2]–[4], [19], lacking
+transparency and open inspection. Users cannot verify or audit the genuineness of the verification results. The centralized
+verifier could claim a compromised application to be trusted
+or vice versa out of business interests or external attacks. It
+is even worse that the verification services are deployed by
+the manufacturer itself [20]. The monolithic trust model can
+sabotages users’ trust on TEEs [18], [21].
+This centralized trust on both the attester and verifier sides
+can cause serious vulnerabilities to the entire RA procedure,
+e.g., malicious application measurements, fake signed reports,
+and unverifiable results. One part being compromised in the
+chain of trust lead to the failure of the whole system. This
+fundamental problem prevents RA from fulfilling its very purpose, i.e., establishing authentic trust between remote entities.
+• Rigid Procedure: Most TEE RA designs follow a fixed
+procedure [1] for standard scenarios and depend heavily on
+the underlying cloud infrastructure to function properly [2],
+[3]. They lack the resilience [22] to remain operational under
+adverse conditions, which has been required in various systems
+[23]–[26]. Such resilience is crucial since RA must be performed before most other TEE functions. Real-world incidents
+such as network outages, device malfunctions and computing
+exhaustion can occur, necessitating RA to provide resilient
+functionalities to continuously ensure the platforms integrity.
+As TEEs are increasingly used in diverse emerging scenarios,
+there is a stronger incentive for RA designs to address this
+aspect and avoid using a rigid workflow.
+According to these limitations, we identify three crucial
+requirements for designing an open and resilient TEE RA
+scheme with end-to-end trust and high-available attestation
+functionality. First (R1), the growing number of advanced
+
+0000–0000/00$00.00 © 2021 IEEE
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+2
+
+TABLE I: Comparison between JANUS and related works
+Design
+
+R1: Trusted RA RoT
+RoT Type
+Intrinsic Trust1
+
+Intel IAS [20]
+Intel DCAP [38]
+Azure RA [2]
+Google RA [19]
+
+root key
+root key
+root key
+root key
+
+✗
+✗
+✗
+✗
+
+OPERA [21]
+Sanctum RA [5]
+LIRA-V [39]
+MATEE [37]
+SCRAPS [31]
+PERMANENT [32]
+SGXOnerated [40]
+DAA [41]
+Román et al. [28]
+JANUS (this paper)
+
+root key
+root key
+root key
+root key
+root key
+root key
+root key
+root key
+root key
+PUF
+
+✗
+✓
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+✓
+
+R2: Open Verification
+Multi-party Verification
+Auditable Results
+I NDUSTRY
+✗
+✗
+✓
+✗
+✗
+✗
+✗
+✗
+ACADEMIA
+✓
+✗
+✗
+✗
+✗
+✗
+✗
+✗
+✓
+✗
+✓
+✗
+✓
+✗
+✓
+✗
+✗
+✗
+✓
+✓
+
+root key
+
+1
+
+root key
+
+2
+
+Relying on a manufacturer-provisioned device root key.
+Using PUF to generate the root key of TEE.
+PUF
+Directly embedding PUF into TEE RA functions.
+
+attacks [7]–[15], [18], [27] in recent years make it urgent
+for TEE RA to adopt a stronger RoT with independent trust
+for attestation, instead of relying on a centralized root key.
+Second (R2), the vendor-centric single-point-of-verification
+model poses great risks of losing trust or being compromised
+by external attackers [21]. It is essential to create a more open
+procedure that supports various trusted verification functions
+and multi-party participation. Third (R3), it is also necessary
+for users to select different RA workflows and additional
+functions to handle unexpected situations, ensuring that the
+attestation procedure can bootstrap trust for other tasks in TEE.
+Existing Approaches. Unfortunately, despite tremendous efforts in TEE RA protocol designs, none of the existing works
+satisfy all three requirements at once. Table I presents the
+representative designs in industry and academia.
+Most designs rely on a root key that is embedded by
+the manufacturer or generated by hardware [5], [28]. The
+entire RA procedure can be immediately compromised once
+the key string is leaked by various attacks [9], [10], [14]–
+[16], [18], [29], [30], regardless of how it is created (not
+satisfying R1). On the verifier side, some designs [21], [31],
+[32] do allow more parties to perform the verification together.
+However, they only provide signature verification and lack rich
+functions to build a more open procedure. Such decentralized
+function is insufficient in emerging scenarios [33]–[36] (not
+fully satisfying R2). Meanwhile, almost no research [37] have
+explored how to provide the native resilience for a complete
+RA procedure. They only offer specific, fixed attestation
+workflows, requiring a stable cloud environment for users to
+verify their applications in TEE (not satisfying R3).
+Our Design. Although the three requirements may seem
+orthogonal to each other, we identify that the fundamental
+factors to meet them lie in decentralization and redundancy.
+Therefore, in this paper, we propose JANUS1 , an open and
+1 JANUS is an ancient roman guardian god with two faces
+
+R3: Resilient Functions
+Redundant Workflows
+Infra. Independent
+✗
+✗
+✗
+✗
+
+✗
+✗
+✗
+✗
+
+✗
+✗
+✗
+✓2
+✗
+✗
+N/A
+N/A
+✗
+✓
+
+✓3
+✗
+✗
+✗
+✓
+✓
+N/A
+N/A
+✗
+✓
+
+Trust is not derived from any artificial entity.
+Having extra TPM-based RA functionality for SGX.
+3
+Third parties are allowed to deploy the verification services.
+
+resilient TEE RA design on decentralized end-to-end trust with
+flexible functions and procedures. Compared with other works,
+we fully integrate these two factors throughout the entire RA
+procedure of JANUS, allowing it to satisfy the three crucial
+requirements simultaneously.
+For R1, JANUS decentralizes the centralized root key of
+TEE by Physically Unclonable Function (PUF) [42]. PUF is a
+hardware primitive that incorporates physical variations during
+manufacturing to its intrinsic structure, which cannot be determined even by its manufacturer. Some designs have introduced
+PUF into TEE/RA for key generation [5], [28] or application
+measurement [43]. In JANUS, we take a step further by offering
+this insight: PUF establishes intrinsic trust based on physics
+instead of human configuration. Itself genuinely decentralizes
+the centralized trust model on a single root key and address
+the untrusted platform limitation. JANUS offers PUF-based
+mutual attestation protocols for local and remote enclaves in
+TEE. While the way PUF is used is somewhat similar with
+other research, we treat it as an additional stronger RoT with
+independent trust and the purpose is different.
+For R2, JANUS decentralizes the centralized verification
+procedure by smart contracts. Indeed, many works in Table
+I have adopted the same technique, JANUS goes beyond them
+by offering attestation audit, batch attestation and other novel
+functions to enable a more flexible, auditable and lightweight
+procedure. They create a more open verification procedure in a
+stronger decentralized manner, thereby thoroughly addressing
+the untrusted verifier limitation. For R3, we design an automated switch mechanism using a dedicated smart contract in
+JANUS. It allows users to select different workflows to conduct
+the attestation, i.e., using off-chain PUF-based protocols or onchain RA functions. This two-fold architecture makes JANUS
+continuously functional against incidents such as network outages, device malfunctions and computing exhaustion, ensuring
+flexible and high-reliable RA service delivery.
+We evaluated JANUS with a Proof-of-Concept (PoC) im-
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+plementation. The system prototype includes an SGX-enabled
+Dell EMC server and an NXP LPC55S69 board with Hyperledger Sawtooth [44]. The server is connected to an IPUF [45].
+The LPC board has a built-in SRAM PUF IP. They mutually
+attest with each other using the on/off-chain RA functions.
+Sawtooth is the backend of our verification service and switch
+mechanism. Our evaluation show that the off-chain attestation
+using PUF and TEE take ∼5 ms on EMC Server and ∼510 ms
+on LPC board (R1). The on-chain verification functions take
+8.3 ms∼30 ms per transaction (R2). For the attestation switch,
+JANUS provides a policy-based approach which requires a
+5.7KB contract and incurs an on-chain latency of 4.4 ms (R3).
+Contributions. JANUS is the first TEE RA design with endto-end trust and resilient workflow on decentralized RoT and
+verification procedure. Specifically, our work contributes by:
+• We use the independent trust from PUF to decentralize
+the single trust provided by artificial root keys in TEE
+for a more trusted and stronger RoT for RA. We design
+PUF-based mutual attestation protocols for applications
+in local or remote enclaves. We provide a UC-based [46]
+formal security proof for the protocols.
+• We design novel smart contract-based RA functions for
+transparent decentralized verification. They enable efficient on-chain batch attestation and the audits of historical
+results by snapshots. creating a more open RA verification
+procedure for practical applications.
+• We propose a switch mechanism to combine the PUFbased protocols and smart contract attestation. It ensures
+automated workflow transitions between off-chain and
+on-chain RA functions in the event of unexpected system
+failures, thereby achieving resilience by design.
+2
+• We give a complete PoC implementation of JANUS . The
+comparison with other RA schemes show that JANUS has
+small storage overhead and achieves great scalability and
+reasonable computing performance.
+Scope. We focus on the system design of TEE RA schemes in
+this study to address the issues of over-centralization and lack
+of resilience, which exist in most designs and have grown
+as urgent industrial concerns. We assume that the off-theshelf hardware environments with PUF-embedded TEEs are
+available. The hardware integration of PUF into existing TEEs
+is out of scope of this work.
+II. BACKGROUND
+A. Trusted Execution Environment and Remote Attestation
+Trusted Execution Environment (TEE) aims to create a
+secure, isolated environment within a processor (xPU) where
+sensitive code can execute securely without interference from
+the normal OS. It typically requires hardware and OS-level
+support to ensure the integrity and confidentiality of the loaded
+applications. TEEs can be roughly classified into enclavebased (Intel SGX [4], Sanctum [5], Keystone [6], PENGLAI
+[47]), virtualization-based (ARM Trustzone, Intel TDX [48],
+AMD SEV [49], ARM CCA [50]).
+2 It will be open-sourced at https://sites.google.com/view/janus-ra
+
+3
+
+In recent years, TEEs have encountered numerous advanced
+attacks [7]–[15], [18], [27] in the real world. These attacks can
+expose the isolated secrets and compromise the applications
+of other tenants in cloud environments. Therefore, before
+executing any actual tasks in TEE, it is necessary to verify
+the integrity of the loaded program to ensure the security of
+TEE itself.
+Remote Attestation (RA) is an essential component in
+modern TEEs. It relies on trusted measurement and cryptographic primitives to extend the chain of trust between
+remote entities. Figure 1 depicts a simplified RA workflow
+standardized in RFC9334 [1].
+Parties have to be trusted
+Attested Application
+e
+
+do
+
+e
+rs
+
+en
+
+th
+
+y
+ke
+
+y
+ke ing
+ot on
+Ro visi
+① pro
+
+Endorsements
+
+TEE Manufacturer
+②
+
+④ Verification
+
+③ RA
+protocols
+Attester
+
+RA Procedure
+
+result
+
+Verifier
+
+Relying Party
+(User)
+
+endorse the result
+
+Fig. 1: A typical TEE RA workflow.
+We further explain the terminology [1] as follows.
+• TEE Manufacturer (Mfr ) provisions RoT in the TEE devices, e.g., root key injection (➀). Users have to trust Intel
+[4], Apple [51], Samsung [52] and other semiconductor
+giants to securely embed a private root key.
+• Mfr synchronizes necessary parameters (➁) with Verifier
+(Vrf ), such as device specifications and public keys. Vrf
+is usually a cloud verification service, like Azure [2],
+serving as a proxy between the users and the TEEs. It
+initiates and conducts the RA procedure with the attester.
+• Attester (Att) is an application deployed in the TEE.
+For example, in SGX, Att obtains its binary digest
+by MRENCLAVE, which is signed by an attestation key
+derived from the root key. It then produces an encrypted
+RA report for Vrf to verify (➂). This procedure can be
+mutual [53] in some distributed systems where Vrf is
+also attested.
+• Relying Party (RP) is the actual user of RA who requests
+Vrf for attestation. It can decide whether to trust Att as
+authentic based on the verification results (➃).
+RA is the initial procedure occurring before TEE executes
+actual applications. Users should use RA to verify whether
+their deployed code is authentic before launching it.
+B. Physically Unclonable Functions (PUF)
+PUF, developed from the physical one-way function [42],
+is a hardware primitive that randomly maps a given challenge
+to a response. They utilizes minor environmental variations in
+manufacturing and incorporate physical randomness into its
+structures. Therefore, each PUF instance has a unique structure
+with a distinct set of challenge-response pairs (CRPs). In this
+work, PUF is treated as a stable physical random function [54].
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+PUF in the real-world. Currently, famous MCU and FPGA
+manufacturers have all introduced their commercialized PUFs
+[55], [56]. There are also several PUF-specialized companies
+including Verayo, Intrinsic-ID [57], ICTK [58], and PUFtech.
+PUF has already been integrated in various real-world products, such as Intel SGX [59], IoT devices [60], medical wearables [61] and USIM [62]. With the standardization efforts
+[63], [64], PUF is experiencing widespread deployment and
+becoming a basic component in hardware ecosystems.
+The most common usage of PUF today is root key generation. A PUF response can be a secret seed to derive a
+recoverable root key [5], [28]. However, this usage does not
+provide stronger security guarantees because the RA procedure
+still becomes compromised if the key is revealed [13], [18].
+A huge gap exists between the rapidly growing PUF industry
+and less developed PUF usages.
+III. M OTIVATION
+A. Lessons Learned from Real-world TEE RA Designs
+Currently, nearly all real-world vendors [2]–[4], [19] have
+adopted the workflow presented in §II-A since it relies on a
+straightforward trust model. We then present three mainstream
+commercial designs and analyze their problems.
+• Intel IAS-based RA [4]: An attesting application obtains
+its binary measurement by MRENCLAVE. It wraps the measurement, a signature signed by an Intel-provisioned key and
+other data to form an encrypted report. This report can only
+be decrypted and verified by Intel Attestation Service (IAS).
+• Intel DCAP-based RA [38]: To avoid the IAS-centric
+procedure, Intel proposed Data Center Attestation Primitives
+(DCAP) which offloads the report verification to a third party
+by issuing Provisioning Certification Key (PCK) certificates.
+However, users still rely on Intel’s root key, and only one
+(non-Intel) verifier can execute the verification.
+• Microsoft Azure RA [2]: Similar to IAS-based RA, only
+the Azure Attestation Service can verify the measurements in
+this design. The main difference is the replacement of IAS
+with another vendor-specific service. RP has to trust Azure
+(Vrf ) to return the right results. Other cloud vendors (e.g.,
+Google [19], AWS [3]) adopt a similar architecture.
+In these examples, as long as Vrf confirms Att’s report that
+is endorsed by Mfr , the chain of trust is established. RP has
+no alternative but to believe that Vrf has faithfully executed
+the verification and that the TEE root key is secure. However,
+powerful attackers [7]–[10] can generate fake RA reports and
+verification results once they leak the key or corrupt Vrf .
+Then, others would not be able to find the compromises of
+TEEs if the trust in RA procedure has been completely broken.
+Also, these RA designs themselves cannot provide reliable
+functionalities. How they can be used is entirely up to the
+underlying cloud infrastructure. They serve merely as only
+add-ons to the deployed cloud services for TEEs.
+Lessons Learned: We conclude the following lessons, i.e., the
+motivation of this work, from the architectural weaknesses of
+these real-world RA designs.
+• Current designs rely on Mfr to provision a single centralized root key as the RoT. Once the key is compromised,
+
+4
+
+attackers can tamper with the deployed applications and
+generate fake signed RA reports at will. (Requiring R1)
+• Only one Vrf can execute the verification and RP
+must accept whatever Vrf returns. The results cannot
+be re-verified or audited to ensure that Vrf has honestly
+checked the attested applications. (Requiring R2)
+• The usability of current designs is entirely up to the
+underlying cloud infrastructure. They cannot provide reliable attestation services without a stable (cloud) environment. (Requiring R3)
+B. Related Works and Design Motivation
+Driven by these real-world needs, we now investigate the
+related works and their limitations. Further, we will clarify
+how JANUS is motivated to adopt PUF and smart contract to
+satisfy the three security requirements. The works [65]–[73]
+that focus on other problems will not be discussed.
+1) Stronger TEE RoT for RA.: MATEE [37] introduces a
+TPM for SGX to offer an independent attestation key pair as a
+backup RoT. Costan et al. [5] and Roman et al. [28] use PUF
+to generate the root key for RA. However, the system remains
+vulnerable if the key is deduced by carefully designed attacks
+[9], [13], [16]–[18], [74], [75], no matter how it is sealed [41],
+[76], [77] or derived. The trust on a digital key string does not
+establish a stronger RoT for TEE RA. However, we notice that
+the potential of PUF has not been fully explored.
+Design motivation for R1. The security of PUF sources from
+its unique physical structure. Unlike the TEE manufacturers,
+who have full control of the key provision, even PUF manufacturers cannot predict how a PUF instance is produced. Therefore, PUF offers physics-based independent and unbiased trust,
+which cannot be realized by key-based RoT. Moreover, it
+acts as a physical random function to provide integrity and
+authenticity for the input, thereby realizing measuring and
+“signing” simultaneously for RA. Hence, PUF itself, instead
+of a PUF-derived key, can be a stronger intrinsic RoT in TEE
+RA to effectively decentralize the trust in the root key.
+PUF has emerged as a critical security primitive in numerous applications [78]–[82]. It also has been introduced into RA
+by several works [83]–[87]. In PUFAtt [84], PReFER [85] and
+[83], PUF-based measurements are verified using emulated
+PUF models. The system can be breached once the model
+is leaked by attackers. Some studies [88], [89] use PUF to
+directly provide physical bindings for attested measurements.
+This approach seems similar to JANUS since PUF is simple in
+use. However, we argue that our objectives differ. Compared
+with other works, we further observe that PUF instantiates a
+way to establish independent and genuine trust without human
+interventions. Based on this deeper insight, we fully harness
+PUF’s potential and address the fundamental trust crisis of
+TEE RA.
+2) Decentralized Verification Functions: Intel DCAP-based
+RA [38] and OPERA [21] delegate the authority of Intel to a
+third party by customized certificates, allowing it to deploy the
+RA verification service. This approach only migrates the trust
+from one centralized party to another. In fact, blockchain and
+smart contract are common effective techniques for achiev-
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+ing decentralization. TM-Coin [90], BARRET [91], PERMANENT [32], SCRAPS [31], CONFIDE [92] and others [40],
+[93] have used them to realize the on-chain decentralized
+verification of RA reports. However, their contracts only
+enable signature verification and may impose computational
+overhead [21] for distributed attestations. And the historical
+results cannot be re-verified or audited.
+Design Motivation for R2. Considering the limitations of
+these works, we are motivated to build a more transparent
+procedure with extensive on-chain verification functions. We
+continue to use smart contract since its decentralized nature is
+especially suitable to satisfy R2. Compared with others, JANUS
+has a more open on-chain verification procedure. We treat
+smart contract as a “public bulletin board”, enabling not only
+multi-party execution but also the preservation of historical
+states and results. Except for on-chain signature verification,
+both aspects have not been well leveraged in previous works.
+3) Resilient RA Procedure: As mentioned earlier, the extra
+attestation key in MATEE [37] can cooperate with the original
+SGX RoT to enable the multimodal attestation. Except that,
+it appears that current designs [94], [95] do not focus on
+providing built-in resilience against system failures such as
+network outages, computing exhaustion, etc., which is the
+fundamental service requirement for RA.
+Design Motivation for R3. Motivated by this significant gap,
+we argue that the key to realize resilience is to create redundancy in an RA design. We can develop multiple attestation
+functionalities. They can be activated by a switch mechanism
+to offer RA services collaboratively, as shown in Fig 2. Users
+can choose the suitable way of performing RA in response to
+common system failures or customized needs, thereby ensuring the resilience. When the cloud infrastructure is limited or
+damaged, an RA design can mitigate the availability issues,
+thus continually ensuring the integrity of TEEs.
+Attestation
+workflow
+
+Attestation
+Functionality 1
+Attestation
+Functionality 2
+
+Device malfunction,
+Network outages,
+Computing exhaustion
+
+Attestation
+finish
+
+Others
+Switch between functionalities
+
+Fig. 2: Illustration of attestation switch mechanism
+
+IV. JANUS OVERVIEW
+A. Threat Model and Assumption
+In this work, Atts are assumed to be deployed in TEE platforms with PUF embedded. We use the mutual RA assumption
+where Vrf and Att are attested with each other. The TEEs
+that running Vrf s do not necessarily have PUF. We consider
+an adversary Adv who can launch attacks against Att, Vrf .
+Its goal is to fool the attestation procedure or tamper with the
+results. In our threat model, Att, Vrf are honest and Adv can:
+A1 (Channel attacks) Launch man-in-the-middle (MiTM)
+attacks to eavesdrop, intercept, modify and replay messages between Att and Vrf in the open channel.
+
+5
+
+A2 (DoS attacks on Att) Sending massive erroneous attestation requests to an legitimate attested device to exhaust its
+resources, making it unavailable to handle valid requests.
+A3 (Physical probing) Crack the attested devices and deduce
+the private keys through semi-invasive physical manners
+like side-channel analysis or external storage read-out.
+A4 (Invasive Chip delayering) Use invasive and destructive
+measures like Focused Ion Beam (FIB) and Laser Voltage
+Probing (LVP) to mill and delayer the device chip, and
+then physically extract the fused keys in TEE.
+A5 (PUF modeling attacks) Collect raw PUF CRPs from
+the communication channels during the online attestation.
+Adv can use them to train a PUF model by machine
+learning to output new valid CRPs.
+These attacks may help Adv generate signed measurements
+or fool the verification procedure. Besides, Adv is allowed to
+corrupt the verifiers to change the results.
+A6 (Rogue verifiers) Adv corrupts one or more legitimate
+Vrf (s) to let it/them output the verification results as
+Adv ’s wishes, thereby making wrong claims on attested
+applications.
+Compared with other works, JANUS aims to counter the
+strongest possible adversary that combines all attacks in the
+threat model.
+B. System Architecture
+JANUS is a TEE RA system with end-to-end trusted procedure. It has a two-fold architecture with distinct RA functionalities, hence the name. For one, to address the untrusted
+platform limitation and satisfy R1, JANUS provides PUFbased mutual attestation protocols built on the double RoTs
+(i.e., PUF and TEE root key). For another, to address the
+untrusted verifier limitation and satisfy R2, JANUS provides
+smart contract-based verification functions that enable batch
+attestation and flexible result audits. The two parts together
+form the off-chain and on-chain RA function of JANUS.
+To satisfy R3 and realize resilience for JANUS, we let the
+two parts to collaborate by a smart contract-based switch
+mechanism. It yields greater openness and offers automation
+to switch between off-chain and on-chain attestation (§V-D).
+Roles: Except for Mfr , Att, Vrf , we define the following
+roles for participants in JANUS:
+• Attestation Manager: A trusted third-party (TTP) service
+for bootstrapping the system. It does not appear in the
+online attestation after the initialization.
+• Aggregator: Resource-rich Att or Vrf who voluntarily
+aggregates blockchain transactions for others.
+• Auditor: Attested legitimate Att or Vrf who will audit
+the attestation results of requested RA sessions.
+The behaviors and output Attestation Manager can be verified publicly (§V-A). It can be realized by any global service
+providers, thus not hurting the decentralization in practice.
+Workflow: We present the workflow of JANUS in Figure 3. It
+has three phases: Provision, Initialization, and Attestation.
+• Provision (offline): The TEE devices are provisioned with
+secret materials like device-specific root keys. Also, PUF
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+Provision
+
+Initialization
+
+PUF
+Manufacturer
+
+Certificate
+Issuer
+
+Attestation
+On-chain Attestation
+
+TEE
+Manufacturer
+
+6
+
+Participants
+
+PUF RoT
+
+Public key
+Certificate
+
+Registration
+contract
+
+upload registra
+tion manifests
+
+TEE RoT
+
+involved
+
+Attestation
+Manager
+
+grouping and
+generate keys
+
+Audit
+contract
+
+...
+
+...
+attestation
+request
+
+Attestation
+contract
+
+Attestation
+Switch
+
+Aggregator
+
+...
+Auditor
+
+Off-chain Attestation
+Verifier
+
+Attester
+Enclave
+PUF
+
+mutual
+attestation
+
+Enclave
+PUF
+
+Fig. 3: Architecture and workflow of JANUS
+
+instances will be embedded into the devices as an intrinsic
+RoT to provide independent trust.
+• Initialization (offline): Att and Vrf and other participants
+first set up a consortium blockchain. Then Attestation
+Manager groups Att and Vrf , and uploads registration
+manifests to the blockchain. Details can be found in §V-A
+• Attestation (online): For a complete RA session in JANUS ,
+Vrf and Att first choose the way of attestation by switch.
+Then Vrf sends a challenge message to start the off-chain
+(§V-B) or on-chain attestation §V-B. The result will be
+determined and may be audited in the future.
+C. Design Challenges
+C1: Maintaining scalability in an end-to-end (E2E) protocol. Common approaches of establishing secure E2E links
+between two parties use heavyweight primitives (TLS) or
+redundant interactions (two-party computation), limited in
+efficiency and scalability. This challenge is particularly tricky
+in our work since PUF is a hardware-unique primitive that each
+instance has a unique CRP domain. Pre-sharing each ones’
+CRPs would bring tremendous overhead instead.
+C2: Avoiding attestation data leakage on the blockchain.
+The blockchain used here may allow rogue verifiers (A6) to
+probe data on-chain and recover the attestation messages in
+other RA sessions or deduce others’ secrets. For example,
+raw measurements or PUF CRPs must not be stored on-chain
+since rogue verifiers may directly use them to perform MITM
+attacks (A1).
+C3: Snapshotting an RA session. To enable the audits of
+attestation results, uploading all states and output of RA
+sessions to the blockchain is a straightforward approach.
+However, it is infeasible since this causes excessive storage
+overhead and latency on-chain. Therefore, to keep the scale
+of blockchain compact and functionally focused, we need a
+lightweight and secure structure to properly summarize RA
+sessions, i.e., snapshots. Verifying the snapshots would be
+equivalent to verifying each step of the protocol.
+C4: Realizing automation for attestation switch. The two
+RA functionalities provided by JANUS should be closely
+merged with each other to achieve resilience for various applications and situations. The switch mechanism must be self-
+
+instructing and interconnect with each part, without requiring
+global operators to manage the RA procedures.
+V. JANUS D ESIGNS
+We present the detailed design of JANUS in this section. As
+described in §IV-B, we realize two attestation functionalities,
+i.e., off-chain and on-chain, and an automated switch mechanism to combine the two. The notations used through this
+paper are given as follows.
+Notations: Let {0, 1}∗ be the set of all bit strings and ∅ be an
+empty set. For any n ∈ N, {0, 1}n is the set of all n-bit strings.
+X ←$ {0, 1}n means the random selection of a string X from
+{0, 1}n . For some X ∈ {0, 1}n , |X| denotes the length of X.
+For some X, Y ∈ {0, 1}n , X||Y denotes their concatenation,
+and X ⊕ Y denotes their bitwise XOR result. The lengths of
+PUF challenges and responses are set to be the same in this
+study, denoted by n unless otherwise specified. HK (·) denotes
+a keyed hash function.
+A. System Initialization
+The offline initialization is conducted by the Attestation
+Manager, who helps generate IDs and protocol keys. The
+Manager is not involved in the online attestation.
+① Setup and Grouping. The participants first create their
+blockchain accounts, i.e. a key pair (pk, sk) with personal
+address addr = H(pk). Then the Manager does the following:
+• Grouping: Manager organizes the participants in JANUS
+by their locations or functions. For example, the attested
+applications on the same device can be naturally assigned
+in the same group (group id gid). The use of grouping
+will be further shown in ②.
+• Attesters: Let aid = addr||DSN||gid. DSN (Device Serial
+Number) identifies on which device Att aid is deployed.
+• Verifiers: Let vid = addr||VON||gid where SON (Verifier
+Owner Number) specifies which owner Vrf vid belongs
+to. vid is similar to aid, which eases the identity switch
+in the mutual attestation.
+② Protocol keys generation. Then Manager helps generate
+the protocol key, including a group key (unique for each group)
+and a communication key (unique for each one).
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+Attesters: Each Att aid generates an initial PUF challenge
+Cinit , which can be chosen arbitrarily and made public.
+Then Att aid uses PUF to get Raid = puf (Cinit ) and
+MR aid = puf (Raid ), and submits Raid to the Manager. The Manager calculates and returns the group key
+Kgid = ⊕N
+i=1 Ri for a group Ggid with N attesters.
+Att aid now calculates its communication key MK aid =
+Kgid ⊕ Raid ⊕ MR aid .
+• Verifiers: Each Vrf vid randomly selects a communication
+key svid ←$ {0, 1}n , then submits svid to the Manager
+and receives their group key Sgid = ⊕M
+j=1 sj .
+• Manager: For each communication key, it encrypts the
+key using all group keys to compute the handshake
+materials H. For example, for MK i of Att i , Hi =
+{. . . , EncKj (MK i ), EncKi (MK i ), . . . EncSk (MK i ), . . . }.
+All H will be uploaded to the blockchain in ③. This
+pre-computation can address C1 and thus significantly
+improve the E2E scalability of JANUS.
+Finally, Att aid stores (Cinit , MK aid ) and Vrf vid stores
+(svid , Sgid ). Att aid does not need to store the group key since
+they can recover Kgid = MK aid ⊕ MR aid ⊕ Raid by PUF.
+Note that the communication keys are designed to be known
+by the other participant in the protocol (§V-B2). Our PUFbased designs ensures that an adversary obtaining several
+communication keys cannot derive any group key, eliminating
+the usage of secure storage (seen in §V-B3).
+③ Registration to the blockchain. The Manager uploads
+registration manifests to the blockchain, including H, device
+configurations, and measurements. The configurations would
+contain CPU SVN versions, TCB sizes, and others. The
+measurements fall into two types here:
+• Traditional Measurement: For verifiers in mutual RA,
+their measurements are traditional enclave measurements
+M , e.g., hash digests of the application’s meta-data [4].
+• PUF-based Nested Measurement:
+The measurements
+RM of attesters are obtained using both PUF and TEE.
+Specifically, we let RM = puf (M ) where M is the
+original enclave measurement.
+The Manager would upload (pid, H(RMaid ||aid||pid)) or
+H(Mvid ||vid) instead of raw measurements to prevent the
+sloppy attesters in challenge C2. The registration contract
+handling these manifests is given in §V-C.
+•
+
+B. PUF-based Attestation Protocols
+To satisfy R1, we use PUF as an intrinsic RoT in TEE
+to generate physically trusted measurements. The designed
+attestation protocols form the off-chain RA function of JANUS.
+1) Local attestation: JANUS supports the local attestation
+(LA) like Intel SGX RA [4]. Multiple Atts can exist as
+seperate functions on the same TEE device. LA allows them
+to attest each other before interacting with a remote Vrf .
+In Figure 4, two attesters Att aid1 , Att aid2 control different
+enclaves and can both invoke the device’s PUF instances. We
+let Att aid1 initiate the session and generates the challenge
+(Z1 , t1 ) by step ①. When receiving (Z1 , t1 ) from an untrusted
+local channel, Att aid2 invokes the same PUF to verify the
+tag. The operations in step ③ and ⑤ provides PUF-based
+
+7
+
+Attester
+aid2
+
+Attester
+puf
+
+Enclave
+
+Get
+by calling
+the same PUF. Then calculate
+and verify
+
+2
+
+Enclave
+
+aid1
+1
+
+Let
+
+3
+
+Let
+and
+Calculate
+
+Call the corresponding PUF
+instance to verify Z2 and M2
+
+Verify Z3 and M1, then finish
+the mutual local attestation
+
+5
+
+Let
+and
+
+and
+6
+
+4
+
+Calculate
+and
+
+Fig. 4: The off-chain local attestation protocol of JANUS
+① Att aid1 uses aid1 , timestamp ts1 , local PUF id pid1 and a nonce
+n1 ∈ {0, 1}n to form Z1 . Then it invokes PUF to get Rn1 . A MAC
+algorithm T like HMAC [96] is used with Rn1 being the key.
+② Att aid2 reproduces Rn1 by using n1 as the PUF challenge. (Z1 , t1 )
+is considered valid only if Att aid2 gets the same t1 .
+③ After verifying (Z1 , t1 ), Att aid2 uses a different PUF instance pid2
+to get RM2 . It obtains C2 , R2 = puf(C2 ) and gets t2 .
+④ Att aid1 uses the specified PUF instance to get Rn2 and recalculated C2 , R2 , thereby verifying (Z2 , t2 ).
+⑤ Att aid1 follows the same steps in ③ to generate (Z3 , t3 ). Its
+measurement M1 is also contained in Z3 to attest Att aid2 .
+⑥ If the verification passes for both enclaves, it proves that they
+indeed exist on the same TEE platform.
+
+integrity and authenticity to the tag generation. Our protocol
+avoids leaking PUF responses to the channel, or adversaries
+can collect raw CRPs to perform PUF modeling attacks (A5).
+2) Remote attestation: This protocol is the core of off-chain
+RA function of JANUS. As shown in Figure 5, an Att and a
+Vrf is mutually attested through this three-round protocol.
+Attester
+Enclave
+
+Verifier
+
+aid: i
+
+Enclave
+
+puf
+Verify and decrypt using sj from
+, then obtain RT, nV
+Invoke PUF to get
+and form
+
+2
+
+vid: j
+
+1
+
+Let
+and
+
+3
+
+and
+
+Verify and decrypt using the shared 6
+key
+, then complete the mu
+tual remote attestation
+
+4
+
+Verify and decrypt using MKi from
+. Then parse out and
+check
+with
+
+Let
+
+and obtain
+
+5
+
+Fig. 5: The off-chain remote attestation protocol of JANUS
+Before starting the RA session, the verifier Vrf j retrieves
+EncSj (MK i ) and (pid, H(RMi ||i||pid)) from the blockchain.
+Then it initiates the RA session as follows.
+Sending remote attestation challenge. Vrf j first constructs
+the challenge message (A1 , C1 , T1 ):
+① (A1 , C1 , T1 ): Vrf j forms A1 and samples RT , RV ←$
+{0, 1}n where RT is a temporary random string and
+RV is a part of the shared key. Now Vrf j uses an
+authenticated encryption (AE) algorithm E to encrypt
+RT ||RV with A1 as the associated data (AD) and sj as
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+the key. Thus, Vrf j gets the ciphertext C1 and the tag
+T1 , then sends (A1 , C1 , T1 ) to the attester.
+Responding with signed measurement. Upon receiving
+(A1 , C1 , T1 ), Att i learns the vidj and retrieves EncKi (sj ),
+H(Mj ||j) from the blockchain.
+② verify (A1 , C1 , T1 ): Att i gets Ri , M Ri by PUF and
+recovers Ki = MKi ⊕ MR i ⊕ Ri . It uses the decryption
+algorithm D to verify (A1 , C1 ) and obtain RT , RV .
+③ (A2 , C2 , T2 ): After Att i verifies the challenge, it generates the nested measurement RMi = puf (Mi ). Then it
+uses original TEE attestation key to sign RMi ||RA where
+RA = pufpid (nV ) is another part of the shared session
+key. The signature σA is then appended after RMi ||RA
+and they are together encrypted by E. Finally, Att i sends
+(A2 , C2 , T2 ) back to Vrf j .
+Verifying with response. Vrf j decrypts EncSj (MK i ) to get
+MK i so that it can calculate MK i ⊕ RT .
+④ verify the measurement: Vrf j uses the certificate Certi to
+verify σA . If the verification passes, Vrf j parses out RMi
+to re-calculate H(RMi ||i||pid) and compares it with the
+one on-chain. If the measurement is valid, then Vrf j
+completes the attestation with Att i .
+⑤ (A3 , C3 , T3 ): Vrf j now can obtain the shared session
+key SK = RA ⊕ RV . Then it forms A3 and generates its
+enclave measurement Mj . It calls E to encrypt Mj along
+σV using the shared key SK.
+In step ⑥, Att i can verify (A3 , C3 , T3 ) and the measurement Mj using the same procedure in ④. Then it finishes the
+attestation with Vrf j and obtains SK = RA ⊕ RT .
+3) Protocol Summary: We summarize the above attestation
+protocols and give the following remarks.
+• Intrinsic RoTs: With PUF being an extra intrinsic RoT,
+Adv would fail the attestation even if it knows the TEE
+root keys. This decentralized trust can offer stronger
+security guarantees for TEE RA and succinctly addresses
+the untrusted TEE platform limitaion.
+• Performance Tradeoff: By the pre-computation of handshake materials, our protocol achieves lightweight and
+scalable communication at the cost of single query to
+blockchain. Participants can periodically cache the onchain entries, minimizing the latency of the online query.
+• Key Protection: The designed key structures of Att use
+PUF response MR aid to mask the secret Raid . Then even
+if MK aid is leaked, Adv will learn nothing about Raid
+and Kgid (A3).
+C. Smart Contracts for Attestation
+We design three smart contracts in JANUS to realize participant registration, on-chain attestation, and attestation audit.
+We first introduce the registration contract, which is required
+by both off-chain and on-chain attestation.
+1) Registration Contract: As mentioned in §V-A, thi contract is used to store registration manifests. It manipulates the
+blockchain as an immutable distributed database L through
+key-value pairs and offers two functionalities:
+① U PLOAD MANIFESTS. The Attestation Manager can upload
+devices’ measurements, encrypted key materials and other data
+
+8
+
+through this contract. The contract stores them with unique
+blockchain addresses as indexes in L.
+② R ETRIEVE ON - CHAIN DATA. The blockchain nodes (initialized devices) are allowed to retrieve any data stored on-chain.
+They can use a specified address to query the block entry in
+L without direct interactions with the contract.
+The registration contract avoids the risk of a single point of
+failure caused by a central server, thereby offering communication scalability for RA in large-scale network.
+2) Attestation Contract: This contract realizes on-chain
+attestation for JANUS. It involves multiple verifiers in a single
+verification execution. As a result, both the execution and results of RA verification would be publicly aware and admitted.
+The workflow of this contract is described as follows.
+The verifier generates a request transaction to trigger the
+attester, e.g., changing the state nonce n under a given request blockchain address which Att aid periodically queries.
+When Att aid learns of a coming request (the nonce being changed), it generates RMaid , σA , and calculates C =
+EncMK aid (n||RMaid ||σA ). It wraps C in a valid transaction
+and submits it to a nearby Aggregator (§IV-B). Aggregators
+will wrap and submit received transactions in a batch to
+the attestation contract. Main functions of this contract are
+formalized in Algorithm 1.
+Algorithm 1: Smart contract for on-chain attestation
+Input : transaction list l
+Output: trust state st
+BATCH ATTESTATION
+1 for a transaction tx ∈ l do
+2
+if tx.signature is valid then
+3
+st ←O N - CHAIN ATTESTATION(tx)
+4
+Output: st
+5
+end
+6 end
+O N - CHAIN ATTESTATION
+7 c ← EncSg (M Kaid ), t ← H(RMaid ||aid||pid), pid
+/* retrieve them from blockchain */
+
+M Kaid ← DecSg (c), C ← tx.payload // parse tx
+∗
+9 P ← DecM Kaid (C), (RMaid , σA ) ← Parse(P )
+∗
+∗
+10 t ← H(RMaid ||aid||pid)
+∗
+11 if σA is invalid or t ̸= t then
+12
+Output: untrusted
+13 end
+14 Output: trusted
+8
+
+① O N - CHAIN ATTESTATION: As shown in line 7, verifiers use
+MK aid to obtain the measurement RMaid and the signature
+σA . They can use the same verification steps in §V-B2 and
+determine the attestation result on Att aid together.
+② BATCH ATTESTATION: Verifiers can verify multiple measurements in a transaction batch at once. This improves
+computing resource utilization of the blockchain nodes and
+facilitates the on-chain verification procedure.
+3) Audit Contract: We design an audit contract as shown
+in Figure 6. This contract allows other participants in JANUS
+to re-verify the result of a historical RA session. It helps
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+9
+
+evaluate the device status and identify compromised verifiers
+or attesters in time.
+
+Another
+Participant
+(b) audit request
+
+Attester
+RA session
+
+(a) upload
+credentials
+
+Aggregator
+
+Verifier
+
+Blockchain
+Network
+trigger
+
+update
+state
+
+Audit
+contract
+
+Auditors
+
+Fig. 6: Workflow of on-chain audit smart contract
+As mentioned before, uploading all protocol messages for
+all Att and Vrf is not feasible (C3), so we propose a new data
+structure, credential, to snapshot an end-to-end RA session.
+Here, Att aid calculates cr1 = HKgid (Hsvid (m1 ||m2 ||aid||vid))
+and Vrf vid calculates cr2 = HSgid (HMK aid (m1 ||m2 ||aid||vid)).
+A pair of credentials (cr1 , cr2 ) ensures that both parties have
+executed the protocol and acquired the expected output, i.e.,
+obtained each other’s key (Kgid or svid ) and measurements (m1
+or m2 ). (cr1 , cr2 ) will be submitted to the blockchain through
+an Aggregator for audits. To this end, We define a new trusted
+entity, Auditor. Legitimate Att or Vrf that has been attested
+can become an Auditor to execute this contract in their TEEs.
+Our audit contract provides three functions, as formalized
+in Algorithm 2.
+① T RUST RATING: Participants can upload their configurations
+to the blockchain (§V-C1). Auditors can use this contract to
+calculate the trust rate based on the configurations of deployed
+device. Trust rates can serve as indicators of whether the status
+of Att should be auditted in time.
+② ATTESTATION REVIEW: Auditors can obtain keys and measurements from the Manager to verify the credentials. As
+shown in line 13, 14, they can re-calculate (cr1∗ , cr2∗ ) and
+compare them with (cr1 , cr2 ) in a submitted transaction.
+③ S POT CHECK: Auditing every credential can bring tremendous computation overhead. Therefore, we allow Auditors
+to spot check some credentials, i.e., treat the audit results
+of randomly picked credentials as the results of the whole
+transaction list. Combined with trust rating, spot check would
+significantly improve audit efficiency and minimizes the risk
+of missing compromised participants.
+The attestation and audit contract well satisfy R2 by enabling various decentralized verification functions and providing consensual and auditable results. Every RA session in
+JANUS are now publicly transparent and can be re-verified efficiently, preventing malicous verifiers from exclusively claiming wrong attestation results.
+D. Attestation Switch in JANUS
+The switch machanism aims to make two functionalities in
+JANUS to collaborate with each other. As shown in Figure 7,
+
+Algorithm 2: Smart contract for attestation audit
+Input : transaction list l
+Output: device trust rate r, audit state st
+T RUST RATING
+1 if tx.signature is valid then
+2
+conf ← Parse(tx.payload)// device config
+3
+r ← Evaluate(conf)
+4
+Output: r
+5 end
+S POT CHECK :
+6 n ←$ [0, l.size − 1], tx ← l[n]
+/* randomly pick one */
+
+if tx.signature is valid then
+st ←ATTESTATION REVIEW(tx)
+9
+Output: st
+10 end
+ATTESTATION REVIEW
+11 Kgid , Sgid , M Kaid , svid , m1 ← RMaid , m2 ← Mvid
+7
+
+8
+
+12
+
+/* retrieve them from the Manager */
+(cr1 , cr2 ) ← Parse(tx.payload) // credentials
+
+cr1∗ ← HKgid (Hsvid (m1 ||m2 ||aid||vid))
+∗
+14 cr2 ← HSgid (HM Kaid (m1 ||m2 ||aid||vid))
+∗
+∗
+15 if cr1 = cr1 and cr2 = cr2 then
+16
+Output: trusted
+17 end
+18 Output: untrusted
+
+13
+
+it is instantiated by a switch smart contract and switch rules.
+When encountering network outages and other incidents, Vrf
+and Att can asynchronously determine how they will perform
+RA. No other entities or global operators are required, so Vrf
+and Att can automatically control their attestation flow, which
+addresses the rigid procedure limitation and satisfy (R3).
+Switch contract: This contract maintains two fields for every
+Att to change the attestation flow: device condition (dc) and
+attestation state (as). Both fields take one of the values in
+{off-chain, on-chain, both}. Note that dc is only set
+by Att and as is set by anyone who wants to conduct RA
+with Att, i.e., some verifier.
+dc indicates the way in which Att prefers to conduct the attestation, i.e., off-chain protocol or on-chain smart contract. In
+practice, the device where Att resides may experience network
+outages, low battery power, stressed computing resources, etc.
+dc gives Att the leeway to adapt these conditions. as, on
+the other hand, indicates how Vrf will initiate an RA session
+with Att. Vrf first checks Att’s dc, and if dc=both, then
+Vrf can set as to on-chain or off-chain. Otherwise,
+as should only be set the same as dc.
+For example, if Att cannot establish point-to-point channels
+currently, it can trigger the switch contract to update dc to
+on-chain since the blockchain is always online. Then Vrf
+will choose to conduct on-chain RA functions with Att after
+it knows Att’s dc. They can change their attestation flow
+independently without interference of any other operators.
+Switch rules: We now give some example switch rules to
+instruct the switch procedure.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+Attestation Switching
+device condition
+
+Switch
+Contract
+
+attestation state
+
+Off-chain attestation
+
+Attester
+
+On-chain attestation
+
+Verifier
+
+Attestation
+contract
+
+transaction
+
+Performing Attestation
+
+Aggregator
+
+transaction
+
+Audit
+contract
+
+Fig. 7: Holistic view of attestation switch in JANUS
+S WITCH TO ON - CHAIN: If dc ̸= off-chain, Vrf can
+choose on-chain smart contract-based attestation with Att
+under the following cases:
+• Vrf cannot establish direct communication with Att.
+• The attestation results need to be acknowledged by at
+least a quorum of verifiers.
+• Att’s application is deployed in a distributed manner.
+Vrf needs to update as to on-chain through the switch
+contract. Then it generates a request transaction to perform
+the normal on-chain attestation (§V-C2).
+S WITCH TO OFF - CHAIN: If dc̸=on-chain, Vrf can
+choose off-chain PUF-based attestation protocols under the
+following cases:
+• Vrf and Att only need to conduct a routine attestation
+(periodically executed for regular check).
+• Higher verification efficiency is required for real-time
+systems like IoV and IoT.
+• Vrf needs off-chain attestation for other reasons, e.g.,
+privacy concerns, personal needs.
+These switch rules enable Vrf and Att to switch between
+on-chain or off-chain attestation seamlessly. Administrators
+can configure customized rules for their RA system. In the
+first two cases, Vrf are not required to update as. It directly
+sends the challenge of step ① in §V-B2 to start the attestation.
+For the third case, Vrf should first update as to off-chain
+before the attestation. Note that Vrf and Att are required to
+submit their credentials for audits afterward in all three cases.
+E. Use Cases
+JANUS provides a more open TEE RA framework with
+end-to-end trusted and resilient procedure for many realworld applications. In addition to the systems such as cloud
+computing and IoT, which frequently utilize RA, JANUS can
+be integrated into several emerging scenarios.
+• Function as a Service (FaaS). Our on-chain functions
+benefit distributed services like FaaS [33]. FaaS allows developers to deploy their applications in small functions. Given
+the highly dispersed nature of code deployment, traditional
+RA schemes may suffer from efficiency issues as they have
+to attest each function individually. In JANUS, distributed
+functions can be attested in a batch through our contract.
+
+10
+
+• BeyondCorp. Google BeyondCorp [35] is a security
+framework that implements a zero trust model, which shifts
+access controls from the network perimeter to individual
+devices. It requires continuous monitoring to verify the status
+of devices before granting access. The lightweight off-chain
+protocols and snapshotting mechanism in JANUS attestation
+can well support these needs.
+• Trusted Internet Connections (TIC) CISA TIC initiative
+[36] was established to enhance the federal networks by standardizing and consolidating network connections. It requires
+a trust-level evaluation and auditing capability, with the aim
+of reducing the number of access points while maintaining
+network resilience. JANUS can also offer suitable attestation
+functions like trust rating and resilient RA procedure, to meet
+TIC standards in real-world systems in real-world systems.
+VI. JANUS SECURITY
+A. Security Proof of PUF-based Protocols
+We first formalize the PUF definition and give the idealized
+PUF properties as follows.
+Definition 1: (Ideal PUF) Let P be a PUF family where
+R = puf(C) for ∀puf ∈ P and C, R ∈ {0, 1}∗ . P is an
+ideal PUF family if |C|= |R|= n and for any probabilistic
+polynomial-time (PPT) distinguisher A, we have,
+n
+• (Pseudorandomness) ∀puf ∈ P, ∀C ∈ {0, 1} ,
+h
+i
+h
+i
+1
+(1)
+Pr Apuf(C) ⇒ 1 − Pr A$ ⇒ 1 ≤ n · ϵ,
+2
+where ϵ is a negligible value related to n and $ denotes
+a random bits oracle.
+n
+• (Uniqueness) ∀puf1 , puf2 ∈ P, ∀C ∈ {0, 1} , let p(C) =
+puf0 (C) ⊕ puf1 (C),
+h
+i
+h
+i
+′
+1
+Pr Ap(C) ⇒ 1 − Pr A$ ⇒ 1 ≤ n · ϵ . (2)
+2
+• (Unclonability) Each PUF instance has a unique physical
+structure. Any attempt to evaluate a pre-installed PUF
+instance in simulation environments such as hardware
+debugging would change its response generation process
+and turn it into a different instance.
+In this work, we utilize Universally Composable (UC)
+framework [46] to depict the security of our off-chain protocols in §V-B1 and §V-B2. UC aims to rigorously demonstrate
+the (in)distinguishability of the protocol execution in the real
+world and ideal world. In the ideal world, an ideal functionality
+F describes the abstracted interfaces that a protocol wishes
+to achieve. Therefore, we propose the first mutual attestation
+ideal functionality Fatt in Appendix §A.
+Then a Simulator S in the ideal world emulates the protocol
+execution and behaviors of the real-world adversary A. The
+protocol realizes the ideal functionality if an environment
+machine Z cannot distinguish the observed output is from
+the real world or the ideal world. For JANUS, we have the
+following theorem to prove,
+Theorem 1: If the AEAD algorithm (E, D) provides ciphertext indistinguishability under chosen ciphertext attack (INDCCA), the hash function H is collision resistant and puf is an
+ideal PUF, then the PUF-based attestation protocols of JANUS
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+11
+
+with respect to a global database L UC-realizes Fatt against
+a static adversary A.
+Proof The complete proof is given in the Appendix §A. □
+B. Security Analysis
+We now give the security analysis against different attacks
+and describe how JANUS is capable of defending against them.
+As shown in Table II, JANUS can resist all attacks included
+in the threat model (§IV-A), while other designs can only
+partially resist them.
+TABLE II: Security comparison of (TEE) RA schemes
+Designs
+SGX RA [4]
+OPERA [21]
+MATEE [53]
+LIRA-V [39]
+SCRAPS [31]
+JANUS
+
+: Resisted;
+
+A1
+
+A2
+
+A3
+
+: Partially resisted;
+
+A4
+
+A6
+
+A7
+
+: not resisted;
+
+• Channel attacks: JANUS has adopted complete protocol
+design and cryptographic techniques to prevent Adv from
+replaying, modifying, or forging any messages in an open
+channel. For the off-chain PUF-based protocols, the AEAD
+algorithm (E, D) ensures data confidentiality, integrity, and
+authenticity, while the PUF-based authentication operations
+in LA guarantee the authenticity of (Z, t). For the on-chain
+verification and snapshot structure, JANUS ensures that the
+channel attackers cannot tamper with the messages. Moreover,
+our UC-based security proof shows that the security strength of
+our protocols is bounded by PUF and cryptographic primitives.
+• DoS attacks: As assumed in §IV-A, the DoS attacks
+here are similar to those in other works [31], [32], referring
+to Adv sending massive meaningless and erroneous attestation requests to a legitimate Att to exhaust the device
+resources. JANUS can mitigate this attack in three ways:
+(1) The blockchain is naturally a robust distributed system
+that withstands numerous data requests. (2) If the system is
+overwhelmed, the duplex architecture of JANUS allows users
+to opt for off-chain protocols, or the other way around. This
+resilience helps guarantee the continuous service delivery. (3)
+Meanwhile, in our protocol design, most operations are based
+on lightweight primitives, e.g., AEAD algorithm, thereby
+imposing no excessive computational burdens on Att.
+• Physical probing: If Adv physically acquires the attested
+devices, it can repeatedly trigger the RA procedure to generate
+side-channel power leakage to deduce the key, or it directly
+dumps the binary in external memory to find the secret information. However, in our design, Kgid is constructed through
+PUF-based XOR masking. It can remain secure under the
+semi-invasive attack manners even if MK aid is exposed by
+power side-channel analysis or memory read-out. Also, our
+PUF-based RA protocol §V-B2 avoids using a fixed encryption
+key on the attester side in each session, thereby preventing the
+highly correlated power leakage.
+• Chip delayering: Furthermore, if Adv adopts invasive
+physical attacks such as FIB and LVP to reveal the electrical
+
+layout inside the TEE chip, such destructive attack would
+unavoidably damage the original structure of the embedded
+PUF instances. Therefore, even if Adv manages to extract the
+TEE root key, it will be unable to generate valid attestation
+reports and pass the verification without PUF. Most RA
+designs cannot resist this type of attacks since they rely on
+a centralized TEE root key instead of physics-based trust.
+• PUF modeling attacks: The communication messages in
+RA protocols and smart contracts do not expose raw PUF
+CRPs during transmission, preventing Adv from gathering
+them to train a PUF model. Moreover, PUF’s I/O bus is usually
+sealed in the chip [55], [56] and thus not exposed to the
+outside. As a result, Adv cannot directly invoke PUF unless it
+uses invasive measures, which, as previously explained, would
+alter the original IC status and turn PUF unavailable. Also,
+JANUS is PUF-agnostic and can use various PUF designs [97]–
+[99] with better modeling resilience.
+• Rogue verifier and collusion: The decentralized attestation
+contract in §V-C2 prevents rogue verifiers from intentionally
+declaring the false attestation results. For off-chain protocols,
+even if there are corrupted verifiers that produce untrusted
+results, our audit contract helps identify such compromises
+and minimize the impact that rogue verifiers bring.
+VII. I MPLEMENTATION AND E VALUATION
+A. JANUS Implementation
+We provide a PoC implementation of JANUS in this paper.
+For off-chain attestation protocols, we use a LPC55S69 evaluation board as the verifier and an Dell EMC R750 Server
+as the attester. LPC55S69 enables ARM TrustZone and has
+dual core Arm Cortex-M33 up to 150 MHz. It is a widely
+used general-purpose IoT device [100]. The EMC Server is
+with 512 GB RAM and with Intel Xeon Gold 6330 3.1 GHz
+processor enabling SGX. We set an (8,8)-IPUF [45] instance
+on a Digilent Nexys board with Xilinx Artix-7 embedded.
+IPUF is connected to the EMC Server to be the second
+RoT. The LPC board communicates with the EMC server
+using socket API. They simulate the scenario where distributed
+application modules require mutual RA.
+For on-chain smart contracts, we use Hyperledger Sawtooth
+[44] to implement our smart contracts in Docker containers, as
+in [31], [32], The contracts are deployed on the EMC server
+and thus will be running with the attester code. We allow
+remote devices to access the Sawtooth network via REST
+API and the exposed container ports. Then the LPC board
+can interact with the Sawtooth blockchain.
+B. Prototype Evaluation
+1) Off-Chain Protocol Evaluation: Table IV compares the
+theoretical performance of the PUF-based RA protocol in
+§V-B2 with SGX and LIRA-V [39].
+Theoretical comparison: We can see that JANUS has a
+compact protocol structure using three-round interactions to
+complete mutual attestation. Compared to other protocols,
+JANUS only needs asymmetric primitives in measurement
+signing, resulting in lower computation overhead on resourceconstrained platforms. And JANUS is the only one to achieve
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+12
+
+TABLE III: Performance of off-chain remote attestation of JANUS
+Items
+SGX Server
+
+Overall
+1.18 ms
+
+LPC55S69
+
+Local Attestation
+Challenge
+Response
+0.12ms
+
+0.81 ms
+
+-
+
+Overall
+4.98 ms
+510.46 ms
+
+Remote Attestation
+Challenge
+Response
+0.04 ms (②)
+1.64 ms (③)
+2.16 ms (⑥)
+3.47 ms (①)
+341.98 ms (⑤)
+164.12 ms (④)
+
+Binary
+size (KB)
+
+PUF
+((8,8)-IPUF)
+
+Communication
+Latency
+
+548
+
+2267 LUT +
+295 FF,
+14ms†
+
+3 ms ∼
+7 ms
+
+348
+
+†: including the latency of serial port communication;
+
+UC-based provable security. Also, JANUS does not necessitate the pre-storage of cryptographic materials for peer-topeer communication, reducing storage overhead to constant
+complexity. Therefore, the off-chain protocol of JANUS is
+lightweight and scalable for numerous devices.
+TABLE IV: Comparison of PUF-based RA protocols
+Properties
+RoT Type
+No. of RoT
+Mutual RA
+Security proof
+Signature calls
+Key agreement
+Protocol round
+
+Sanctum RA [5]
+Key
+1
+✗
+✗
+2
+ECDH
+2
+
+[28]
+Key
+1
+✗
+✗
+2
+N/A
+2
+
+[89]
+PUF
+1
+✗
+✗
+1
+N/A
+4
+
+JANUS
+PUF
+2
+✓
+✓
+2
+PUF XOR
+3
+
+Microbenchmark: The performances of the protocols are
+given in Table III. We here choose ASCON AEAD [101],
+SHA256 and ECDSA with secp256r1. The devices genuinely
+execute the PUF-based RA protocol (∼1000 LoC) meanwhile we use gettimeofday() and hardware cycle counter
+KIN1_DWT_CYCCNT to record the latency.
+The local attestation protocol (∼1500 LoC) involving no
+asymmetric cryptographic operations can be completed in less
+than 1.2 ms on SGX enclaves in the server. The majority
+of computation latency for the RA protocol comes from
+the signing and verifying operation that is about 157.7 ms
+and 337.30 ms on the LPC board. The AEAD-based design
+can save considerable computation resources. Also, the raw
+executable files are 548 KB and 348 KB on each platform,
+making it resource-friendly and highly portable.
+2) On-Chain Smart Contract Evaluation: We implement
+the smart contracts in Python (∼600 LoC) and the corresponding client in C (∼800 LoC) that allows devices to form and
+send the transactions to Sawtooth Network.
+Microbenchmark: Table V summarizes the overall performance of on-chain attestation of JANUS. We measure the
+performance from two perspectives: (1) client preparation and
+(2) contract execution. For (1), except the attestation data
+generation, the required operations by Sawtooth including data
+serialization and transaction wrapping bring much overhead
+actually. Hence, as shown in Table V, the computation latency
+on the board is about 300 ms∼400 ms and the server is about
+3 ms∼4 ms. For (2), off-chain data submissions are executed
+faster than transaction payload verification. The submission
+latency of three contracts are all less than 5 ms and is
+acceptable for real-time systems. Our tests also find out that
+the LPC board requires about 12 ms to retrieve the stored data
+on-chain through unix sockets in local network. These results
+
+show that our off/on-chain interactions do not adversely affect
+the overall performance of the entire RA procedure in JANUS.
+3) Scalability Evaluation: We present the scalability evaluation of JANUS’s off-chain and on-chain attestation
+Baselines: We choose [81], [39] as the off-chain comparison
+baseline and [31] for on-chain. [81] presents an PUF-based
+authentication protocol and [31] also uses smart contract for
+attestation and thus is partially similar with JANUS’s on-chain
+functions.
+
+(a) Off-chain RA protocol
+
+(b) On-chain Attestation
+Fig. 8: Scalability evaluation of JANUS when increasing the
+involved attested participants
+
+Comparison: Figure 8a illustrates the storage cost incurred by
+a Vrf when communicating with other Atts. Compared with
+[39], [81], JANUS requires the minimal cryptographic materials
+in E2E communication. Figure 8b provides a comparison of
+on-chain attestation latency between JANUS and SCRAPS
+[31]. JANUS exhibits a slower upward trend as the number
+of Att increases and save many interaction latency than
+SCRAPS. JANUS can offer better scalable off-chain and onchain attestation services for large-scale networks.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+13
+
+TABLE V: Performance of onchain attestation of JANUS
+Side
+Contract
+
+Client
+
+Item
+Script size
+Off-chain Data submission
+TX Payload Verification
+Total calls
+Platform
+EMC SGX Server
+LPC55S69
+
+Attestation
+8.0 KB
+2.5 ms
+29.6 ms
+3
+Challenge
+3.15 ms
+341.26 ms
+
+Audit
+8.0 KB
+3.7 ms
+8.3 ms
+2
+
+Attestation report
+3.75 ms
+486.25 ms
+
+VIII. D ISCUSSION
+In this section, we further discuss why the purpose of
+choosing PUF in this work is different from others, and
+additional efforts of integrating PUF into real-world TEEs.
+A. Decentralized Trust of PUF for TEE
+PUF internalizes environmental randomness on its structure.
+It provides a way to create physical intrinsic trust, which is
+desired in current TEEs. The following characteristics of PUF
+make it an essential component for TEE RA.
+• New security guarantees: TEE, TPM and HSM use the
+same way of ensuring the security, i.e., sealing the fused
+private keys. However, PUF introduces a new security
+paradigm by the unique intrinsic structures instead of a
+given key. It eliminates the target, e.g., keys, of many
+attacks and thus offers new and stronger guarantees in
+addition to the sealing key-based approach.
+• Independent trust: PUF reserves an untouched area in
+circuits that cannot be modified by others (even its manufacturer) once the fabrication is completed. Therefore,
+it creates a new source of trust that is truly independent.
+Compared to other PUF-based works, we provide this
+insight to further exploit its capabilities, which is beyond
+than the PUF-backed key generation or physical hashing.
+• Succinct usage: PUF only exposes challenge and response port. Compared with TPM and other techniques,
+PUF has a quite succinct usage which benefits the integration into many security designs.
+The succinct usage of PUFs leads to apparent similarities
+between some PUF-based RA designs [84], [85], [89] and
+JANUS. The fundamental difference lies in that we address
+the long-standing issue of trust establishment in TEE RA by
+leveraging the independent trust and new security guarantee
+of PUFs, which has not been well explored by other studies.
+B. Integrating PUF into TEEs
+Intel [59], NXP [55] and Xilinx [56] have released products
+with integrated PUF. With PUF being standardized [63], [64],
+a hardware ecosystem with built-in PUF can be expected. Here
+we discuss a possible roadmap of integrating it into TEE.
+The hardware integration of PUF in TEE would require xPU
+(e.g., CPU, GPU and NPU) extensions and new xPU-PUF
+interface design. Potential efforts include: (1) On the PUF side,
+it should be defined as an attestable fixed function module. It
+should be setup with a clear secure model (e.g., side-channel
+resistant). (2) On the xPU side, new hardware extensions
+
+Credentials
+3.11 ms
+333.81 ms
+
+Request
+3.08 ms
+324.75 ms
+
+Attestation Switch
+5.7 KB
+4.4 ms
+2
+dc update
+3.06 ms
+325.85 ms
+
+as submission
+3.17 ms
+338.60 ms
+
+or drivers should be added to cooperate with the installed
+PUF. Then TEE/RA related instructions (e.g., measurement or
+signing) could optionally be enforced by PUF. (3) The (offdie) physical link between xPU and PUF should be encrypted.
+It may also need access control and memory management. We
+leave the off-the-shelf implementation for future work.
+C. Limitations
+We identify two limitations of JANUS. First, PUF here
+cannot operate alone to obtain measurements in case of
+TEE failures. It must work in TEE to generate the physical
+attestation endorsements in a nested way. We intend to address
+this limitation in the future. Second, JANUS does not provide
+formally-verified smart contract functions including the attestation switch. Therefore, their security strength is difficult to be
+evaluated. We consider leveraging TEE to enhance the security
+and privacy of the contract execution [40].
+IX. C ONCLUSION AND F UTURE W ORK
+To decentralize the trust establishment in traditional TEE
+RA designs, we propose using PUF as an additional intrinsic RoT to break the closed RA architecture dominated by
+TEE manufacturers. Our PUF-based attestation protocols are
+lightweight in both computation and storage. And to eliminate
+the centralization in single-party verification, we design several
+smart contracts to build a publicly verifiable and permanently
+reviewable procedure. Our switch mechanism combines the
+different attestation functionalities of JANUS to form a resilient
+RA service. JANUS thoroughly addresses the limitations of
+over-centralization and lack of resilience that exist in nearly
+all TEE RA schemes. It can be a comprehensive solution of
+increasing trust in TEE and shed some light on designing a
+more secure and trusted TEE RA paradigm.
+In the future, we plan to overcome the aforementioned
+drawbacks of JANUS. We will design a dedicated PUF-based
+measuring mechanism for different platforms including TEE.
+It is expected to achieve lightweight runtime measuring by
+PUF. Building on this and JANUS framework, we will explore
+how to use PUF to provide runtime measurement and design
+PUF-based unified heterogeneous TEE systems.
+ACKNOWLEDGMENTS
+The authors would like to thank the editors and anonymous
+reviewers for their work. This work is supported by National
+Science and Technology Major Project (No. 2022ZD0120304)
+and Shanghai Science and Technology Innovation Action
+Program (No. 22511101300).
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+R EFERENCES
+[1] H. Birkholz, D. Thaler, M. Richardson, N. Smith, and W. Pan,
+“Remote ATtestation procedureS (RATS) Architecture,” RFC 9334,
+Jan. 2023. [Online]. Available: https://www.rfc-editor.org/info/rfc9334
+[2] Microsoft, “Microsoft Azure Attestation,” https://azure.microsoft.com/
+en-us/products/azure-attestation, 2021.
+[3] AWS Nitro Enclaves, “Cryptographic attestation,” https://docs.aws.
+amazon.com/enclaves/latest/user/set-up-attestation.html, 2023.
+[4] V. Costan and S. Devadas, “Intel SGX explained,” Cryptology ePrint
+Archive, 2016, https://eprint.iacr.org/2016/086.pdf.
+[5] V. Costan, I. A. Lebedev, and S. Devadas, “Sanctum: Minimal hardware
+extensions for strong software isolation,” in 25th USENIX Security
+Symposium, USENIX Security 16, 2016, pp. 857–874.
+[6] D. Lee, D. Kohlbrenner, S. Shinde, K. Asanović, and D. Song,
+“Keystone: An Open Framework for Architecting Trusted Execution
+Environments,” in Fifteenth EuroSys Conference, 2020, pp. 38:1–38:16.
+[7] P. Kocher, J. Horn, A. Fogh, D. Genkin, D. Gruss, W. Haas, M. Hamburg, M. Lipp, S. Mangard, T. Prescher, M. Schwarz, and Y. Yarom,
+“Spectre attacks: Exploiting speculative execution,” in 2019 IEEE
+Symposium on Security and Privacy, 2019, pp. 1–19.
+[8] M. Lipp, M. Schwarz, D. Gruss, T. Prescher, W. Haas, A. Fogh,
+J. Horn, S. Mangard, P. Kocher, D. Genkin, Y. Yarom, and M. Hamburg,
+“Meltdown: Reading kernel memory from user space,” in 27th USENIX
+Security Symposium, 2018, pp. 973–990.
+[9] S. van Schaik, M. Minkin, A. Kwong, D. Genkin, and Y. Yarom,
+“Cacheout: Leaking data on intel cpus via cache evictions,” in 2021
+IEEE Symposium on Security and Privacy, 2021, pp. 339–354.
+[10] M. Lipp, A. Kogler, D. F. Oswald, M. Schwarz, C. Easdon, C. Canella,
+and D. Gruss, “PLATYPUS: software-based power side-channel attacks
+on x86,” in 42nd IEEE Symposium on Security and Privacy, 2021, pp.
+355–371.
+[11] A. Tang, S. Sethumadhavan, and S. J. Stolfo, “CLKSCREW: exposing
+the perils of security-oblivious energy management,” in 26th USENIX
+Security Symposium, 2017, pp. 1057–1074.
+[12] A. Cui and R. Housley, “BADFET: defeating modern secure boot using
+second-order pulsed electromagnetic fault injection,” in 11th USENIX
+Workshop on Offensive Technologies, 2017.
+[13] P. Qiu, D. Wang, Y. Lyu, and G. Qu, “VoltJockey: Breaching trustzone by software-controlled voltage manipulation over multi-core frequencies,” in Proceedings of the 2019 ACM SIGSAC Conference on
+Computer and Communications Security, 2019, pp. 195–209.
+[14] R. Buhren, H. N. Jacob, T. Krachenfels, and J. Seifert, “One Glitch
+to Rule Them All: Fault Injection Attacks Against AMD’s Secure Encrypted Virtualization,” in 2021 ACM SIGSAC Conference on Computer
+and Communications Security, 2021, pp. 2875–2889.
+[15] S. van Schaik, A. Seto, T. Yurek, A. Batori, B. AlBassam, C. Garman,
+D. Genkin, A. Miller, E. Ronen, and Y. Yarom, “SoK: SGX.Fail: How
+stuff get eXposed,” https://sgx.fail, 2022.
+[16] J. V. Bulck, D. Moghimi, M. Schwarz, M. Lipp, M. Minkin, D. Genkin,
+Y. Yarom, B. Sunar, D. Gruss, and F. Piessens, “LVI: hijacking transient
+execution through microarchitectural load value injection,” in IEEE
+Symposium on Security and Privacy. IEEE, 2020, pp. 54–72.
+[17] M. Schwarz, M. Lipp, D. Moghimi, J. V. Bulck, J. Stecklina,
+T. Prescher, and D. Gruss, “Zombieload: Cross-privilege-boundary data
+sampling,” in ACM CCS. ACM, 2019, pp. 753–768.
+[18] S. van Schaik, A. Kwong, D. Genkin, and Y. Yarom, “SGAxe: How
+SGX Fails in Practice,” https://sgaxe.com/files/SGAxe.pdf, 2021.
+[19] Google Cloud, “Remote attestation of disaggregated machines,” https:
+//cloud.google.com/docs/security/remote-attestation, 2022.
+[20] Intel, “Remote Attestation,” https://www.intel.com/content/www/us/
+en/developer/tools/software-guard-extensions/attestation-services.html,
+2023.
+[21] G. Chen, Y. Zhang, and T.-H. Lai, “OPERA: Open Remote Attestation
+for Intel’s Secure Enclaves,” in Proceedings of the 2019 ACM SIGSAC
+Conference on Computer and Communications Security. ACM, Nov.
+2019, pp. 2317–2331.
+[22] R. Ross and V. Pillitteri, “NIST Special Publication 800-160, Developing Cyber-Resilient Systems,” https://nvlpubs.nist.gov/nistpubs/
+SpecialPublications/NIST.SP.800-160v2r1.pdf, 2021.
+[23] Microsoft, “Cloud-native resiliency,” https://learn.microsoft.com/en-us/
+dotnet/architecture/cloud-native/resiliency, 2022.
+[24] ——, “Azure platform resiliency,” https://learn.microsoft.com/en-us/
+dotnet/architecture/cloud-native/infrastructure-resiliency-azure, 2022.
+[25] Google cloud, “Infrastructure design for availability and resilience,”
+https://services.google.com/fh/files/misc/infrastructure design for
+availability and resilience wp.pdf, 2020.
+
+14
+
+[26] Mezzalira, Luca and Hyatt, Laura and Denti, Vittorio
+and Jaupaj, Zamira, “Let’s Architect! Creating resilient
+architecture,”
+https://aws.amazon.com/cn/blogs/architecture/
+lets-architect-creating-resilient-architecture/, 2022.
+[27] M. Lipp, D. Gruss, R. Spreitzer, C. Maurice, and S. Mangard, “ARMageddon: Cache attacks on mobile devices,” in 25th USENIX Security
+Symposium, 2016, pp. 549–564.
+[28] R. Román, R. Arjona, and I. Baturone, “A lightweight remote attestation using pufs and hash-based signatures low-end iot devices,” Future
+Generation Computer Systems, vol. 148, pp. 425–435, 2023.
+[29] Boru Chen and Yingchen Wang and Pradyumna Shome and Christopher W. Fletcher and David Kohlbrenner and Riccardo Paccagnella
+and Daniel Genkin, “GoFetch: Breaking Constant-Time Cryptographic
+Implementations Using Data Memory-Dependent Prefetchers,” https:
+//gofetch.fail/, 2024.
+[30] NIST, https://nvd.nist.gov/vuln/detail/CVE-2024-2193, 2024.
+[31] L. Petzi, A. E. B. Yahya, A. Dmitrienko, G. Tsudik, T. Prantl, and
+S. Kounev, “SCRAPS: Scalable Collective Remote Attestation for PubSub IoT Networks with Untrusted Proxy Verifier,” in 31st USENIX
+Security Symposium, 2022, pp. 3485–3501.
+[32] S. F. J. J. Ankergård, E. Dushku, and N. Dragoni, “PERMANENT:
+Publicly Verifiable Remote Attestation for Internet of Things Through
+Blockchain,” Foundations and Practice of Security, vol. 13291, pp.
+218–234, 2022.
+[33] Google cloud, “Cloud Functions,” https://cloud.google.com/functions,
+2023.
+[34] Intel, “Project Amber: Increasing Trust in Confidential Computing,” https://www.intel.com/content/www/us/en/security/project-amber.
+html, 2023.
+[35] Google cloud, “BeyondCorp: A new approach to enterprise security.”
+https://cloud.google.com/beyondcorp, 2023.
+[36] Cybersecurity and I. S. Agency, “Trusted Internet Connections 3.0,”
+https://www.cisa.gov/sites/default/files/publications/CISA%20TIC%
+203.0%20Traditional%20TIC%20Use%20Case.pdf, 2021.
+[37] A. Galanou, F. Gregor, R. Kapitza, and C. Fetzer, “MATEE: Multimodal attestation for trusted execution environments,” in Proceedings
+of the 23rd ACM/IFIP International Middleware Conference, Nov.
+2022, pp. 121–134.
+[38] V. Scarlata, S. Johnson, J. Beaney, and P. Zmijewski, “Supporting Third
+Party Attestation for Intel® SGX with Intel® Data Center Attestation
+Primitives,” Product Brief, 2018.
+[39] C. Shepherd, K. Markantonakis, and G. Jaloyan, “LIRA-V: lightweight
+remote attestation for constrained RISC-V devices,” in IEEE Security
+and Privacy Workshops, 2021, pp. 221–227.
+[40] N. Jean-Louis, Y. Li, Y. Ji, H. Malvai, T. Yurek, S. Bellemare, and
+A. Miller, “SGXonerated:Finding (and Partially Fixing) Privacy Flaws
+in TEE-based Smart Contract Platforms Without Breaking the TEE,”
+in Proceedings on Privacy Enhancing Technologies (PoPETs), 2024,
+pp. 617–634.
+[41] E. Brickell, J. Camenisch, and L. Chen, “Direct anonymous attestation,” in Proceedings of the 11th ACM conference on Computer and
+communications security, 2004, pp. 132–145.
+[42] R. Pappu, “Physical One-Way Functions,” Ph.D. dissertation, MIT, Sep.
+2002.
+[43] H. R. Ghaeini, M. Chan, R. Bahmani, F. Brasser, L. Garcia, J. Zhou,
+A.-R. Sadeghi, N. O. Tippenhauer, and S. Zonouz, “PAtt: Physics-based
+Attestation of Control Systems,” in 22nd International Symposium on
+Research in Attacks, Intrusions and Defenses, RAID 2019, 2019, pp.
+165–180.
+[44] K. Olson, M. Bowman, and J. Mitchell, “Sawtooth: An Introduction,” https://www.hyperledger.org/wp-content/uploads/2018/01/
+Hyperledger Sawtooth WhitePaper.pdf, 2018.
+[45] P. H. Nguyen, D. P. Sahoo, C. Jin, K. Mahmood, U. Rührmair, and
+M. van Dijk, “The Interpose PUF: Secure PUF design against state-ofthe-art machine learning attacks,” IACR Transactions on Cryptographic
+Hardware and Embedded Systems, pp. 243–290, 2019.
+[46] R. Canetti, “Universally composable security: A new paradigm for
+cryptographic protocols,” in Proceedings 42nd IEEE Symposium on
+Foundations of Computer Science. IEEE, 2001, pp. 136–145.
+[47] E. Feng, X. Lu, D. Du, B. Yang, X. Jiang, Y. Xia, B. Zang, and
+H. Chen, “Scalable memory protection in the PENGLAI enclave,” in
+15th USENIX Symposium on Operating Systems Design and Implementation, OSDI. USENIX Association, 2021, pp. 275–294.
+[48] J. Yao, “Intel® Trust Domain Extensions,” https://www.
+intel.com/content/www/us/en/developer/articles/technical/
+intel-trust-domain-extensions.html, 2023.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+[49] AMD, “AMD Secure Encrypted Virtualization (SEV),” https://www.
+amd.com/en/developer/sev.html, 2017.
+[50] ARM,
+“Arm
+Confidential
+Compute
+Architecture,”
+https://www.arm.com/architecture/security-features/
+arm-confidential-compute-architecture, 2021.
+[51] Apple Platform Security, “Secure Enclave,” https://support.apple.com/
+en-gb/guide/security/sec59b0b31ff/web, 2021.
+[52] Samsung Developers, “SAMSUNG TEEGRIS,” https://developer.
+samsung.com/teegris/overview.html, 2019.
+[53] G. Chen and Y. Zhang, “MAGE: Mutual Attestation for a Group of
+Enclaves without Trusted Third Parties,” in 31st USENIX Security
+Symposium, 2022, pp. 4095–4110.
+[54] U. Rührmair and M. van Dijk, “Pufs in security protocols: Attack
+models and security evaluations,” in 2013 IEEE Symposium on Security
+and Privacy, SP 2013. IEEE Computer Society, 2013, pp. 286–300.
+[55] NXP,
+“LPC5500
+Series,”
+https://www.nxp.com/products/
+processors-and-microcontrollers/arm-microcontrollers/
+general-purpose-mcus/lpc5500-arm-cortex-m33:LPC5500 SERIES,
+2021.
+[56] AMD
+Xilinx,
+“Physically
+Unclonable
+Function,”
+https://docs.xilinx.com/r/en-US/am011-versal-acap-trm/
+Physically-Unclonable-Function?tocId=8Lcvsmt7Vkdglr∼m8UuUeg,
+2022.
+[57] Intrinsic-ID, “QuiddiKey 300, The First Root-of-Trust IP Certified Against Physical Attacks,” https://www.intrinsic-id.com/products/
+quiddikey-300/, 2022.
+[58] ICTK, “ICTK Technology,” https://ictk.com/Service-Plan, 2022.
+[59] Intel Agilex Device Security User Guide, “Intrinsic ID
+Physically
+Unclonable
+Function
+(PUF),”
+https://www.intel.
+com/content/www/us/en/docs/programmable/683823/21-3/
+intrinsic-id-physically-unclonable-function.html, 2021.
+[60] Lee, Teddy Kyung, “Via PUF Technology as a Root of
+Trust in IoT Supply Chain,” https://www.gsaglobal.org/forums/
+via-puf-technology-as-a-root-of-trust-in-iot-supply-chain/, 2023.
+[61] Intrinsic ID, “Health and Wellness Start with Trust,” https://www.
+intrinsic-id.com/markets/medical/, 2020.
+[62] Lee, Teddy Kyung, “Industry’s first debut of PUF-USIM chip,” https:
+//www.gsaglobal.org/forums/industrys-first-debut-of-puf-usim-chip/,
+2023.
+[63] “Information security, cybersecurity and privacy protection — Physically unclonable functions — Part 1: Security requirements,” International Organization for Standardization, Standard, Dec. 2020.
+[64] “Information security, cybersecurity and privacy protection — Physically unclonable functions — Part 2: Test and evaluation methods,”
+International Organization for Standardization, Standard, May 2022.
+[65] I. D. O. Nunes, K. Eldefrawy, N. Rattanavipanon, M. Steiner, and
+G. Tsudik, “VRASED: A Verified Hardware/Software Co-Design for
+Remote Attestation,” in 28th USENIX Security Symposium, 2019, pp.
+1429–1446.
+[66] I. De Oliveira Nunes, S. Jakkamsetti, N. Rattanavipanon, and
+G. Tsudik, “On the TOCTOU Problem in Remote Attestation,” in
+Proceedings of the 2021 ACM SIGSAC Conference on Computer and
+Communications Security, 2021, pp. 2921–2936.
+[67] I. D. O. Nunes, K. Eldefrawy, N. Rattanavipanon, and G. Tsudik,
+“APEX: A verified architecture for proofs of execution on remote
+devices under full software compromise,” in 29th USENIX Security
+Symposium, Aug. 2020, pp. 771–788.
+[68] S. Surminski, C. Niesler, F. Brasser, L. Davi, and A.-R. Sadeghi,
+“RealSWATT: Remote Software-based Attestation for Embedded Devices under Realtime Constraints,” in Proceedings of the 2021 ACM
+SIGSAC Conference on Computer and Communications Security, 2021,
+pp. 2890–2905.
+[69] Z. Sun, B. Feng, L. Lu, and S. Jha, “OAT: Attesting Operation Integrity
+of Embedded Devices,” in 2020 IEEE Symposium on Security and
+Privacy, 2020, pp. 1433–1449.
+[70] J. Wang, Y. Wang, A. Li, Y. Xiao, R. Zhang, W. Lou, Y. T. Hou, and
+N. Zhang, “ARI: Attestation of Real-time Mission Execution Integrity,”
+in 31st USENIX Security Symposium, 2023.
+[71] B. Kuang, A. Fu, Y. Gao, Y. Zhang, J. Zhou, and R. H. Deng, “FeSA:
+Automatic Federated Swarm Attestation on Dynamic Large-Scale IoT
+Devices,” IEEE Transactions on Dependable and Secure Computing,
+pp. 1–16, 2022.
+[72] X. Carpent, K. ElDefrawy, N. Rattanavipanon, and G. Tsudik,
+“Lightweight Swarm Attestation: A Tale of Two LISA-s,” in Proceedings of the 2017 ACM on Asia Conference on Computer and
+Communications Security. ACM, 2017, pp. 86–100.
+
+15
+
+[73] F. Kohnhäuser, N. Büscher, and S. Katzenbeisser, “A practical attestation protocol for autonomous embedded systems,” in 2019 IEEE
+European Symposium on Security and Privacy, 2019, pp. 263–278.
+[74] D. Moghimi, B. Sunar, T. Eisenbarth, and N. Heninger, “TPM-FAIL:
+TPM meets timing and lattice attacks,” in 29th USENIX Security
+Symposium (USENIX Security 20), 2020, pp. 2057–2073.
+[75] H. N. Jacob, C. Werling, R. Buhren, and J.-P. Seifert, “faultpm:
+Exposing amd ftpms’ deepest secrets,” 2023.
+[76] J. Camenisch, M. Drijvers, and A. Lehmann, “Universally composable
+direct anonymous attestation,” in 19th IACR International Conference
+on Practice and Theory in Public-Key Cryptography, 2016, pp. 234–
+264.
+[77] J. Camenisch, L. Chen, M. Drijvers, A. Lehmann, D. Novick, and
+R. Urian, “One TPM to Bind Them All: Fixing TPM 2.0 for Provably
+Secure Anonymous Attestation,” in 2017 IEEE Symposium on Security
+and Privacy, 2017, pp. 901–920.
+[78] U. Chatterjee, V. Govindan, R. Sadhukhan, D. Mukhopadhyay, R. S.
+Chakraborty, D. Mahata, and M. M. Prabhu, “Building PUF Based
+Authentication and Key Exchange Protocol for IoT without Explicit
+CRPs in Verifier Database,” IEEE Transactions on Dependable and
+Secure Computing, vol. 16, no. 3, pp. 424–437, May 2019.
+[79] M. Umar, S. H. Islam, K. Mahmood, S. Ahmed, Z. Ghaffar, and M. A.
+Saleem, “Provable Secure Identity-Based Anonymous and PrivacyPreserving Inter-Vehicular Authentication Protocol for VANETS Using
+PUF,” IEEE Transactions on Vehicular Technology, vol. 70, no. 11, pp.
+12 158–12 167, 2021.
+[80] M. A. Qureshi and A. Munir, “PUF-RAKE: A PUF-Based Robust and
+Lightweight Authentication and Key Establishment Protocol,” IEEE
+Transactions on Dependable and Secure Computing, vol. 19, no. 4,
+pp. 2457–2475, Jul. 2022.
+[81] Y. Zheng, W. Liu, C. Gu, and C.-H. Chang, “PUF-based Mutual
+Authentication and Key Exchange Protocol for Peer-to-Peer IoT Applications,” IEEE Transactions on Dependable and Secure Computing,
+pp. 1–18, 2022.
+[82] X. Zhang, D. Gu, T. Wang, and Y. Huang, “Old School, New Primitive:
+Towards Scalable PUF-based Authenticated Encryption Scheme in
+IoT,” IEEE Transactions on Computer-Aided Design of Integrated
+Circuits and Systems, pp. 1–1, 2023.
+[83] S. Schulz, A.-R. Sadeghi, and C. Wachsmann, “Short paper:
+Lightweight remote attestation using physical functions,” in Proceedings of the Fourth ACM Conference on Wireless Network Security,
+2011, pp. 109–114.
+[84] J. Kong, F. Koushanfar, P. K. Pendyala, A.-R. Sadeghi, and C. Wachsmann, “PUFatt: Embedded Platform Attestation Based on Novel
+Processor-Based PUFs,” in Proceedings of the 51st Annual Design
+Automation Conference, 2014, pp. 1–6.
+[85] A. Mondal, S. Gangopadhyay, D. Chatterjee, H. Boyapally, and
+D. Mukhopadhyay, “PReFeR: Physically Related Function based Remote Attestation Protocol,” ACM Transactions on Embedded Computing Systems, vol. 22, no. 5s, pp. 109:1–109:23, 2023.
+[86] U. Javaid, M. N. Aman, and B. Sikdar, “Defining trust in IoT
+environments via distributed remote attestation using blockchain,” in
+Mobihoc 20: ACM International Symposium on Theory, Algorithmic
+Foundations, and Protocol Design for Mobile Networks and Mobile
+Computing, 2020, pp. 321–326.
+[87] M. N. Aman, M. H. Basheer, S. Dash, J. W. Wong, J. Xu, H. W. Lim,
+and B. Sikdar, “Hatt: Hybrid remote attestation for the internet of things
+with high availability,” IEEE Internet of Things Journal, vol. 7, no. 8,
+pp. 7220–7233, 2020.
+[88] N. Marastoni and M. Ceccato, “Remote Attestation of IoT Devices
+using Physically Unclonable Functions: Recent Advancements and
+Open Research Challenges,” in Proceedings of the 5th Workshop on
+CPS&IoT Security and Privacy. ACM, 2023, pp. 25–36.
+[89] R. N. Akram, K. Markantonakis, and K. Mayes, “Remote Attestation
+Mechanism for Embedded Devices Based on Physical Unclonable
+Functions,” in Radio Frequency Identification System Security, ser.
+Cryptology and Information Security Series, vol. 11, 2013, pp. 107–
+121.
+[90] J. Park and Kwangjo Kim, “TM-Coin: Trustworthy management of
+TCB measurements in IoT,” in IEEE International Conference on
+Pervasive Computing and Communications Workshops, 2017, pp. 654–
+659.
+[91] M. Bampatsikos, C. Ntantogian, C. Xenakis, and S. C. A. Thomopoulos, “BARRETT: BlockchAin Regulated REmote aTTestation,” in
+IEEE/WIC/ACM International Conference on Web Intelligence, 2019,
+pp. 256–262.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+[92] Y. Yan, C. Wei, X. Guo, X. Lu, X. Zheng, Q. Liu, C. Zhou,
+X. Song, B. Zhao, H. Zhang, and G. Jiang, “Confidentiality support
+over financial grade consortium blockchain,” in Proceedings of the
+2020 International Conference on Management of Data, SIGMOD
+Conference 2020. ACM, 2020, pp. 2227–2240.
+[93] R. Li, Q. Wang, Q. Wang, D. Galindo, and M. Ryan, “Sok: Tee-assisted
+confidential smart contract,” Proceedings on Privacy Enhancing Technologies, vol. 2022, no. 3, pp. 711–731, 2022.
+[94] T. Abera, R. Bahmani, F. Brasser, A. Ibrahim, A.-R. Sadeghi, and
+M. Schunter, “DIAT: Data Integrity Attestation for Resilient Collaboration of Autonomous Systems,” in Proceedings 2019 Network and
+Distributed System Security Symposium, 2019.
+[95] A. Ibrahim, A. Sadeghi, G. Tsudik, and S. Zeitouni, “DARPA: device
+attestation resilient to physical attacks,” in Proceedings of the 9th ACM
+Conference on Security & Privacy in Wireless and Mobile Networks
+(WISEC), 2016, pp. 171–182.
+[96] M. Bellare, R. Canetti, and H. Krawczyk, “Keying hash functions
+for message authentication,” in 16th Annual International Cryptology
+(CRYPTO), ser. Lecture Notes in Computer Science, vol. 1109, 1996,
+pp. 1–15.
+[97] C. Xu, J. Zhang, M. Law, X. Zhao, P. Mak, and R. P. Martins,
+“Transfer-path-based hardware-reuse strong PUF achieving modeling
+attack resilience with200 million training crps,” IEEE Transactions on
+Information Forensics and Security, vol. 18, pp. 2188–2203, 2023.
+[98] H. Nassar, L. Bauer, and J. Henkel, “ANV-PUF: machine-learningresilient nvm-based arbiter PUF,” ACM Transactions on Embedded
+Computing Systems, vol. 22, no. 5s, pp. 133:1–133:23, 2023.
+[99] H. Lin, H. Zuo, Q. Peng, and X. Zhao, “A 690fj/bit ml-attack-resilient
+strong PUF based on subthreshold voltage attenuator ring with closedloop feedback,” in IEEE European Solid State Circuits Conference,
+ESSCIRC. IEEE, 2023, pp. 113–116.
+[100] NXP, “High Efficiency Arm Cortex-M33-Based Microcontroller Family,” https://www.nxp.com/products/processors-and-microcontrollers/
+arm-microcontrollers/general-purpose-mcus/lpc5500-arm-cortex-m33/
+high-efficiency-arm-cortex-m33-based-microcontroller-family:
+LPC55S6x, 2023.
+[101] C. Dobraunig, M. Eichlseder, F. Mendel, and M. Schläffer, “ASCON
+v1. 2: Lightweight authenticated encryption and hashing,” Journal of
+Cryptology, vol. 34, no. 3, p. 33, 2021.
+
+Xiaolin Zhang received from Xidian University
+of China, Xi’an, his B.S. degree in cyber security
+in 2020. He is currently a Ph.D. candidate under successive postgraduate and doctoral program
+at School of Electronic Information and Electrical
+Engineering, Shanghai Jiao Tong University, Shanghai. His research interests include design of PUFbased security schemes and cryptography. He has
+published scientific papers on IEEE TCAD.
+
+Kailun Qin is currently a DEng candidate at School
+of Electronic Information and Electrical Engineering, Shanghai Jiao Tong University (SJTU), Shanghai. He obtained his master’s degrees respectively
+from IMT Atlantique (France) and Nanjing University of Science and Technology (China) in 2017. His
+research interests include confidential computing,
+trusted execution environment and system security.
+He has been an active speaker at multiple cloud and
+security industry conferences.
+
+16
+
+Shipei Qu received from Xidian University of
+China, Xi’an, his B.S. degree in Electronic Engineering in 2020. He is currently a Ph.D. candidate
+at School of Electronic Information and Electrical
+Engineering,Shanghai Jiao Tong University, Shanghai. His research interests include hardware security
+and cryptography.
+
+Tengfei Wang received the B.E. degree and the M.E.
+degree from Tianjin University, Tianjin, China, in
+2016 and in 2019, respectively. He is currently pursuing the D.E degree from the School of Electronic
+Information and Electrical Engineering, Shanghai
+Jiao Tong University, Shanghai. His current research
+interests include circuit and system designs for cryptosystems. He has published scientific papers on
+IEEE TVLSI and other academic journals.
+
+Chi Zhang is currently a research associate at
+School of Electronic Information and Electrical Engineering, Shanghai Jiao Tong University, Shanghai.
+He received the B.S. degree in computer science and
+technology from Southeast University in 2014, and
+the Ph.D. degree in computer science and technology
+from Shanghai Jiao Tong University in 2022. His
+research interests include cryptographic engineering,
+hardware security such as side-channel analysis and
+fault inject analysis, and cryptography. He has published scientific papers on TCHES, IEEE TVLSI,
+TIFS and DAC, AsianHost and other academic journals and conferences.
+
+Dawu Gu is a distinguished professor at School of
+Electronic Information and Electrical Engineering,
+Shanghai Jiao Tong University (SJTU), Shanghai.
+He received from Xidian University of China, Xi’an,
+his B.S. degree in applied mathematics in 1992,
+and his M.S. degree in 1995 and Ph.D. degree in
+1998 both in cryptography. His research interests
+include crypto algorithms, crypto engineering, and
+system security. He was the winner of Chang Jiang
+Scholars Distinguished Professors Program in 2014
+by Ministry of Education of China. He won the
+National Award of Science and Technology Progress in 2017. He is the vice
+president of the Chinese Association for Cryptologic Research (CACR). He
+has got over 200 scientific papers in top academic journals and conferences,
+such as CRYPTO, IEEE S&P, ACM CCS, NDSS, TCHES. He also served as
+PC members of international conferences such as ASIACRYPT, ASIACCS,
+ACNS, ISC, ISPEC, ICICS, Globecom, IEEE TrustCom, and NSS for more
+than 30 times.
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+17
+
+Functionality: Fatt
+Initialization:
+Upon receiving (M EASUREMENT, id, prog) from a party P , generate platform information I and obtain measurement
+m := memms(prog, I), then let L[id, prog] := (measured, I, m) and return (M EASURED, id) to P .
+• Upon receiving (P ROVISION , id) from P ,
+(a) generate the platform key set K and helper data W, update L[id, :].append(K, W);
+(b) let L[id, :].state = provisioned and return (P ROVISIONED, W, id) to P .
+Mutual Report:
+• Upon receiving (C HALLENGE , i, j, progi , ssid) from Pi ,
+(a) send the message to S and update L[i, progi ].append(ssid);
+(b) if receive (C HALLENGED, A, C, T, ssid) from S, send it to Pj and set L[j, progj ].state = challenged.
+• Upon receiving (M UT R EPORT , i, j, progj , ssid) from Pj ,
+(a) send the message along with (Ii , progi , Ij , progj ) to S and update L[j, progj ].append(ssid);
+(b) if receive (M UTATT R EPORT, ⟨Ai , Ci , Ti ⟩, ⟨Aj , Cj , Tj ⟩, σi , σj , ssid) from S, set L[i, progi ].state = challenged.
+Then send (ATTESTATION, Ai , Ci , Ti , ssid) and (ATTESTATION, Aj , Cj , Tj , ssid) to Pi , Pj , respectively.
+Mutual Verification:
+• Upon receiving (V ERIFICATION , i, j, Ai , Ci , Ti , Aj , Cj , Tj , ssid) from Pi or Pj ,
+(a) obtain the signature σi := RecovK i ,Wi (Ai , Ci , Ti ) and σj := RecovKj ,Wj (Aj , Cj , Tj );
+(b) if the party is corrupted, or the submitted record and the signature have not appeared or appear more than once,
+set f [i, j] := 1 or f [j, i] := 1 accordingly; otherwise let f [i, j] or f [j, i] be the result of PrfVrf K,W (σ, I, m);
+(c) set L[i, progi ].state = L[j, progj ].state = attested and send (ATTESTED, f [i, j], ssid), (ATTESTED, f [j, i], ssid) to
+Pi , Pj , respectively.
+•
+
+Fig. 9: Ideal Functionality of Mutual Attestation
+
+A PPENDIX A
+S ECURITY P ROOF
+As mentioned in §VI-A, the following definition formalizes
+the basic idea of UC-based security proof.
+Definition 2: (UC-security) A protocol π UC-realizes the
+ideal functionality F, if for any PPT adversary A there exists
+a simulator S such that no PPT environment machine Z exists
+to distinguish whether it contacts with π and A in the real
+world or S and F in the ideal world. We have,
+REALπ,A,Z ≈ IDEALF ,S,Z
+
+(3)
+
+where ≈ denotes the computational indistinguishability.
+The formalized ideal functionality FAtt for mutual attestation protocols is shown in Figure 9. We omit the repeated
+entry check of tape records on aid, vid, ssid in FAtt . Assuming
+the system is parameteraized with 1λ , we take the remote
+attestation protocol πRA as an example to prove Theorem 1
+as follows.
+Proof We construct a simulator S that precisely emulates
+A’s behaviors. We assume that a PPT adversary A can
+statically corrupt any party in πRA , i.e., Vrf or Att, to obtain
+its internal state and tape input and output. S runs an internal
+copy of A and then proceeds in the following cases.
+Case 1. Att and Vrf are both honest.
+A in the real world only obtains the channel messages if Att
+and Vrf are not corrupted. So S in the ideal world need to simulate the messages exchanged between Att and Vrf in the real
+world. Upon receiving P ROVISION from FAtt , S randomly
+selects KAtt := (M Kid , K) and KVrf := (sid , S). Upon
+receiving C HALLENGE, S obtains RV , RA , RT ←$ {0, 1}n
+
+and simulates M UTATT R EPORT by randomly sampling PUFbased measurement RM and attestation proof σ. Then it uses
+AEAD encryption E to get (A, C, T ) for Att and Vrf . It sends
+these messages to the internal adversary A who outputs them
+to the environment machine Z. We denote AdvIND
+πRA ,Fatt (Z) as
+the probability upper bound of Z distinguishing them with
+the real-world messages, and we have AdvIND
+πRA ,Fatt (Z) ≤
+Coll
+EUF
+IND
+(Z)+2Adv
+(Z)+2Adv
+(Z)+Adv
+3AdvIND
+H (Z) =
+Sig
+PUF
+AEAD
+ϵ(λ) where ϵ(λ) is a negligible value (negl) related to λ.
+Case 2. Att is corrupted and Vrf is honest.
+If A corrupts Att in the real world, S can also obtain the
+historical states of Att. Therefore, S can get KAtt to decrypt
+the old (C, T ) to obtain the measurement RM and recover
+the attestation proof σ during the challenge phase. Then, it
+can use these extracted materials to calculate Att’s output
+as if they are generated by A in the real world execution.
+However, since S cannot obtain the states of Vrf , it has to
+simulate Vrf ’s output to Fatt , as in the Case 1. Consequently,
+the advantage of Z to distinguish Vrf ’s output should not
+EUF
+wColl
+exceed 2AdvIND
+(Z) = ϵ(λ).
+AEAD (Z) + AdvSig (Z) + AdvH
+Case 3. Att is honest and Vrf is corrupted.
+Similar to Case 2, if A corrupts Vrf in the real world,
+S can obtain (s, S) to recover its measurement M and the
+corresponding proof. Then S simulates Att’s output and
+forms (A, C, T ) as the input to Fatt . Since Att is assumed
+to be equipped with PUF, S has to randomly sample a
+PUF response as the measurement. Z needs to break the
+indistinguishability game of ideal PUF, thereby having the
+IND
+EUF
+advantage AdvIND
+πRA ,Fatt (Z) ≤ AdvAEAD (Z) + AdvSig (Z) +
+wColl
+IND
+AdvH (Z) + AdvPUF (Z) = ϵ(λ).
+
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021
+
+18
+
+TABLE VI: Real-world Remote Attestation Report Fields
+Field
+
+Intel SGX
+
+ACK-TEE
+
+Azure for SGX
+
+SVN
+
+isvsvn, cpusvn
+
+svn
+
+svn
+
+bootloader˙svn, tee˙svn
+guest˙svn, microcode˙svn
+
+tpmversion
+
+Measurement
+
+mrenclave
+
+mrenclave
+
+mrenclave
+
+launchmeasurement
+
+-
+
+Signer
+
+mrsigner
+
+mrsigner
+
+mrsigner
+
+authorkeydigest
+
+aikPubHash
+
+Signature
+
+signature
+
+signature
+
+signature
+
+signature
+
+signature
+
+Others
+
+base˙name,
+report˙data, isvpoid
+
+product˙id
+
+product˙id,
+report˙data
+
+imageid, report˙id
+report˙data
+
+vbsReportPresent,
+secureBootEnabled
+
+Case 4. Att and Vrf are both corrupted.
+This case is straightforward since S can extract all states in
+Att and Vrf .
+□
+Note that the local attestation protocol can also be proven
+under the same ideal functionality. Therefore, the full off-chain
+attestation procedure of JANUS can achieve UC-security by
+directly applying the UC-composable theorem in [46].
+A PPENDIX B
+C OMPATIBILITY R EAL - WORLD TEE R EMOTE
+ATTESTATION
+Compatibility: JANUS is designed to have a regular attestation
+procedure as we expected. It can be easily integrated with realworld RA schemes by changing the payload field. Table VI
+summarizes the attestation report formats of mainstream TEE
+RA schemes. Moreover, since the off-chain remote attestation
+protocol in §V-B2 preserves a symmetric structure for both
+parties, our protocol can be scalable and lightweight regardless
+of whether attesters and verifiers have PUF installed. For onchain attestation, the smart contracts are loosely coupled with
+device hardware configurations. JANUS focuses more on the
+architectural design of attestation and is open to underlying
+TEE specifications, making it compatible with different systems with heterogeneous devices.
+Table VI summarizes the format of several real-world
+TEE RA designs, including Intel SGX, Azure and ACKTEE (Alibaba Cloud Container Service for Kubernetes). This
+table can serve as the evaluation metric of the trust rating in
+§V-C3. Auditors can label each device based on the device
+configuration details in the table to reflect its trust confidence
+level. Additionally, this table can also serve as a reference
+for integrating JANUS’s attestation report into real-world TEE
+products.
+
+Azure for SEV-SNP
+
+Azure for TPM
+
+
