@@ -1,6 +1,5 @@
 你使用 openclaw profile 控制的 chrome 浏览器，每次打开浏览器都要静默操作，不要尝试夺取焦点
 
-
 对于每个视频：
 * 优先通过本地 yt-dlp工具获取字幕，获取不到则使用 yt-dlp 下载音频然后whisper-cli 命令行(模型在 /opt/homebrew/Cellar/whisper-cpp/1.8.3/share/whisper-cpp/models) 注意我是中文用户，用中文解读
 
@@ -14,18 +13,30 @@ whisper-cpp 任务转写前注意看看空闲内存够不够4g，不要把系统
 - Each directory has README.md with summaries
 - Naming: "YYYY - Paper Title.pdf"
 - Key conferences: USENIX Security, IEEE S&P, NDSS, CCS, ESORICS
+- Download sources: arXiv (优先), USENIX (直接PDF), Semantic Scholar OA, IACR ePrint
 
-### 2026-04-12 凌晨批次（3:52 AM NZT）
-- **11 篇新论文**下载至 `/tmp/tee_paper/2026-04-12-03-52-00/`，全部来自 USENIX Security 2025（8 月，西雅图）
-- 涵盖：TDXploit（Intel TDX 单步攻击）、TEEcorrelate（性能计数器防御）、Dorami（RISC-V TEE）、Phantom（AI 模型混淆）、Game of Arrows（LLM 权重攻击）、TETD、FABLE、Flexway O-Sort、Available Attestation（区块链）、BulletCT、aDNS
-- 9 个重复文件从旧目录删除
-- README.md 约 10434 字节，包含论文摘要 + 综合对比分析
-- IEEE S&P 2025 和 CCS 2025 论文因 Cloudflare 拦截未能下载
+### 2026-04-16 上午批次（10:55 NZST）
+- **1 篇新论文**下载至 `/tmp/tee_paper/2026-04-16-10-55-46/`：DORAMI (arXiv 2410.03653, RISC-V TEE SM 权限分离)
+- Game of Arrows, Phantom, TEEcorrelate, TensorShield 均已在以往批次中收录（重复），已删除当前目录副本
+- 现有 327 篇论文去重后确认无其他重复
+- README.md 包含 DORAMI 摘要（1000字）+ 与同期论文横向对比综述
+- Git push: 见本批次 commit
 
-### 2026-04-08 下午批次
-- **13 篇新论文**下载至 `/tmp/tee_paper/2026-04-08-15-50-00/`，涵盖 BadRAM、CipherSteal、PORTAL、ASGARD、PALANTÍR、The Road to Trust、DORAMI、TETD、TEEcorrelate、TELESCOPE、Mole、EXIA、SNPeek
-- 9 个旧重复文件从早期目录删除（保留最新下载版本）
-- `/tmp/tee_paper/2026-04-08-14-50-00/README.md` 补写完成（2 篇论文）
+### 2026-04-16 凌晨批次（7:54 AM NZT）
+- 确认现有集合完整性：无新论文收录（arXiv 40 篇验证全部已收录）
+- README.md 新增（说明无新论文）
+- Git push 成功
 
-### 2026-04-03 session (12:13 PM)
-- 5 new IACR ePrint papers (2025-2026) - all TEE-focused: Defeating AutoLock (TrustZone cache attack), Intel TDX side-channels, Nested Attestation for serverless, Leaderless BFT consensus, SCALE-FL federated learning. Git push successful (commit 121086c). Total size 12MB.
+### 2026-04-15 下午批次
+- 收录 JANUS (NDSS 2026 远程认证) + CCxTrust (协作信任)
+- Git push 成功
+
+### 历次去重记录
+- 2026-04-16-10-55: 删除 Game of Arrows, Phantom, TEEcorrelate, TensorShield 当前目录副本（已存于 2026-04-13-07-47-53、2026-04-12-18-42-28、2026-04-16-06-16-08）
+- 2026-04-12: 批量删除 56 个重复 PDF（保留最旧时间戳副本）
+- 2026-04-08: 删除 9 个旧重复文件
+
+### 已知问题
+- ACM DL / IEEE S&P / CCS 2025 需机构订阅，curl 下载返回 403
+- USENIX Security 论文可直接下载（开源）
+- ASGARD (NDSS 2025) PDF 链接失效，建议通过作者或机构获取
