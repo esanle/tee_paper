@@ -1,0 +1,122 @@
+[
+  {
+    "filename": "2026 - A TEE-based Approach for Preserving Data Secrecy in Process Mining.pdf",
+    "title_candidates": [
+      "A TEE-based Approach for Preserving Data Secrecy in Process Mining with",
+      "Davide Basile a , Valerio Goretti a , Luca Barbaro a , Hajo A. Reijers b , Claudio Di Ciccio b",
+      "a Sapienza University of Rome, Via Regina Elena 295, 00161, Rome, Italy"
+    ],
+    "abstract": "Abstract\nProcess mining techniques enable organizations to gain insights into their business processes through the\nanalysis of execution records (event logs) stored by information systems. While most process mining\nefforts focus on intra-organizational scenarios, many real-world business processes span multiple independent\norganizations.\nInter-organizational process mining, though, faces significant challenges, particularly regarding confidentiality guarantees: The analysis of data can reveal information that the participating organizations may\nnot consent to disclose to one another, or to a third party hosting process mining services. To overcome\nthis issue, this paper presents CONFINE, an approach for secrecy-preserving inter-organizational process\nmining. CONFINE leverages Trusted Execution Environments (TEEs) to deploy trusted applications that are\ncapable of securely mining multi-party event logs while preserving data secrecy. We propose an architecture\nsupporting a four-stage protocol to secure data exchange and processing, allowing for protected transfer and\naggregation of unaltered process data across organizational boundaries. To avoid out-of-memory errors due\nto the limited capacity of TEEs, our protocol employs a segmentation-based strategy, whereby event logs\nare transmitted to TEEs in smaller batches. We conduct a formal verification of our approach\u2019s correctness\nalongside a security analysis on the guarantees provided by the TEE core. We test our implementation\n",
+    "text_length": 13444
+  },
+  {
+    "filename": "2026 - Agentic Witnessing: Pragmatic and Scalable TEE-Enabled Privacy-Preserving Auditing.pdf",
+    "title_candidates": [
+      "Agentic Witnessing: Pragmatic and Scalable TEE-Enabled",
+      "Advanced Research and Invention Agency (ARIA)",
+      "arXiv:2604.24203v1 [cs.CR] 27 Apr 2026"
+    ],
+    "abstract": "Abstract\n\nauthors to disclose source code, which is not always possible. The\nwell documented reproducibility crisis [3, 18] means verifying the\nideas in papers are instantiated and correct is important.\nWe propose Agentic Witnessing, a system that shifts verification\nfrom static mathematical proofs to dynamic, adversarial interrogation. Agentic Witnessing employs a distributed architecture: a\nVerifier which would like the audit completed and specifies what the\naudit questions should be, a Prover holding the data (or codebase)\nbeing audited, and an Enclaved Auditor mediating the interaction.\nSo, instead of exporting the data sets to a human verifier, Agentic Witnessing uses a Virtual Auditor, an LLM agent running in a\ntrusted execution environment (TEE). This Auditor acts as a proxy\nwitness: it accesses the raw data of the entity being audited, answering simple true or false questions for the organization doing the\nverification, and reasons about the data using \u201cChain of Thought\u201d\n(CoT) techniques. It produces a cryptographically signed attestation\nof the verification results, but without ever revealing the raw data.\nTo achieve this we must solve three fundamental systems challenges. First, we need to incentivise the correct behaviours from the\nentity being audited, and we achieve this by binding the responses\nof the audit to a transcript hash chain which is a cryptographic log\nthat ensures non-repudiation. Second, to inspect arbitrary repositories without custom enclave code, ",
+    "text_length": 18562
+  },
+  {
+    "filename": "2026 - Gyokuro: Source-assisted Private Membership Testing using Trusted Execution Environments.pdf",
+    "title_candidates": [
+      "Gyokuro: Source-assisted Private Membership Testing using",
+      "arXiv:2603.23226v1 [cs.CR] 24 Mar 2026",
+      "Retrieval (PIR) [7, 8, 11, 13, 15, 19, 26, 27, 31, 32, 40, 46, 51,"
+    ],
+    "abstract": "Abstract\n\nSrdjan C\u030capkun\nETH Zurich\n\nRetrieval (PIR) [7, 8, 11, 13, 15, 19, 26, 27, 31, 32, 40, 46, 51,\n53, 56, 57, 60, 68, 72, 79, 83, 94, 95], Private Set Intersection\n(PSI) [1, 20, 22, 23, 43, 52, 76, 77, 80, 81], Oblivious RAM\n(ORAM) [12, 38, 48, 88], homomorphic encryption [25, 78],\nand trusted computing [44, 86, 89].\nHowever, designing a PMT protocol that is efficient, scalable, and privacy-preserving remains a challenge. In this work,\nwe focus on a sub-variant of the PMT protocol, which we\ndenote as Source-assisted PMT (SPMT). The unique aspect\nof this protocol is that clients utilize information they received\nfrom the data source, denoted as source-assisted information,\nin addition to the data item during membership testing. SPMT\nprotocols are useful in various applications, such as certificate\ntransparency (CT) log auditing, supply-chain auditing, data\nprovenance verification, and public document auditing. For\nexample, in the context of drug supply-chain auditing, consumers (clients) check whether the supply-chain information\n(source-assisted information) of the drug they purchased is\nissued by valid pharmaceutical supply-chain partners (data\nsources) and is stored in valid public logs (server/database)\nwithout revealing the drug label (private data item). Supplychain information could, e.g., be presented to consumers in\nthe form of a QR code found on the medicine package. Consumers would then engage in an SPMT protocol with the\npublic log using this QR code to verif",
+    "text_length": 16515
+  },
+  {
+    "filename": "2026 - KingsGuard: Enclave Data Protection Under Real-World TEE Vulnerabilities.pdf",
+    "title_candidates": [
+      "If you cite this paper, please use the CCS reference: Saltanat Firdous Allaqband, Deepanjali S, Rohit Srinivas R G, Devashish Gosain, and Chester Rebeiro. 2026. KingsGuard:",
+      "Enclave Data Protection Under Real-World TEE Vulnerabilities. In Proceedings of the 2026 ACM SIGSAC Conference on Computer and Communications Security (CCS \u201926), November",
+      "15\u201319, 2026, The Hague, Netherlands. ACM, New York, NY, USA."
+    ],
+    "abstract": "Abstract\nTrusted Execution Environments (TEEs) have emerged as a cornerstone for securing sensitive computations by providing isolated\nenclaves protected from untrusted software. However, their security guarantees are undermined by vulnerabilities in both the\nenclave code and the underlying hardware design, which can allow\nsensitive data to leak despite strong isolation guarantees. This paper presents KINGSGUARD, a novel TEE design that systematically\nmonitors and controls the propagation of sensitive data within an\nenclave. By enforcing fine-grained data flow tracking and checks in\nhardware, our approach ensures that sensitive data does not leave\nthe enclave boundary, thus bridging the gap between the idealized\nthreat models of TEEs and their practical realizations. Additionally,\nto balance security with practical functionality, we introduce controlled declassification at enclave boundaries, allowing intentional\nrelease of data to the outside world. Our implementation of KINGSGUARD on a RISC-V processor has a 10.8% hardware area overhead\nwhen synthesized on FPGA and a 5.69% performance overhead.\n\nCCS Concepts\n\u2022 Security and privacy \u2192 Systems security; Hardware security\nimplementation.\n\nKeywords\nTrusted Execution Environments, TEE Vulnerabilities, Dynamic\nInformation Flow Tracking, Declassification\n\n1\n\nIntroduction\n\nTrusted Execution Environments (TEEs) [7, 18] have gained significant popularity in recent years due to their ability to strengthen\nsystem security. At their core",
+    "text_length": 18479
+  },
+  {
+    "filename": "2026 - Privacy-Preserving Product-Quantized Approximate Nearest Neighbor Search via A Hybrid of FHE and TEE.pdf",
+    "title_candidates": [
+      "P RIVACY-P RESERVING P RODUCT-Q UANTIZED A PPROXIMATE",
+      "N EAREST N EIGHBOR S EARCH F RAMEWORK FOR L ARGE - SCALE",
+      "DATASETS VIA A H YBRID OF F ULLY H OMOMORPHIC"
+    ],
+    "abstract": "Introduction\n\nWith advances in machine learning, such as large language models (LLMs) [1, 2] and visual language models (VLMs)\n[3, 4], these models can achieve high-quality retrievals. While various retrieval methods exist, nearest-neighbor search\nplays a fundamental role among them [1, 2, 3, 4]. The vectors used in nearest-neighbor search contain rich information\nthat enables similarity-based retrieval. These vectors pose risks to data confidentiality and privacy [5, 6, 7, 8, 9].\nThese risks include attacks such as embedding inversion, membership inference, and attribute inference [10, 11, 8, 12].\nTherefore, these vectors, especially high-confidentiality data, require a way to preserve data confidentiality and privacy\nagainst attacks.\n\n\fPPPQ-ANN\n\nA P REPRINT\n\nFigure 1: Server memory of the search process in PPPQ-ANN. All processing in PPPQ-ANN is performed within\nthe TEE, and data is memorized in encrypted RAM. Blue squares denote ciphertexts encrypted by CKKS-based FHE,\nand green squares denote plaintexts. Queries and codebooks that could lead to the complete reconstruction of data\nare encrypted within the TEE using CKKS-based FHE. WOP and WRP denote optimized data packings for PQ.\nAdditionally, database DE and IVF index are represented by PQ code indexes.\n\nRepresentative approaches to confidential computation are Multi-Party Computation (MPC) [13, 14], Trusted Execution Environment (TEE) [15], and Fully Homomorphic Encryption (FHE) [16, 17]. Various methods have been\npropo",
+    "text_length": 11645
+  },
+  {
+    "filename": "2026 - Proteus: Append-Only Ledgers for (Mostly) Trusted Execution Environments.pdf",
+    "title_candidates": [
+      "Proteus: Append-Only Ledgers for (Mostly) Trusted Execution Environments",
+      "Shubham Mishra\u2217 \u2020 , Jo\u00e3o Gon\u00e7alves\u2217 \u00a7 , Chawinphat Tankuranand\u2020 , Neil Giridharan\u2020 ,",
+      "Natacha Crooks\u2217 \u2020 , Heidi Howard\u2021 , Chris Jensen\u2021"
+    ],
+    "abstract": "Abstract\n\nmachine compromise: they offer the guarantee that the nodes\nwill never deviate from the protocol. To avoid data loss in the\npresence of benign crashes, tamper-proof logs then internally\ndeploy a crash-fault-tolerant (CFT) consensus protocol,\nreplicating data across 2 f +1 TEE-augmented replicas.\nThese solutions work well under the assumption that TEEs\nare correct. Unfortunately, while secure hardware undoubtedly raises the barrier to attack, it is far from foolproof. Most\nTEEs can (with sufficient effort and access) be compromised.\nIn fact, attackers have extracted user secrets from all major\nTEEs [15, 26, 60, 61, 70, 73, 74] and new vulnerabilities are\ncontinuously found. The time between a vulnerability being\ndiscovered and patched is a huge window of opportunity for\nattackers, especially since these vulnerabilities affect entire\nclasses of TEEs. An attacker can potentially compromise all\nTEEs of the same type within a particular cloud region.\nIn short, TEE compromises are a rare but catastrophic\nevent. The current approach of placing full trust in TEEs\nleaves users vulnerable. The alternative approach of placing\nno trust in TEEs is similarly unsatisfactory. It requires\ndeploying a byzantine-fault-tolerant consensus protocol\n(BFT), which comes at a significant performance cost. It\nrequires increasing the replication factor to 3 f + 1 and\nsignificantly increases latency. This paper asks: how can one\npreserve the performance of current append-only ledgers\nwhile prov",
+    "text_length": 16720
+  },
+  {
+    "filename": "2026 - SPOILER: TEE-Shielded DNN Partitioning of On-Device Secure Inference with Poison Learning.pdf",
+    "title_candidates": [
+      "SPOILER: TEE-Shielded DNN Partitioning of",
+      "On-Device Secure Inference with Poison Learning",
+      "Donghwa Kang1 , Hojun Choe1 , Doohyun Kim1 , Hyeongboo Baek2 , and Brent"
+    ],
+    "abstract": "Introduction\n\nThe proliferation of deep neural networks (DNNs) has made on-device AI\u2014from\nsmartphone face recognition to autonomous delivery\u2014ubiquitous [20]. Processing inference at the edge offers critical benefits: reduced latency, bandwidth\nconservation, and data privacy. However, this decentralized architecture exposes\nmodels to \u201cwhite-box\u201d environments where physical access is assumed. Unlike\ncloud-based black-box models, on-device models are vulnerable to model stealing\n(MS) attacks, where adversaries clone the model\u2019s functionality, compromising\nthe provider\u2019s intellectual property (IP) [17, 27, 38].\nTo mitigate these threats, trusted execution environments (TEEs) [2,6] have\nbeen adopted to shield model weights. However, executing the entire model\nwithin a TEE incurs prohibitive latency overheads (up to 50\u00d7) compared to\nGPU-accelerated execution [25, 37]. To enable practical TEE-based secure inference, a framework must satisfy four imperative requirements: (i) Security:\n\n\f2\n\nD. Kang et al.\nModel provider\n\nUser device\n\nPartition\n& deployment\n\nModel provider\n\nUser device\n\nPartition &\ntraining\n\nDeployment\n\nTraining\nPublic source\n\nPublic source\nREE\n\nDownload\n\nTEE\n\nWhole architecture as\nan attack surface\n\n(a) Training-before-partition\n\nDownload\n\nREE\n\nTEE\n\nLocalized architecture\nas an attack surface\n\n(b) Partition-before-training\n\nModel provider\n2 Poisson learning\n\nUser device\nDeployment\n\nPublic source\n\nDownload\nTEE\nREE\n1 Architecture search\nPublic layer\nLocalized and optimi",
+    "text_length": 7907
+  },
+  {
+    "filename": "2026 - Space Fabric: A Satellite-Enhanced Trusted Execution Architecture.pdf",
+    "title_candidates": [
+      "Space Fabric: A Satellite-Enhanced Trusted Execution",
+      "arXiv:2603.23745v1 [cs.CR] 24 Mar 2026",
+      "efficiently and benefit from passive thermal dissipation [22, 56, 60]."
+    ],
+    "abstract": "Abstract\nThe emergence of decentralized satellite networks and orbital computing platforms creates a pressing need for trust architectures that\ncan operate without physical access to the hardware, without reliance on pre-provisioned vendor secrets, and without dependence\non a single manufacturer\u2019s attestation service. Terrestrial Trusted\nExecution Environments (TEEs) are insufficient for this setting:\nhardware-based designs are susceptible to physical attacks. More\nfundamentally, most of the current platforms root their attestation\nchains in secrets provisioned during manufacturing, creating a prelaunch trust window and single-vendor dependency that cannot be\nindependently audited.\nWe present Space Fabric, an architecture that provides the missing trust foundation for orbital computing by relocating the trusted\ncomputing stack to satellite infrastructure, exploiting a satellite\u2019s\npost-launch physical inaccessibility as a tamper barrier unattainable by terrestrial deployments. Our Satellite Execution Assurance Protocol binds workload execution to a specific satellite via\na Byzantine-tolerant endorsement quorum of distributed ground\nstations, certifying not only what program executes inside the TEE\nbut also where. A further contribution is fully on-orbit key generation: cryptographic secrets are generated within co-located secure\nelements after launch, with no persistent signing secrets accessible on Earth at any point. The residual trust assumption reduces\nto the operator corr",
+    "text_length": 18868
+  },
+  {
+    "filename": "2026 - Styx: Collaborative and Private Data Processing With TEE-Enforced Sticky Policy.pdf",
+    "title_candidates": [
+      "arXiv:2604.04082v1 [cs.CR] 5 Apr 2026",
+      "Styx: Collaborative and Private Data Processing With",
+      "Protecting sensitive information in data-driven collaborations,"
+    ],
+    "abstract": "Abstract\nProtecting sensitive information in data-driven collaborations,\nsuch as AI training, while meeting the diverse requirements of\nmultiple mutually distrusted stakeholders, is both crucial and\nchallenging. This paper presents Styx, a novel framework to\naddress this challenge by integrating sticky policies with Trusted\nExecution Environments (TEEs). At a high level, Styx employs\na hardware-TEE-protected middleware with a programming\nlanguage runtime to form a sandboxed environment for both the\ndata processing and policy enforcement. We carefully designed\na data processing workflow and pipelines to enable a strong yet\nflexible data-specific policy enforcement throughout the entire data\nlifecycle and data derivation to achieve data-in-use protection, data\nlifecycle protection and dynamic collaboration. We implemented\nStyx and demonstrated its ability to make collaborative computing,\nsuch as joint AI training, more secure, privacy-preserving, and\npolicy-compliant. Our evaluation shows the performance overheads\nimposed by Styx are reasonable on single-node computation with\nthe capability to scale to a large distributed multi-node deployment.\n\nCCS Concepts\n\u2022 Security and privacy \u2192 Domain-specific security and privacy architectures; Access control; Trusted computing.\n\nKeywords\nTEE, Access Control, Middleware, Confidential Computing\n\n1\n\nIntroduction\n\nWe study the problem of protecting sensitive data used in\ncollaboration among multiple stakeholders, where no single party\nis uni",
+    "text_length": 18170
+  },
+  {
+    "filename": "2026 - T-RBFT: A Scalable and Efficient Byzantine Consensus Based on Trusted Execution Environment.pdf",
+    "title_candidates": [
+      "T-RBFT: A Scalable and Efficient Byzantine",
+      "Consensus Based on Trusted Execution",
+      "Environment for Consortium Blockchain"
+    ],
+    "abstract": "Abstract\nWith the continuous expansion of blockchain application scenarios, consortium\nchains have raised higher performance and security requirements for consensus\nmechanisms. Unlike public blockchains, consortium chains typically implement\nan admission mechanism that restricts participation to trusted entities, ensuring that most replicas are honest and the number of faulty nodes remains small\nunder normal circumstances. In such settings, conventional Byzantine Fault Tolerant (BFT) protocols, which are designed for worst-case adversarial scenarios,\nincur excessive message exchanges and computational overhead, thereby limiting\nperformance and scalability. To address this issue, this paper proposes T-RBFT,\na two-layer consensus mechanism inspired by network sharding and enhanced by\nthe trusted execution environment (TEE). In T-RBFT, consensus nodes are first\ndynamically grouped based on their runtime characteristics. Then, inter-group\nconsensus is achieved through a TEE-assisted BFT protocol, while each group\ninternally reaches agreement using an improved Raft-based mechanism. Experimental evaluation shows that T-RBFT reduces communication overhead and\nlatency, and achieves higher throughput compared to existing two-layer consensus\nprotocols, providing a scalable and communication-efficient consensus protocol\nfor permissioned blockchain networks.\nKeywords: Two-layer consensus protocols, Byzantine fault-tolerance, Trusted\nexecution environment, Consortium blockchain\n\n1\n\n\f1 Int",
+    "text_length": 8921
+  },
+  {
+    "filename": "2026 - Trusted-Execution Environment for Solving the Replication Crisis in Academia.pdf",
+    "title_candidates": [
+      "Trusted-Execution Environment (TEE) for Solving the",
+      "arXiv:2603.24878v1 [cs.CR] 25 Mar 2026",
+      "First version: September 15, 2025"
+    ],
+    "abstract": "Abstract\nThe growing replication crisis across disciplines such as economics, finance, and\nother social sciences as well as computer science undermines the credibility of academic research. Current institutional solutions\u2014such as artifact evaluations and replication packages\u2014suffer from critical limitations, including shortages of qualified data\neditors, difficulties in handling proprietary datasets, inefficient processes, and reliance\non voluntary labor. This paper proposes a novel framework leveraging new technological advances in trusted-execution environments (TEEs)\u2014exemplified by Intel\u00ae Trust\nDomain Extensions (TDX)\u2014to address the replication crisis in a cost-effective and\nscalable manner. Under our approach, authors execute replication packages within a\ncloud-based TEE and submit cryptographic proofs of correct execution, for which journals or conferences can efficiently verify without re-running the code. This reallocates\nthe operational burden to authors while preserving data confidentiality and eliminating\nreliance on scarce editorial resources. As a proof of concept, we validate the feasibility\nof this system through field experiments, reporting a pilot study replicating published\npapers on TDX-backed cloud VMs, finding average costs of $1.35\u2013$1.80 per package\nwith minimal computational overhead relative to standard VMs and high success rates\neven for novice users with no prior TEE experience. We also provide a conduct formal\nanalysis showing that TEE adoption is in",
+    "text_length": 6513
+  },
+  {
+    "filename": "2026 - When Agents Handle Secrets: A Survey of Confidential Computing for Agentic AI.pdf",
+    "title_candidates": [
+      "arXiv:2605.03213v1 [cs.CR] 4 May 2026",
+      "When Agents Handle Secrets: A Survey of",
+      "Confidential Computing for Agentic AI"
+    ],
+    "abstract": "that plan, invoke tools, maintain persistent memory, and delegate tasks to peer agents via protocols such as MCP and",
+    "text_length": 15912
+  }
+]
