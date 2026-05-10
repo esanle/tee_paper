@@ -1,0 +1,182 @@
+[
+  {
+    "arxiv_id": "2502.06609v1",
+    "year": "2502",
+    "title": "Automatic ISA analysis for Secure Context Switching Neelu S. Kalani \u2217"
+  },
+  {
+    "arxiv_id": "2506.07034v1",
+    "year": "2506",
+    "title": "N ANO Z ONE: Scalable, Efficient, and Secure Memory Protection for Arm CCA Shiqi Liu\u2217\u2020 , Yongpeng Gao\u2217 , Mingyang Zhang\u2217 , Jie Wang\u2217"
+  },
+  {
+    "arxiv_id": "2507.02770v2",
+    "year": "2507",
+    "title": "B LUEPRINT, B OOTSTRAP, AND B RIDGE : A S ECURITY L OOK AT NVIDIA GPU C ONFIDENTIAL C OMPUTING"
+  },
+  {
+    "arxiv_id": "2507.03278v2",
+    "year": "2507",
+    "title": "Securing Transformer-based AI Execution via Unified TEEs and Crypto-protected Accelerators"
+  },
+  {
+    "arxiv_id": "2507.08190v1",
+    "year": "2507",
+    "title": "Supporting Intel\u00ae SGX on Multi-Package Platforms1 Simon Johnson, Raghunandan Makaram, Amy Santoni, Vinnie Scarlata"
+  },
+  {
+    "arxiv_id": "2507.10971v1",
+    "year": "2507",
+    "title": "S ECURITY E NCLAVE A RCHITECTURE FOR H ETEROGENEOUS S ECURITY P RIMITIVES FOR S UPPLY-C HAIN ATTACKS"
+  },
+  {
+    "arxiv_id": "2507.20851v1",
+    "year": "2507",
+    "title": "An Open-source Implementation and Security Analysis of Triad\u2019s TEE Trusted Time Protocol"
+  },
+  {
+    "arxiv_id": "2508.20962v2",
+    "year": "2508",
+    "title": "Characterizing Trust Boundary Vulnerabilities in TEE Container Systems: An Empirical Study"
+  },
+  {
+    "arxiv_id": "2509.08709v2",
+    "year": "2509",
+    "title": "Securing Private Federated Learning in a Malicious Setting: A Scalable TEE-Based Approach with Client Auditing"
+  },
+  {
+    "arxiv_id": "2509.18886v1",
+    "year": "2509",
+    "title": "Confidential LLM Inference: Performance and Cost Across CPU and GPU TEEs"
+  },
+  {
+    "arxiv_id": "2510.14675v1",
+    "year": "2510",
+    "title": "AEX-NStep: Probabilistic Interrupt Counting Attacks on Intel SGX Nicolas Dutly, Friederike Groschupp, Ivan Puddu, Kari Kostiainen, Srdjan C\u030capkun"
+  },
+  {
+    "arxiv_id": "2510.18756v2",
+    "year": "2510",
+    "title": "Hazel: Secure and Efficient Disaggregated Storage Marcin Chrapek"
+  },
+  {
+    "arxiv_id": "2510.19979v1",
+    "year": "2510",
+    "title": "SecureInfer: Heterogeneous TEE-GPU Architecture for Privacy-Critical Tensors for Large Language"
+  },
+  {
+    "arxiv_id": "2510.26091v3",
+    "year": "2510",
+    "title": "TEEBFT : Pricing the Security of Proof of Cloud Alex Shamis1\u22c6 , Matt Stephenson1 , and Linfeng Zhou1"
+  },
+  {
+    "arxiv_id": "2511.11836v1",
+    "year": "2511",
+    "title": "Securing Generative AI in Healthcare: A Zero-Trust Architecture Powered by"
+  },
+  {
+    "arxiv_id": "2511.13717v1",
+    "year": "2511",
+    "title": "TZ-LLM: Protecting On-Device Large Language Models with Arm TrustZone"
+  },
+  {
+    "arxiv_id": "2511.22317v1",
+    "year": "2511",
+    "title": "Enhancing the Security of Rollup Sequencers using Decentrally Attested TEEs"
+  },
+  {
+    "arxiv_id": "2512.06338v1",
+    "year": "2512",
+    "title": "This article has been accepted for publication in IEEE Transactions on Microwave Theory and Techniques. This is the author's version which has not bee"
+  },
+  {
+    "arxiv_id": "2512.06500v1",
+    "year": "2512",
+    "title": "JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 PDRIMA: A Policy-Driven Runtime Integrity"
+  },
+  {
+    "arxiv_id": "2512.07495v1",
+    "year": "2512",
+    "title": "Amulet: Fast TEE-Shielded Inference for On-Device Model Protection Zikai Mao1 , Lingchen Zhao1\u2217, Lei Xu2 , Wentao Dong3 , Shenyi Zhang1 ,"
+  },
+  {
+    "arxiv_id": "2512.10732v1",
+    "year": "2512",
+    "title": "TriHaRd: Higher Resilience for TEE Trusted Time Matthieu Bettinger*\u00a7 , Sonia Ben Mokhtar*, Pascal Felber\u00b0 ,"
+  },
+  {
+    "arxiv_id": "2512.16238v2",
+    "year": "2512",
+    "title": "Trustworthy and Controllable Professional Knowledge Utilization in Large Language Models with TEE\u2013GPU Execution"
+  },
+  {
+    "arxiv_id": "2512.20176v1",
+    "year": "2512",
+    "title": "Optimistic TEE-Rollups: A Hybrid Architecture for Scalable and Verifiable"
+  },
+  {
+    "arxiv_id": "2512.22090v1",
+    "year": "2512",
+    "title": "Confidential Computing Adoption: A Systematization of Knowledge QUENTIN MICHAUD, SAMOVAR, T\u00e9l\u00e9com SudParis, Institut Polytechnique de Paris & Thales, "
+  },
+  {
+    "arxiv_id": "2601.07726v1",
+    "year": "2601",
+    "title": "TeeMAF: A TEE-Based Mutual Attestation Framework for On-Chain and Off-Chain Functions in"
+  },
+  {
+    "arxiv_id": "2601.13826v1",
+    "year": "2601",
+    "title": "MirageNet:A Secure, Efficient, and Scalable On-Device Model Protection in Heterogeneous TEE and GPU System"
+  },
+  {
+    "arxiv_id": "2601.16448v2",
+    "year": "2601",
+    "title": "Ringmaster: How to juggle high-throughput host OS system calls from TrustZone TEEs"
+  },
+  {
+    "arxiv_id": "2602.11434v1",
+    "year": "2602",
+    "title": "TECHNICAL REPORT Security Assessment"
+  },
+  {
+    "arxiv_id": "2602.19450v1",
+    "year": "2602",
+    "title": "Red-Teaming Claude Opus and ChatGPT-based Security Advisors for Trusted Execution Environments"
+  },
+  {
+    "arxiv_id": "2603.00178v2",
+    "year": "2603",
+    "title": "A TEE-Based Architecture for Confidential and Dependable Process Attestation in"
+  },
+  {
+    "arxiv_id": "2603.09311v2",
+    "year": "2603",
+    "title": "External entropy supply for IoT devices employing a RISC-V Trusted Execution"
+  },
+  {
+    "arxiv_id": "2603.17757v1",
+    "year": "2603",
+    "title": "On Securing the Software Development Lifecycle in IoT RISC-V Trusted Execution Environments"
+  },
+  {
+    "arxiv_id": "2603.23226v1",
+    "year": "2603",
+    "title": "Gyokuro: Source-assisted Private Membership Testing using Trusted Execution Environments"
+  },
+  {
+    "arxiv_id": "2603.24878v1",
+    "year": "2603",
+    "title": "Trusted-Execution Environment (TEE) for Solving the Replication Crisis in Academia"
+  },
+  {
+    "arxiv_id": "2604.16053v1",
+    "year": "2604",
+    "title": "T-RBFT: A Scalable and Efficient Byzantine Consensus Based on Trusted Execution"
+  },
+  {
+    "arxiv_id": "2604.24203v1",
+    "year": "2604",
+    "title": "Agentic Witnessing: Pragmatic and Scalable TEE-Enabled Privacy-Preserving Auditing"
+  }
+]

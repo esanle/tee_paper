@@ -1,0 +1,78 @@
+{
+  "session": "2026-05-08-07-45-30",
+  "papers_downloaded": 12,
+  "papers": [
+    {
+      "paper_id": "2605.03213v1",
+      "title": "When Agents Handle Secrets: A Survey of Confidential Computing for Agentic AI",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - When Agents Handle Secrets: A Survey of Confidential Computing for Agentic AI.pdf"
+    },
+    {
+      "paper_id": "2605.00613v2",
+      "title": "KingsGuard: Enclave Data Protection Under Real-World TEE Vulnerabilities",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - KingsGuard: Enclave Data Protection Under Real-World TEE Vulnerabilities.pdf"
+    },
+    {
+      "paper_id": "2604.24203v1",
+      "title": "Agentic Witnessing: Pragmatic and Scalable TEE-Enabled Privacy-Preserving Auditing",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - Agentic Witnessing: Pragmatic and Scalable TEE-Enabled Privacy-Preserving Auditing.pdf"
+    },
+    {
+      "paper_id": "2604.17816v1",
+      "title": "Privacy-Preserving Product-Quantized Approximate Nearest Neighbor Search via A Hybrid of FHE and TEE",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - Privacy-Preserving Product-Quantized Approximate Nearest Neighbor Search via A Hybrid of FHE and TEE.pdf"
+    },
+    {
+      "paper_id": "2604.16053v1",
+      "title": "T-RBFT: A Scalable and Efficient Byzantine Consensus Based on Trusted Execution Environment",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - T-RBFT: A Scalable and Efficient Byzantine Consensus Based on Trusted Execution Environment.pdf"
+    },
+    {
+      "paper_id": "2604.04082v1",
+      "title": "Styx: Collaborative and Private Data Processing With TEE-Enforced Sticky Policy",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - Styx: Collaborative and Private Data Processing With TEE-Enforced Sticky Policy.pdf"
+    },
+    {
+      "paper_id": "2603.24878v1",
+      "title": "Trusted-Execution Environment for Solving the Replication Crisis in Academia",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - Trusted-Execution Environment for Solving the Replication Crisis in Academia.pdf"
+    },
+    {
+      "paper_id": "2603.23745v1",
+      "title": "Space Fabric: A Satellite-Enhanced Trusted Execution Architecture",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - Space Fabric: A Satellite-Enhanced Trusted Execution Architecture.pdf"
+    },
+    {
+      "paper_id": "2603.23226v1",
+      "title": "Gyokuro: Source-assisted Private Membership Testing using Trusted Execution Environments",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - Gyokuro: Source-assisted Private Membership Testing using Trusted Execution Environments.pdf"
+    },
+    {
+      "paper_id": "2603.06263v1",
+      "title": "SPOILER: TEE-Shielded DNN Partitioning of On-Device Secure Inference with Poison Learning",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - SPOILER: TEE-Shielded DNN Partitioning of On-Device Secure Inference with Poison Learning.pdf"
+    },
+    {
+      "paper_id": "2602.05346v1",
+      "title": "Proteus: Append-Only Ledgers for (Mostly) Trusted Execution Environments",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - Proteus: Append-Only Ledgers for (Mostly) Trusted Execution Environments.pdf"
+    },
+    {
+      "paper_id": "2602.04697v1",
+      "title": "A TEE-based Approach for Preserving Data Secrecy in Process Mining",
+      "year": "2026",
+      "path": "/tmp/tee_paper/2026-05-08-07-45-30/2026 - A TEE-based Approach for Preserving Data Secrecy in Process Mining.pdf"
+    }
+  ]
+}

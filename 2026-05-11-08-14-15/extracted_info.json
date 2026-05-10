@@ -1,0 +1,200 @@
+[
+  {
+    "file": "2025 - AEX-NStep: Probabilistic Interrupt Counting Attacks on Intel SGX Nicolas Dutly, Friederike Groschupp, Ivan Puddu, Kari Kostiainen, Srdjan Capkun.pdf",
+    "year": "2025",
+    "title": "AEX-NStep: Probabilistic Interrupt Counting Attacks on Intel SGX Nicolas Dutly, Friederike Groschupp, Ivan Puddu, Kari Kostiainen, Srdjan Capkun.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Amulet: Fast TEE-Shielded Inference for On-Device Model Protection Zikai Mao1 , Lingchen Zhao1, Lei Xu2 , Wentao Dong3 , Shenyi Zhang1 ,.pdf",
+    "year": "2025",
+    "title": "Amulet: Fast TEE-Shielded Inference for On-Device Model Protection Zikai Mao1 , Lingchen Zhao1, Lei Xu2 , Wentao Dong3 , Shenyi Zhang1 ,.pdf",
+    "abstract": "With the rapid advancement of computational capabilities in mobile devices, on-device machine learning (ML) has emerged as a crucial paradigm for privacy-sensitive and latency-critical AI applications [40]. Deep learning models designed for terminal devices such as smartphones, embedded systems, and laptops have been widely utilized in fields like autonomous driving, image recognition, and chatbot applications, enabling real-time decision-making [14]. By processing data locally, on-device ML not only minimizes latency but also enhances user privacy by avoiding the transmission of sensitive information to the cloud. Additionally, it ensures"
+  },
+  {
+    "file": "2025 - An Open-source Implementation and Security Analysis of Triads TEE Trusted Time Protocol.pdf",
+    "year": "2025",
+    "title": "An Open-source Implementation and Security Analysis of Triads TEE Trusted Time Protocol.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Automatic ISA analysis for Secure Context Switching Neelu S. Kalani .pdf",
+    "year": "2025",
+    "title": "Automatic ISA analysis for Secure Context Switching Neelu S. Kalani .pdf",
+    "abstract": "Instruction set architectures are complex, with hundreds of registers and instructions that can modify dozens of them during execution, variably on each instance. Prose-style ISA specifications struggle to capture these intricacies of the ISAs, where often the important details about a single register are spread out across hundreds of pages of documentation. Ensuring that all ISA-state is swapped in context switch implementations of privileged software requires meticulous examination of these pages. This manual process is tedious and We propose a tool called Sailor that leverages machinereadable ISA specifications written in Sail to automate this task. Sailor determines the ISA-state necessary to swap during the context switch using the data collected from Sail and a novel algorithm to classify ISA-state as security-sensitive. Using Sailor\u2019s output, we identify three different classes of"
+  },
+  {
+    "file": "2025 - B LUEPRINT, B OOTSTRAP, AND B RIDGE : A S ECURITY L OOK AT NVIDIA GPU C ONFIDENTIAL C OMPUTING.pdf",
+    "year": "2025",
+    "title": "B LUEPRINT, B OOTSTRAP, AND B RIDGE : A S ECURITY L OOK AT NVIDIA GPU C ONFIDENTIAL C OMPUTING.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Characterizing Trust Boundary Vulnerabilities in TEE Container Systems: An Empirical Study.pdf",
+    "year": "2025",
+    "title": "Characterizing Trust Boundary Vulnerabilities in TEE Container Systems: An Empirical Study.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Confidential Computing Adoption: A Systematization of Knowledge QUENTIN MICHAUD, SAMOVAR, T\u00e9l\u00e9com SudParis, Institut Polytechnique de Paris  Thales,.pdf",
+    "year": "2025",
+    "title": "Confidential Computing Adoption: A Systematization of Knowledge QUENTIN MICHAUD, SAMOVAR, T\u00e9l\u00e9com SudParis, Institut Polytechnique de Paris  Thales,.pdf",
+    "abstract": "Virtual Machines (VMs) Linux-based containers Trusted Execution Environments Virtual Machine-based Fig. 1. Organization of the main sections."
+  },
+  {
+    "file": "2025 - Confidential LLM Inference: Performance and Cost Across CPU and GPU TEEs.pdf",
+    "year": "2025",
+    "title": "Confidential LLM Inference: Performance and Cost Across CPU and GPU TEEs.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Enhancing the Security of Rollup Sequencers using Decentrally Attested TEEs.pdf",
+    "year": "2025",
+    "title": "Enhancing the Security of Rollup Sequencers using Decentrally Attested TEEs.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Hazel: Secure and Efficient Disaggregated Storage Marcin Chrapek.pdf",
+    "year": "2025",
+    "title": "Hazel: Secure and Efficient Disaggregated Storage Marcin Chrapek.pdf",
+    "abstract": "Disaggregated storage with NVMe-over-Fabrics (NVMe-oF) has emerged as the standard solution in modern supercomputers and data center clusters, achieving superior performance, resource utilization, and power efficiency. Simultaneously, confidential computing (CC) is becoming the de facto security paradigm, enforcing stronger isolation and protection for sensitive workloads. However, securing state-of-the-art storage with traditional CC methods struggles to scale and compromises performance or security. To address these issues, we introduce Hazel, a storage management system that extends the NVMe-oF protocol capabilities and adheres to the CC threat model, providing confidentiality, integrity, and"
+  },
+  {
+    "file": "2025 - JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 PDRIMA: A Policy-Driven Runtime Integrity.pdf",
+    "year": "2025",
+    "title": "JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 PDRIMA: A Policy-Driven Runtime Integrity.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - N ANO Z ONE: Scalable, Efficient, and Secure Memory Protection for Arm CCA Shiqi Liu , Yongpeng Gao , Mingyang Zhang , Jie Wang.pdf",
+    "year": "2025",
+    "title": "N ANO Z ONE: Scalable, Efficient, and Secure Memory Protection for Arm CCA Shiqi Liu , Yongpeng Gao , Mingyang Zhang , Jie Wang.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Optimistic TEE-Rollups: A Hybrid Architecture for Scalable and Verifiable.pdf",
+    "year": "2025",
+    "title": "Optimistic TEE-Rollups: A Hybrid Architecture for Scalable and Verifiable.pdf",
+    "abstract": "The rapid integration of Large Language Models (LLMs) into decentralized physical infrastructure networks (DePIN) is currently bottlenecked by the Verifiability Trilemma, which posits that a decentralized inference system cannot simultaneously achieve high computational integrity, low latency, and low cost. Existing cryptographic solutions, such as Zero-Knowledge Machine Learning (ZKML), suffer from super-linear proving overheads (O(k \u00b7 N log N )) that render them infeasible for billionparameter models. Conversely, optimistic approaches (opML) impose prohibitive dispute windows, preventing real-time interactivity, while recent \u201dProof of Quality\u201d (PoQ) paradigms sacrifice cryptographic integrity for subjective semantic evaluation, leaving networks vulnerable to model downgrade attacks and reward hacking. In this paper, we introduce Optimistic TEE-Rollups (OTR), a hybrid verification protocol that harmonizes these constraints. OTR leverages NVIDIA H100 Confidential Computing Trusted Execution Environments (TEEs) to provide sub-second Provisional Finality, underpinned by an optimistic fraud-proof mechanism and stochastic Zero-Knowledge spot-checks to mitigate hardware side-channel risks. We formally define Proof of Efficient Attribution (PoEA), a consensus mechanism that cryptographically binds execution traces to hardware attestations, thereby guaranteeing model authenticity. Extensive simulations demonstrate that OTR achieves 99% of the throughput of centralized baselines with"
+  },
+  {
+    "file": "2025 - S ECURITY E NCLAVE A RCHITECTURE FOR H ETEROGENEOUS S ECURITY P RIMITIVES FOR S UPPLY-C HAIN ATTACKS.pdf",
+    "year": "2025",
+    "title": "S ECURITY E NCLAVE A RCHITECTURE FOR H ETEROGENEOUS S ECURITY P RIMITIVES FOR S UPPLY-C HAIN ATTACKS.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - SecureInfer: Heterogeneous TEE-GPU Architecture for Privacy-Critical Tensors for Large Language.pdf",
+    "year": "2025",
+    "title": "SecureInfer: Heterogeneous TEE-GPU Architecture for Privacy-Critical Tensors for Large Language.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Securing Generative AI in Healthcare: A Zero-Trust Architecture Powered by.pdf",
+    "year": "2025",
+    "title": "Securing Generative AI in Healthcare: A Zero-Trust Architecture Powered by.pdf",
+    "abstract": "The integration of Generative Artificial Intelligence (GenAI) in healthcare is impeded by significant security challenges unaddressed by traditional frameworks, precisely the \u201cdata-in-use\u201d gap where sensitive patient data and proprietary AI models are exposed during active processing. To address this, the paper proposes the Confidential Zero-Trust Framework (CZF), a novel security paradigm that synergistically combines Zero-Trust Architecture for granular access control with the hardware-enforced data isolation of Confidential Computing. We detailed a multi-tiered architectural blueprint for implementing the CZF on Google Cloud and analyzed its efficacy against real-world threats. The CZF provides a defense-in-depth architecture where data remains encrypted while in-use within a hardware-based Trusted Execution Environment (TEE). The framework\u2019s use of remote attestation offers cryptographic proof of workload integrity, transforming compliance from a procedural"
+  },
+  {
+    "file": "2025 - Securing Private Federated Learning in a Malicious Setting: A Scalable TEE-Based Approach with Client Auditing.pdf",
+    "year": "2025",
+    "title": "Securing Private Federated Learning in a Malicious Setting: A Scalable TEE-Based Approach with Client Auditing.pdf",
+    "abstract": "In cross-device private federated learning, differentially private follow-the-regularized-leader (DP-FTRL) has emerged as a promising privacy-preserving method. However, existing approaches assume a semi-honest server and have not addressed the challenge of securely removing this assumption. This is due to its statefulness, which becomes particularly problematic in practical settings where clients can drop out or be corrupted. While trusted execution environments (TEEs) might seem like an obvious solution, a straightforward implementation can introduce forking attacks or availability issues due to state management. To address this problem, our paper introduces a novel server extension that acts as a trusted computing base (TCB) to realize maliciously secure DPFTRL. The TCB is implemented with an ephemeral TEE module on the server side to produce verifiable proofs of server actions. Some clients, upon being selected, participate in auditing these proofs with small additional communication and computational"
+  },
+  {
+    "file": "2025 - Securing Transformer-based AI Execution via Unified TEEs and Crypto-protected Accelerators.pdf",
+    "year": "2025",
+    "title": "Securing Transformer-based AI Execution via Unified TEEs and Crypto-protected Accelerators.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Supporting Intel SGX on Multi-Package Platforms1 Simon Johnson, Raghunandan Makaram, Amy Santoni, Vinnie Scarlata.pdf",
+    "year": "2025",
+    "title": "Supporting Intel SGX on Multi-Package Platforms1 Simon Johnson, Raghunandan Makaram, Amy Santoni, Vinnie Scarlata.pdf",
+    "abstract": "Intel\u00ae Software Guard Extensions (SGX) was originally released on client platforms and later extended to single socket server platforms. As developers have become familiar with the capabilities of the technology, the applicability of this capability in the cloud has been tested. Various Cloud Service Providers (CSPs) are demonstrating the value of using SGX based Trusted Execution Environments (TEE) to create a new paradigm of Confidential Cloud Computing. This paper describes the additional platform enhancements we believe are necessary to deliver a user programmable Trusted"
+  },
+  {
+    "file": "2025 - TEEBFT : Pricing the Security of Proof of Cloud Alex Shamis1 , Matt Stephenson1 , and Linfeng Zhou1.pdf",
+    "year": "2025",
+    "title": "TEEBFT : Pricing the Security of Proof of Cloud Alex Shamis1 , Matt Stephenson1 , and Linfeng Zhou1.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - TZ-LLM: Protecting On-Device Large Language Models with Arm TrustZone.pdf",
+    "year": "2025",
+    "title": "TZ-LLM: Protecting On-Device Large Language Models with Arm TrustZone.pdf",
+    "abstract": "Large Language Models (LLMs) deployed on mobile devices offer benefits like user privacy and reduced network latency, but introduce a significant security risk: the leakage of proprietary models to end users. To mitigate this risk, we propose a system design for protecting on-device LLMs using Arm Trusted Execution Environment (TEE), TrustZone. Our system addresses two primary challenges: (1) The dilemma between memory efficiency and fast inference (caching model parameters within TEE memory). (2) The lack of efficient and secure Neural Processing Unit (NPU) time-sharing between Rich Execution Environment (REE) and TEE."
+  },
+  {
+    "file": "2025 - This article has been accepted for publication in IEEE Transactions on Microwave Theory and Techniques. This is the authors version which has not bee.pdf",
+    "year": "2025",
+    "title": "This article has been accepted for publication in IEEE Transactions on Microwave Theory and Techniques. This is the authors version which has not bee.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - TriHaRd: Higher Resilience for TEE Trusted Time Matthieu Bettinger , Sonia Ben Mokhtar, Pascal Felber ,.pdf",
+    "year": "2025",
+    "title": "TriHaRd: Higher Resilience for TEE Trusted Time Matthieu Bettinger , Sonia Ben Mokhtar, Pascal Felber ,.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2025 - Trustworthy and Controllable Professional Knowledge Utilization in Large Language Models with TEEGPU Execution.pdf",
+    "year": "2025",
+    "title": "Trustworthy and Controllable Professional Knowledge Utilization in Large Language Models with TEEGPU Execution.pdf",
+    "abstract": "Future improvements in large language model (LLM) services increasingly hinge on access to high-value professional knowledge rather than more generic web data. However, the data providers of this knowledge face a skewed tradeoff between income and risk: they receive little share of downstream value yet retain copyright and privacy liability, making them reluctant to contribute their assets to LLM services. Existing techniques do not offer a trustworthy and controllable way to use professional knowledge, because they keep providers in the dark and entangle knowledge parameters with the underlying LLM backbone. In this paper, we present PKUS, the Professional Knowledge Utilization System, which treats professional knowledge as a first-class, separable artifact. PKUS keeps the backbone"
+  },
+  {
+    "file": "2026 - A TEE-Based Architecture for Confidential and Dependable Process Attestation in.pdf",
+    "year": "2026",
+    "title": "A TEE-Based Architecture for Confidential and Dependable Process Attestation in.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2026 - External entropy supply for IoT devices employing a RISC-V Trusted Execution.pdf",
+    "year": "2026",
+    "title": "External entropy supply for IoT devices employing a RISC-V Trusted Execution.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2026 - MirageNet:A Secure, Efficient, and Scalable On-Device Model Protection in Heterogeneous TEE and GPU System.pdf",
+    "year": "2026",
+    "title": "MirageNet:A Secure, Efficient, and Scalable On-Device Model Protection in Heterogeneous TEE and GPU System.pdf",
+    "abstract": "With the growing computational capabilities of edge devices, deploying high-performance deep neural network (DNN) models on untrusted third-party hardware has become a practical approach to reduce inference latency and safeguard user data privacy. Given the high cost of model training and the need to preserve user experience, achieving model privacy protection with low runtime overhead is a key challenge. Leveraging Trusted Execution Environments (TEEs) offers a pragmatic defense path. To this end, prior work has proposed heterogeneous GPU\u2013TEE inference frameworks based on parameter obfuscation to balance GPU compute efficiency and model confidentiality. However, recent studies reveal that"
+  },
+  {
+    "file": "2026 - On Securing the Software Development Lifecycle in IoT RISC-V Trusted Execution Environments.pdf",
+    "year": "2026",
+    "title": "On Securing the Software Development Lifecycle in IoT RISC-V Trusted Execution Environments.pdf",
+    "abstract": "RISC-V\u2013based Trusted Execution Environments (TEEs) are gaining traction in the automotive and IoT sectors as a foundation for protecting sensitive computations. However, the supporting infrastructure around these TEEs remains immature. In particular, mechanisms for secure enclave updates and migrations\u2014essential for complete enclave lifecycle management\u2014are largely absent from the evolving RISC-V ecosystem. In this paper, we address this limitation by introducing a novel toolkit that enables RISC-V TEEs to support critical aspects of the software development lifecycle. Our toolkit provides broad compatibility with existing and emerging RISC-V TEE implementations (e.g., Keystone and CURE), which are particularly promising for"
+  },
+  {
+    "file": "2026 - Red-Teaming Claude Opus and ChatGPT-based Security Advisors for Trusted Execution Environments.pdf",
+    "year": "2026",
+    "title": "Red-Teaming Claude Opus and ChatGPT-based Security Advisors for Trusted Execution Environments.pdf",
+    "abstract": "Trusted Execution Environments (TEEs) (e.g., Intel SGX and Arm TrustZone) aim to protect sensitive computation from a compromised operating system, yet real deployments remain vulnerable to microarchitectural leakage, side-channel attacks, and fault injection. In parallel, security teams increasingly rely on Large Language Model (LLM) assistants as security advisors for TEE architecture review, mitigation planning, and vulnerability triage. This creates a socio-technical risk surface: assistants may hallucinate TEE mechanisms, overclaim guarantees (e.g., what attestation does and does not establish), or behave unsafely under adversarial prompting. We present a red-teaming study of two prevalently deployed LLM assistants in the role of TEE security advisors: ChatGPT-5.2 and Claude Opus-4.6, focusing on the inherent limitations and transferability of prompt-induced failures across LLMs. We introduce"
+  },
+  {
+    "file": "2026 - Ringmaster: How to juggle high-throughput host OS system calls from TrustZone TEEs.pdf",
+    "year": "2026",
+    "title": "Ringmaster: How to juggle high-throughput host OS system calls from TrustZone TEEs.pdf",
+    "abstract": "Many safety-critical systems require timely processing of sensor inputs to avoid potential safety hazards. Additionally, to support useful application features, such systems increasingly have a large rich operating system (OS) at the cost of potential security bugs. Thus, if a malicious party gains supervisor privileges, they could cause real-world damage by denying service to time-sensitive programs. Many past approaches to this problem completely isolate time-sensitive programs with a hypervisor; however, this prevents the programs from accessing useful OS services. We introduce Ringmaster, a novel framework that enables enclaves or TEEs (Trusted Execution Environments) to asynchronously access rich, but potentially untrusted, OS services via Linux\u2019s io_uring. When service is denied by the untrusted OS, enclaves continue to operate on"
+  },
+  {
+    "file": "2026 - T-RBFT: A Scalable and Efficient Byzantine Consensus Based on Trusted Execution.pdf",
+    "year": "2026",
+    "title": "T-RBFT: A Scalable and Efficient Byzantine Consensus Based on Trusted Execution.pdf",
+    "abstract": "With the continuous expansion of blockchain application scenarios, consortium chains have raised higher performance and security requirements for consensus mechanisms. Unlike public blockchains, consortium chains typically implement an admission mechanism that restricts participation to trusted entities, ensuring that most replicas are honest and the number of faulty nodes remains small under normal circumstances. In such settings, conventional Byzantine Fault Tolerant (BFT) protocols, which are designed for worst-case adversarial scenarios, incur excessive message exchanges and computational overhead, thereby limiting performance and scalability. To address this issue, this paper proposes T-RBFT, a two-layer consensus mechanism inspired by network sharding and enhanced by the trusted execution environment (TEE). In T-RBFT, consensus nodes are first dynamically grouped based on their runtime characteristics. Then, inter-group"
+  },
+  {
+    "file": "2026 - TECHNICAL REPORT Security Assessment.pdf",
+    "year": "2026",
+    "title": "TECHNICAL REPORT Security Assessment.pdf",
+    "abstract": ""
+  },
+  {
+    "file": "2026 - TeeMAF: A TEE-Based Mutual Attestation Framework for On-Chain and Off-Chain Functions in.pdf",
+    "year": "2026",
+    "title": "TeeMAF: A TEE-Based Mutual Attestation Framework for On-Chain and Off-Chain Functions in.pdf",
+    "abstract": ""
+  }
+]
